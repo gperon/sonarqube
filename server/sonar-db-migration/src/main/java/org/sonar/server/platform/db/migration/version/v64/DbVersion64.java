@@ -55,11 +55,12 @@ public class DbVersion64 implements DbVersion {
       .add(1624, "Add ORGANIZATIONS.DEFAULT_GROUP_ID", AddDefaultGroupIdToOrganizations.class)
       .add(1625, "Populate column ORGANIZATIONS.DEFAULT_GROUP_ID", PopulateColumnDefaultGroupIdOfOrganizations.class)
       .add(1626, "Clean orphan rows in table GROUPS_USERS", CleanOrphanRowsInGroupsUsers.class)
-      .add(1627, "Delete permission templates linked to removed users", DeletePermissionTemplatesLinkedToRemovedUsers.class)
-      .add(1628, "Purge rows with null PROJECTS.PROJECT_UUID", PurgeComponentsWithoutProjectUuid.class)
-      .add(1629, "Make PROJECTS.PROJECT_UUID not nullable", MakeProjectUuidNotNullable.class)
-      .add(1630, "Add column PROJECTS.PRIVATE", AddColumnProjectsPrivate.class)
-      .add(1631, "Populate column PROJECTS.PRIVATE", PopulateColumnProjectsPrivate.class)
-      .add(1632, "Make column PROJECTS.PRIVATE not nullable", MakeColumnProjectsPrivateNotNullable.class);
+      .add(1627, "Purge rows with null PROJECTS.PROJECT_UUID", PurgeComponentsWithoutProjectUuid.class)
+      .add(1628, "Make PROJECTS.PROJECT_UUID not nullable", MakeProjectUuidNotNullable.class)
+      .add(1629, "Add column PROJECTS.PRIVATE", AddColumnProjectsPrivate.class)
+      .add(1630, "Populate column PROJECTS.PRIVATE", PopulateColumnProjectsPrivate.class)
+      .add(1631, "Make column PROJECTS.PRIVATE not nullable", MakeColumnProjectsPrivateNotNullable.class)
+      .add(1632, "Make components private based on permissions", MakeComponentsPrivateBaseOnPermissions.class)
+      .add(1633, "Make column PROJECTS.PRIVATE not nullable", MakeColumnProjectsPrivateNotNullable.class);
   }
 }
