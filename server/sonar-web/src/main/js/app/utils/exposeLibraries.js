@@ -18,20 +18,26 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 import moment from 'moment';
+import * as glamor from 'glamor';
 import * as ReactRedux from 'react-redux';
+import Select from 'react-select';
 import * as measures from '../../helpers/measures';
 import * as request from '../../helpers/request';
 import FavoriteContainer from '../../components/controls/FavoriteContainer';
 import ListFooter from '../../components/controls/ListFooter';
+import Tooltip from '../../components/controls/Tooltip';
 
 const exposeLibraries = () => {
+  window.glamor = glamor;
   window.moment = moment;
   window.ReactRedux = ReactRedux;
   window.SonarMeasures = measures;
   window.SonarRequest = request;
   window.SonarComponents = {
     FavoriteContainer,
-    ListFooter
+    ListFooter,
+    Tooltip,
+    Select
   };
 };
 
