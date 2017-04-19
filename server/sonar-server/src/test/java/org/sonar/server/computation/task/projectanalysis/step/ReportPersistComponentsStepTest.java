@@ -51,7 +51,7 @@ import static org.sonar.db.component.ComponentDto.UUID_PATH_OF_ROOT;
 import static org.sonar.db.component.ComponentDto.UUID_PATH_SEPARATOR;
 import static org.sonar.db.component.ComponentTesting.newDirectory;
 import static org.sonar.db.component.ComponentTesting.newModuleDto;
-import static org.sonar.db.component.ComponentTesting.newProjectDto;
+import static org.sonar.db.component.ComponentTesting.newPrivateProjectDto;
 import static org.sonar.server.computation.task.projectanalysis.component.Component.Type.DIRECTORY;
 import static org.sonar.server.computation.task.projectanalysis.component.Component.Type.FILE;
 import static org.sonar.server.computation.task.projectanalysis.component.Component.Type.PROJECT;
@@ -239,7 +239,7 @@ public class ReportPersistComponentsStepTest extends BaseStepTest {
   @Test
   public void persist_only_new_components() {
     // Project and module already exists
-    ComponentDto project = newProjectDto(dbTester.getDefaultOrganization(), "ABCD").setKey(PROJECT_KEY).setName("Project");
+    ComponentDto project = newPrivateProjectDto(dbTester.getDefaultOrganization(), "ABCD").setKey(PROJECT_KEY).setName("Project");
     dbClient.componentDao().insert(dbTester.getSession(), project);
     ComponentDto module = ComponentTesting.newModuleDto("BCDE", project).setKey(MODULE_KEY).setName("Module");
     dbClient.componentDao().insert(dbTester.getSession(), module);
@@ -393,7 +393,7 @@ public class ReportPersistComponentsStepTest extends BaseStepTest {
 
   @Test
   public void nothing_to_persist() {
-    ComponentDto project = newProjectDto(dbTester.organizations().insert(), "ABCD").setKey(PROJECT_KEY).setName("Project");
+    ComponentDto project = newPrivateProjectDto(dbTester.organizations().insert(), "ABCD").setKey(PROJECT_KEY).setName("Project");
     dbClient.componentDao().insert(dbTester.getSession(), project);
     ComponentDto module = ComponentTesting.newModuleDto("BCDE", project).setKey(MODULE_KEY).setName("Module");
     dbClient.componentDao().insert(dbTester.getSession(), module);
@@ -468,7 +468,7 @@ public class ReportPersistComponentsStepTest extends BaseStepTest {
 
   @Test
   public void update_module_name_and_description() {
-    ComponentDto project = newProjectDto(dbTester.getDefaultOrganization(), "ABCD").setKey(PROJECT_KEY).setName("Project").setDescription("Project description");
+    ComponentDto project = newPrivateProjectDto(dbTester.getDefaultOrganization(), "ABCD").setKey(PROJECT_KEY).setName("Project").setDescription("Project description");
     dbClient.componentDao().insert(dbTester.getSession(), project);
     ComponentDto module = ComponentTesting.newModuleDto("BCDE", project).setKey(MODULE_KEY).setName("Module");
     dbClient.componentDao().insert(dbTester.getSession(), module);
@@ -507,7 +507,7 @@ public class ReportPersistComponentsStepTest extends BaseStepTest {
 
   @Test
   public void update_module_path() {
-    ComponentDto project = newProjectDto(dbTester.organizations().insert(), "ABCD").setKey(PROJECT_KEY).setName("Project");
+    ComponentDto project = newPrivateProjectDto(dbTester.organizations().insert(), "ABCD").setKey(PROJECT_KEY).setName("Project");
     dbClient.componentDao().insert(dbTester.getSession(), project);
     ComponentDto module = ComponentTesting.newModuleDto("BCDE", project).setKey(MODULE_KEY).setName("Module").setPath("path");
     dbClient.componentDao().insert(dbTester.getSession(), module);
@@ -534,7 +534,7 @@ public class ReportPersistComponentsStepTest extends BaseStepTest {
 
   @Test
   public void update_module_uuid_when_moving_a_module() {
-    ComponentDto project = newProjectDto(dbTester.getDefaultOrganization(), "ABCD").setKey(PROJECT_KEY).setName("Project");
+    ComponentDto project = newPrivateProjectDto(dbTester.getDefaultOrganization(), "ABCD").setKey(PROJECT_KEY).setName("Project");
     dbClient.componentDao().insert(dbTester.getSession(), project);
     ComponentDto moduleA = ComponentTesting.newModuleDto("EDCB", project)
       .setKey("MODULE_A")
@@ -611,7 +611,7 @@ public class ReportPersistComponentsStepTest extends BaseStepTest {
   @Test
   public void do_not_update_created_at_on_existing_component() {
     Date oldDate = DateUtils.parseDate("2015-01-01");
-    ComponentDto project = newProjectDto(dbTester.getDefaultOrganization(), "ABCD").setKey(PROJECT_KEY).setName("Project").setCreatedAt(oldDate);
+    ComponentDto project = newPrivateProjectDto(dbTester.getDefaultOrganization(), "ABCD").setKey(PROJECT_KEY).setName("Project").setCreatedAt(oldDate);
     dbClient.componentDao().insert(dbTester.getSession(), project);
     ComponentDto module = ComponentTesting.newModuleDto("BCDE", project).setKey(MODULE_KEY).setName("Module").setPath("path").setCreatedAt(oldDate);
     dbClient.componentDao().insert(dbTester.getSession(), module);
@@ -629,7 +629,7 @@ public class ReportPersistComponentsStepTest extends BaseStepTest {
 
   @Test
   public void persist_components_that_were_previously_removed() {
-    ComponentDto project = newProjectDto(dbTester.organizations().insert(), "ABCD").setKey(PROJECT_KEY).setName("Project");
+    ComponentDto project = newPrivateProjectDto(dbTester.organizations().insert(), "ABCD").setKey(PROJECT_KEY).setName("Project");
     dbClient.componentDao().insert(dbTester.getSession(), project);
     ComponentDto removedModule = ComponentTesting.newModuleDto("BCDE", project)
       .setKey(MODULE_KEY)
@@ -731,7 +731,7 @@ public class ReportPersistComponentsStepTest extends BaseStepTest {
 
   @Test
   public void update_module_uuid_when_reactivating_removed_component() {
-    ComponentDto project = newProjectDto(dbTester.getDefaultOrganization(), "ABCD").setKey(PROJECT_KEY).setName("Project");
+    ComponentDto project = newPrivateProjectDto(dbTester.getDefaultOrganization(), "ABCD").setKey(PROJECT_KEY).setName("Project");
     dbClient.componentDao().insert(dbTester.getSession(), project);
     ComponentDto module = ComponentTesting.newModuleDto("BCDE", project).setKey(MODULE_KEY).setName("Module");
     ComponentDto removedModule = ComponentTesting.newModuleDto("EDCD", project).setKey("REMOVED_MODULE_KEY").setName("Removed Module").setEnabled(false);
@@ -812,7 +812,7 @@ public class ReportPersistComponentsStepTest extends BaseStepTest {
   public void persists_new_components_with_private_flag_from_root_in_db_out_of_functional_transaction() {
     boolean isRootPrivate = new Random().nextBoolean();
     OrganizationDto organization = dbTester.organizations().insert();
-    ComponentDto project = newProjectDto(organization, "ABCD").setKey(PROJECT_KEY).setName("Project").setPrivate(isRootPrivate);
+    ComponentDto project = newPrivateProjectDto(organization, "ABCD").setKey(PROJECT_KEY).setName("Project").setPrivate(isRootPrivate);
     dbTester.components().insertComponent(project);
     treeRootHolder.setRoot(
       builder(PROJECT, 1).setUuid("ABCD").setKey(PROJECT_KEY)
@@ -843,7 +843,7 @@ public class ReportPersistComponentsStepTest extends BaseStepTest {
   public void persists_existing_components_with_private_flag_from_root_in_db_out_of_functional_transaction() {
     boolean isRootPrivate = new Random().nextBoolean();
     OrganizationDto organization = dbTester.organizations().insert();
-    ComponentDto project = newProjectDto(organization, "ABCD").setKey(PROJECT_KEY).setName("Project").setPrivate(isRootPrivate);
+    ComponentDto project = newPrivateProjectDto(organization, "ABCD").setKey(PROJECT_KEY).setName("Project").setPrivate(isRootPrivate);
     dbTester.components().insertComponent(project);
     ComponentDto module = newModuleDto(project).setUuid("BCDE").setKey("MODULE").setPrivate(!isRootPrivate);
     dbTester.components().insertComponent(module);

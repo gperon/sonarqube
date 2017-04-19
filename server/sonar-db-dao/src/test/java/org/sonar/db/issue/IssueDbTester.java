@@ -74,7 +74,7 @@ public class IssueDbTester {
 
   public IssueDto insertIssue(OrganizationDto organizationDto, Consumer<IssueDto> populateIssueDto) {
     RuleDto rule = db.rules().insertRule(organizationDto);
-    ComponentDto project = db.components().insertProject(organizationDto);
+    ComponentDto project = db.components().insertPrivateProject(organizationDto);
     ComponentDto file = db.components().insertComponent(newFileDto(project));
     IssueDto issueDto = newDto(rule, file, project);
     populateIssueDto.accept(issueDto);
