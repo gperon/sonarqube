@@ -111,6 +111,8 @@ public interface UserSession {
    * Using {@link #hasComponentPermission(String, ComponentDto)} is recommended
    * because it does not have to load project if the referenced component
    * is not a project.
+   *
+   * @deprecated use {@link #hasComponentPermission(String, ComponentDto)} instead
    */
   boolean hasComponentUuidPermission(String permission, String componentUuid);
 
@@ -123,6 +125,8 @@ public interface UserSession {
   /**
    * Ensures that {@link #hasComponentUuidPermission(String, String)} is {@code true},
    * otherwise throws a {@link org.sonar.server.exceptions.ForbiddenException}.
+   *
+   * @deprecated use {@link #checkComponentPermission(String, ComponentDto)} instead
    */
   UserSession checkComponentUuidPermission(String permission, String componentUuid);
 

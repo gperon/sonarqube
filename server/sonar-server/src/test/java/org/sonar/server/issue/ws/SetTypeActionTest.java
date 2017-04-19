@@ -80,7 +80,6 @@ public class SetTypeActionTest {
   @Rule
   public UserSessionRule userSession = UserSessionRule.standalone();
 
-
   private System2 system2 = mock(System2.class);
 
   private DbClient dbClient = dbTester.getDbClient();
@@ -98,7 +97,7 @@ public class SetTypeActionTest {
   @Test
   public void set_type() throws Exception {
     IssueDto issueDto = issueDbTester.insertIssue(newIssue().setType(CODE_SMELL));
-    setUserWithBrowseAndAdministerIssuePermission(issueDto.getProjectUuid());
+    setUserWithBrowseAndAdministerIssuePermission(issueDto);
 
     call(issueDto.getKey(), BUG.name());
 
@@ -110,7 +109,7 @@ public class SetTypeActionTest {
   @Test
   public void insert_entry_in_changelog_when_setting_type() throws Exception {
     IssueDto issueDto = issueDbTester.insertIssue(newIssue().setType(CODE_SMELL));
-    setUserWithBrowseAndAdministerIssuePermission(issueDto.getProjectUuid());
+    setUserWithBrowseAndAdministerIssuePermission(issueDto);
 
     call(issueDto.getKey(), BUG.name());
 
@@ -124,7 +123,7 @@ public class SetTypeActionTest {
   @Test
   public void fail_if_bad_type_value() {
     IssueDto issueDto = issueDbTester.insertIssue(newIssue().setType(CODE_SMELL));
-    setUserWithBrowseAndAdministerIssuePermission(issueDto.getProjectUuid());
+    setUserWithBrowseAndAdministerIssuePermission(issueDto);
 
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("Value of parameter 'type' (unknown) must be one of: [CODE_SMELL, BUG, VULNERABILITY]");
@@ -140,7 +139,9 @@ public class SetTypeActionTest {
   @Test
   public void fail_when_missing_browse_permission() throws Exception {
     IssueDto issueDto = issueDbTester.insertIssue();
-    userSession.logIn("john").addProjectUuidPermissions(ISSUE_ADMIN, issueDto.getProjectUuid());
+    String login = "john";
+    String permission = ISSUE_ADMIN;
+    logInAndAddProjectPermission(login, issueDto, permission);
 
     expectedException.expect(ForbiddenException.class);
     call(issueDto.getKey(), BUG.name());
@@ -149,7 +150,7 @@ public class SetTypeActionTest {
   @Test
   public void fail_when_missing_administer_issue_permission() throws Exception {
     IssueDto issueDto = issueDbTester.insertIssue();
-    userSession.logIn("john").addProjectUuidPermissions(USER, issueDto.getProjectUuid());
+    logInAndAddProjectPermission("john", issueDto, USER);
 
     expectedException.expect(ForbiddenException.class);
     call(issueDto.getKey(), BUG.name());
@@ -179,9 +180,14 @@ public class SetTypeActionTest {
     return newDto(rule, file, project);
   }
 
-  private void setUserWithBrowseAndAdministerIssuePermission(String projectUuid) {
+  private void setUserWithBrowseAndAdministerIssuePermission(IssueDto issueDto) {
+    ComponentDto project = dbClient.componentDao().selectByUuid(dbTester.getSession(), issueDto.getProjectUuid()).get();
     userSession.logIn("john")
-      .addProjectUuidPermissions(ISSUE_ADMIN, projectUuid)
-      .addProjectUuidPermissions(USER, projectUuid);
+      .addProjectPermission(ISSUE_ADMIN, project)
+      .addProjectPermission(USER, project);
+  }
+
+  private void logInAndAddProjectPermission(String login, IssueDto issueDto, String permission) {
+    userSession.logIn(login).addProjectPermission(permission, dbClient.componentDao().selectByUuid(dbTester.getSession(), issueDto.getProjectUuid()).get());
   }
 }

@@ -93,7 +93,7 @@ public class IssueServiceMediumTest {
     RuleDto rule = newRule();
     ComponentDto project = newProject();
     ComponentDto file = newFile(project);
-    userSessionRule.logIn("john").addProjectUuidPermissions(UserRole.USER, project.uuid());
+    userSessionRule.logIn("john").addProjectPermission(UserRole.USER, project);
 
     IssueDto issue = saveIssue(IssueTesting.newDto(rule, file, project));
 
@@ -191,7 +191,7 @@ public class IssueServiceMediumTest {
     ComponentDto project = ComponentTesting.newProjectDto(organization);
     tester.get(ComponentDao.class).insert(session, project);
 
-    userSessionRule.logIn().addProjectUuidPermissions(UserRole.USER, project.uuid());
+    userSessionRule.logIn().addProjectPermission(UserRole.USER, project);
     session.commit();
 
     // project can be seen by group "anyone"

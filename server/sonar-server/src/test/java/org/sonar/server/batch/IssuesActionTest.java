@@ -333,6 +333,6 @@ public class IssuesActionTest {
   }
 
   private void addBrowsePermissionOnComponent(ComponentDto project) {
-    userSessionRule.addProjectUuidPermissions(UserRole.USER, project.uuid());
+    userSessionRule.addProjectPermission(UserRole.USER, project);
   }
 }
