@@ -25,7 +25,9 @@ import { translateWithParameters } from '../../../helpers/l10n';
 import { formatMeasure } from '../../../helpers/measures';
 
 type Props = {|
-  count: number
+  count: number,
+  onClick?: () => void,
+  selected?: boolean
 |};
 
 export default function ConciseIssueLocationBadge(props: Props) {
@@ -35,7 +37,7 @@ export default function ConciseIssueLocationBadge(props: Props) {
         'issue.this_issue_involves_x_code_locations',
         formatMeasure(props.count)
       )}>
-      <LocationIndex>
+      <LocationIndex onClick={props.onClick} selected={props.selected}>
         {'+'}{props.count}
       </LocationIndex>
     </Tooltip>
