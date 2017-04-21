@@ -33,6 +33,7 @@ type Props = {|
 export default function ConciseIssueLocationBadge(props: Props) {
   return (
     <Tooltip
+      mouseEnterDelay={0.5}
       overlay={translateWithParameters(
         'issue.this_issue_involves_x_code_locations',
         formatMeasure(props.count)
