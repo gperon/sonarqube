@@ -106,4 +106,12 @@ public class ProjectsService extends BaseService {
       .setParam(PAGE_SIZE, request.getPageSize());
     return call(get, SearchWsResponse.parser());
   }
+
+  public void changeVisibility(ChangeVisibilityRequest request) {
+    PostRequest post = new PostRequest(path("change_visibility"))
+        .setParam(PARAM_PROJECT, request.getProject())
+        .setParam("visibility", request.getVisibility());
+
+    call(post);
+  }
 }
