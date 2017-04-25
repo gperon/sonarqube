@@ -41,175 +41,190 @@ import org.dbunit.ext.postgresql.PostgresqlDataTypeFactory;
 import org.sonar.db.dialect.Dialect;
 import org.sonar.db.dialect.MsSql;
 import org.sonar.db.dialect.MySql;
+import org.sonar.db.dialect.MariaDb;
 import org.sonar.db.dialect.Oracle;
 import org.sonar.db.dialect.PostgreSql;
 import org.sonar.db.version.SqTables;
 
 public abstract class DatabaseCommands {
-  private final IDataTypeFactory dbUnitFactory;
 
-  private DatabaseCommands(DefaultDataTypeFactory dbUnitFactory) {
-    this.dbUnitFactory = dbUnitFactory;
+    private final IDataTypeFactory dbUnitFactory;
 
-    // Hack for MsSQL failure in IssueMapperTest.
-    // All the Double fields should be listed here.
-    dbUnitFactory.addToleratedDelta(new ToleratedDeltaMap.ToleratedDelta("issues", "effort_to_fix", 0.0001));
-  }
+    private DatabaseCommands(DefaultDataTypeFactory dbUnitFactory) {
+        this.dbUnitFactory = dbUnitFactory;
 
-  public final IDataTypeFactory getDbUnitFactory() {
-    return dbUnitFactory;
-  }
-
-  abstract List<String> resetSequenceSql(String table, int minSequenceValue);
-
-  String truncateSql(String table) {
-    return "TRUNCATE TABLE " + table;
-  }
-
-  boolean useLoginAsSchema() {
-    return false;
-  }
-
-  public static DatabaseCommands forDialect(Dialect dialect) {
-    DatabaseCommands command = ImmutableMap.of(
-      org.sonar.db.dialect.H2.ID, H2,
-      MsSql.ID, MSSQL,
-      MySql.ID, MYSQL,
-      Oracle.ID, ORACLE,
-      PostgreSql.ID, POSTGRESQL).get(dialect.getId());
-
-    return Preconditions.checkNotNull(command, "Unknown database: " + dialect);
-  }
-
-  private static final DatabaseCommands H2 = new DatabaseCommands(new H2DataTypeFactory()) {
-    @Override
-    List<String> resetSequenceSql(String table, int minSequenceValue) {
-      return Arrays.asList("ALTER TABLE " + table + " ALTER COLUMN ID RESTART WITH " + minSequenceValue);
-    }
-  };
-
-  private static final DatabaseCommands POSTGRESQL = new DatabaseCommands(new PostgresqlDataTypeFactory()) {
-    @Override
-    List<String> resetSequenceSql(String table, int minSequenceValue) {
-      return Arrays.asList("ALTER SEQUENCE " + table + "_id_seq RESTART WITH " + minSequenceValue);
-    }
-  };
-
-  private static final DatabaseCommands ORACLE = new DatabaseCommands(new Oracle10DataTypeFactory()) {
-    @Override
-    List<String> resetSequenceSql(String table, int minSequenceValue) {
-      String sequence = StringUtils.upperCase(table) + "_SEQ";
-      return Arrays.asList(
-        "DROP SEQUENCE " + sequence,
-        "CREATE SEQUENCE " + sequence + " INCREMENT BY 1 MINVALUE 1 START WITH " + minSequenceValue);
+        // Hack for MsSQL failure in IssueMapperTest.
+        // All the Double fields should be listed here.
+        dbUnitFactory.addToleratedDelta(new ToleratedDeltaMap.ToleratedDelta("issues", "effort_to_fix", 0.0001));
     }
 
-    @Override
+    public final IDataTypeFactory getDbUnitFactory() {
+        return dbUnitFactory;
+    }
+
+    abstract List<String> resetSequenceSql(String table, int minSequenceValue);
+
     String truncateSql(String table) {
-      return "TRUNCATE TABLE " + table + " REUSE STORAGE";
+        return "TRUNCATE TABLE " + table;
     }
 
-    @Override
     boolean useLoginAsSchema() {
-      return true;
-    }
-  };
-
-  private static final DatabaseCommands MSSQL = new DatabaseCommands(new MsSqlDataTypeFactory()) {
-    @Override
-    public void resetPrimaryKeys(DataSource dataSource) {
+        return false;
     }
 
-    @Override
-    List<String> resetSequenceSql(String table, int minSequenceValue) {
-      return null;
+    public static DatabaseCommands forDialect(Dialect dialect) {
+        DatabaseCommands command = ImmutableMap.<String, DatabaseCommands>builder()
+                .put(org.sonar.db.dialect.H2.ID, H2)
+                .put(MsSql.ID, MSSQL)
+                .put(MySql.ID, MYSQL)
+                .put(MariaDb.ID, MARIADB)
+                .put(Oracle.ID, ORACLE)
+                .put(PostgreSql.ID, POSTGRESQL).build()
+                .get(dialect.getId());
+
+        return Preconditions.checkNotNull(command, "Unknown database: " + dialect);
     }
 
-    @Override
+    private static final DatabaseCommands H2 = new DatabaseCommands(new H2DataTypeFactory()) {
+        @Override
+        List<String> resetSequenceSql(String table, int minSequenceValue) {
+            return Arrays.asList("ALTER TABLE " + table + " ALTER COLUMN ID RESTART WITH " + minSequenceValue);
+        }
+    };
+
+    private static final DatabaseCommands POSTGRESQL = new DatabaseCommands(new PostgresqlDataTypeFactory()) {
+        @Override
+        List<String> resetSequenceSql(String table, int minSequenceValue) {
+            return Arrays.asList("ALTER SEQUENCE " + table + "_id_seq RESTART WITH " + minSequenceValue);
+        }
+    };
+
+    private static final DatabaseCommands ORACLE = new DatabaseCommands(new Oracle10DataTypeFactory()) {
+        @Override
+        List<String> resetSequenceSql(String table, int minSequenceValue) {
+            String sequence = StringUtils.upperCase(table) + "_SEQ";
+            return Arrays.asList(
+                    "DROP SEQUENCE " + sequence,
+                    "CREATE SEQUENCE " + sequence + " INCREMENT BY 1 MINVALUE 1 START WITH " + minSequenceValue);
+        }
+
+        @Override
+        String truncateSql(String table) {
+            return "TRUNCATE TABLE " + table + " REUSE STORAGE";
+        }
+
+        @Override
+        boolean useLoginAsSchema() {
+            return true;
+        }
+    };
+
+    private static final DatabaseCommands MSSQL = new DatabaseCommands(new MsSqlDataTypeFactory()) {
+        @Override
+        public void resetPrimaryKeys(DataSource dataSource) {
+        }
+
+        @Override
+        List<String> resetSequenceSql(String table, int minSequenceValue) {
+            return null;
+        }
+
+        @Override
+        protected boolean shouldTruncate(Connection connection, String table) throws SQLException {
+            // truncate all tables on mssql, else unexpected errors in some tests
+            return true;
+        }
+    };
+
+    private static final DatabaseCommands MYSQL = new DatabaseCommands(new MySqlDataTypeFactory()) {
+        @Override
+        public void resetPrimaryKeys(DataSource dataSource) {
+        }
+
+        @Override
+        List<String> resetSequenceSql(String table, int minSequenceValue) {
+            return null;
+        }
+    };
+
+    private static final DatabaseCommands MARIADB = new DatabaseCommands(new MySqlDataTypeFactory()) {
+        @Override
+        public void resetPrimaryKeys(DataSource dataSource) {
+        }
+
+        @Override
+        List<String> resetSequenceSql(String table, int minSequenceValue) {
+            return null;
+        }
+    };
+
+    public void truncateDatabase(DataSource dataSource) throws SQLException {
+        Connection connection = dataSource.getConnection();
+        Statement statement = null;
+        try {
+            connection.setAutoCommit(false);
+            statement = connection.createStatement();
+            for (String table : SqTables.TABLES) {
+                try {
+                    if (shouldTruncate(connection, table)) {
+                        statement.executeUpdate(truncateSql(table));
+                        connection.commit();
+                    }
+                } catch (Exception e) {
+                    connection.rollback();
+                    throw new IllegalStateException("Fail to truncate table " + table, e);
+                }
+            }
+        } finally {
+            DbUtils.closeQuietly(connection);
+            DbUtils.closeQuietly(statement);
+        }
+    }
+
     protected boolean shouldTruncate(Connection connection, String table) throws SQLException {
-      // truncate all tables on mssql, else unexpected errors in some tests
-      return true;
-    }
-  };
-
-  private static final DatabaseCommands MYSQL = new DatabaseCommands(new MySqlDataTypeFactory()) {
-    @Override
-    public void resetPrimaryKeys(DataSource dataSource) {
-    }
-
-    @Override
-    List<String> resetSequenceSql(String table, int minSequenceValue) {
-      return null;
-    }
-  };
-
-  public void truncateDatabase(DataSource dataSource) throws SQLException {
-    Connection connection = dataSource.getConnection();
-    Statement statement = null;
-    try {
-      connection.setAutoCommit(false);
-      statement = connection.createStatement();
-      for (String table : SqTables.TABLES) {
+        Statement stmt = connection.createStatement();
+        ResultSet rs = null;
         try {
-          if (shouldTruncate(connection, table)) {
-            statement.executeUpdate(truncateSql(table));
-            connection.commit();
-          }
-        } catch (Exception e) {
-          connection.rollback();
-          throw new IllegalStateException("Fail to truncate table " + table, e);
+            rs = stmt.executeQuery("select count(1) from " + table);
+            if (rs.next()) {
+                return rs.getInt(1) > 0;
+            }
+
+        } catch (SQLException ignored) {
+            // probably because table does not exist. That's the case with H2 tests.
+        } finally {
+            DbUtils.closeQuietly(rs);
+            DbUtils.closeQuietly(stmt);
         }
-      }
-    } finally {
-      DbUtils.closeQuietly(connection);
-      DbUtils.closeQuietly(statement);
+        return false;
     }
-  }
 
-  protected boolean shouldTruncate(Connection connection, String table) throws SQLException {
-    Statement stmt = connection.createStatement();
-    ResultSet rs = null;
-    try {
-      rs = stmt.executeQuery("select count(1) from " + table);
-      if (rs.next()) {
-        return rs.getInt(1) > 0;
-      }
-
-    } catch (SQLException ignored) {
-      // probably because table does not exist. That's the case with H2 tests.
-    } finally {
-      DbUtils.closeQuietly(rs);
-      DbUtils.closeQuietly(stmt);
-    }
-    return false;
-  }
-
-  public void resetPrimaryKeys(DataSource dataSource) throws SQLException {
-    Connection connection = null;
-    Statement statement = null;
-    ResultSet resultSet = null;
-    try {
-      connection = dataSource.getConnection();
-      connection.setAutoCommit(false);
-
-      statement = connection.createStatement();
-      for (String table : SqTables.TABLES) {
+    public void resetPrimaryKeys(DataSource dataSource) throws SQLException {
+        Connection connection = null;
+        Statement statement = null;
+        ResultSet resultSet = null;
         try {
-          resultSet = statement.executeQuery("SELECT CASE WHEN MAX(ID) IS NULL THEN 1 ELSE MAX(ID)+1 END FROM " + table);
-          resultSet.next();
-          int maxId = resultSet.getInt(1);
-          resultSet.close();
+            connection = dataSource.getConnection();
+            connection.setAutoCommit(false);
 
-          for (String resetCommand : resetSequenceSql(table, maxId)) {
-            statement.executeUpdate(resetCommand);
-          }
-          connection.commit();
-        } catch (Exception e) {
-          connection.rollback(); // this table has no primary key
+            statement = connection.createStatement();
+            for (String table : SqTables.TABLES) {
+                try {
+                    resultSet = statement.executeQuery("SELECT CASE WHEN MAX(ID) IS NULL THEN 1 ELSE MAX(ID)+1 END FROM " + table);
+                    resultSet.next();
+                    int maxId = resultSet.getInt(1);
+                    resultSet.close();
+
+                    for (String resetCommand : resetSequenceSql(table, maxId)) {
+                        statement.executeUpdate(resetCommand);
+                    }
+                    connection.commit();
+                } catch (Exception e) {
+                    connection.rollback(); // this table has no primary key
+                }
+            }
+        } finally {
+            DbUtils.closeQuietly(connection, statement, resultSet);
         }
-      }
-    } finally {
-      DbUtils.closeQuietly(connection, statement, resultSet);
     }
-  }
 }

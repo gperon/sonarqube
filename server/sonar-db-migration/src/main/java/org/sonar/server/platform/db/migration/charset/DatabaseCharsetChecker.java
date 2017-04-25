@@ -28,63 +28,66 @@ import org.sonar.db.dialect.Dialect;
 import org.sonar.db.dialect.H2;
 import org.sonar.db.dialect.MsSql;
 import org.sonar.db.dialect.MySql;
+import org.sonar.db.dialect.MariaDb;
 import org.sonar.db.dialect.Oracle;
 import org.sonar.db.dialect.PostgreSql;
 
 /**
- * On fresh installations, checks that all db columns are UTF8. On all installations on MySQL or MSSQL,
- * whatever fresh or upgrade, fixes case-insensitive columns by converting them to
- * case-sensitive.
+ * On fresh installations, checks that all db columns are UTF8. On all
+ * installations on MySQL or MSSQL, whatever fresh or upgrade, fixes
+ * case-insensitive columns by converting them to case-sensitive.
  *
  * See SONAR-6171 and SONAR-7549
  */
 public class DatabaseCharsetChecker {
 
-  public enum State {
-    FRESH_INSTALL, UPGRADE, STARTUP
-  }
-
-  private final Database db;
-  private final SqlExecutor sqlExecutor;
-
-  public DatabaseCharsetChecker(Database db) {
-    this(db, new SqlExecutor());
-  }
-
-  @VisibleForTesting
-  DatabaseCharsetChecker(Database db, SqlExecutor sqlExecutor) {
-    this.db = db;
-    this.sqlExecutor = sqlExecutor;
-  }
-
-  public void check(State state) {
-    try (Connection connection = db.getDataSource().getConnection()) {
-      CharsetHandler handler = getHandler(db.getDialect());
-      if (handler != null) {
-        handler.handle(connection, state);
-      }
-    } catch (SQLException e) {
-      throw new IllegalStateException(e);
+    public enum State {
+        FRESH_INSTALL, UPGRADE, STARTUP
     }
-  }
 
-  @VisibleForTesting
-  @CheckForNull
-  CharsetHandler getHandler(Dialect dialect) {
-    switch (dialect.getId()) {
-      case H2.ID:
-        // nothing to check
-        return null;
-      case Oracle.ID:
-        return new OracleCharsetHandler(sqlExecutor);
-      case PostgreSql.ID:
-        return new PostgresCharsetHandler(sqlExecutor, new PostgresMetadataReader(sqlExecutor));
-      case MySql.ID:
-        return new MysqlCharsetHandler(sqlExecutor);
-      case MsSql.ID:
-        return new MssqlCharsetHandler(sqlExecutor, new MssqlMetadataReader(sqlExecutor));
-      default:
-        throw new IllegalArgumentException("Database not supported: " + dialect.getId());
+    private final Database db;
+    private final SqlExecutor sqlExecutor;
+
+    public DatabaseCharsetChecker(Database db) {
+        this(db, new SqlExecutor());
     }
-  }
+
+    @VisibleForTesting
+    DatabaseCharsetChecker(Database db, SqlExecutor sqlExecutor) {
+        this.db = db;
+        this.sqlExecutor = sqlExecutor;
+    }
+
+    public void check(State state) {
+        try (Connection connection = db.getDataSource().getConnection()) {
+            CharsetHandler handler = getHandler(db.getDialect());
+            if (handler != null) {
+                handler.handle(connection, state);
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    @VisibleForTesting
+    @CheckForNull
+    CharsetHandler getHandler(Dialect dialect) {
+        switch (dialect.getId()) {
+            case H2.ID:
+                // nothing to check
+                return null;
+            case Oracle.ID:
+                return new OracleCharsetHandler(sqlExecutor);
+            case PostgreSql.ID:
+                return new PostgresCharsetHandler(sqlExecutor, new PostgresMetadataReader(sqlExecutor));
+            case MySql.ID:
+                return new MysqlCharsetHandler(sqlExecutor);
+            case MariaDb.ID:
+                return new MariadbCharsetHandler(sqlExecutor);
+            case MsSql.ID:
+                return new MssqlCharsetHandler(sqlExecutor, new MssqlMetadataReader(sqlExecutor));
+            default:
+                throw new IllegalArgumentException("Database not supported: " + dialect.getId());
+        }
+    }
 }

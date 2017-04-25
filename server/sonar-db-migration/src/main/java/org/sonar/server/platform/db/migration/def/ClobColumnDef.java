@@ -22,6 +22,7 @@ package org.sonar.server.platform.db.migration.def;
 import javax.annotation.concurrent.Immutable;
 import org.sonar.db.dialect.Dialect;
 import org.sonar.db.dialect.H2;
+import org.sonar.db.dialect.MariaDb;
 import org.sonar.db.dialect.MsSql;
 import org.sonar.db.dialect.MySql;
 import org.sonar.db.dialect.Oracle;
@@ -35,50 +36,52 @@ import static org.sonar.server.platform.db.migration.def.Validations.validateCol
 @Immutable
 public class ClobColumnDef extends AbstractColumnDef {
 
-  private ClobColumnDef(Builder builder) {
-    super(builder.columnName, builder.isNullable, null);
-  }
-
-  public static Builder newClobColumnDefBuilder() {
-    return new Builder();
-  }
-
-  @Override
-  public String generateSqlType(Dialect dialect) {
-    switch (dialect.getId()) {
-      case MsSql.ID:
-        return "NVARCHAR (MAX)";
-      case MySql.ID:
-        return "LONGTEXT";
-      case Oracle.ID:
-        return "CLOB";
-      case H2.ID:
-        return "CLOB(2147483647)";
-      case PostgreSql.ID:
-        return "TEXT";
-      default:
-        throw new IllegalArgumentException("Unsupported dialect id " + dialect.getId());
-    }
-  }
-
-  public static class Builder {
-    private String columnName;
-    private boolean isNullable = true;
-
-    public Builder setColumnName(String columnName) {
-      this.columnName = validateColumnName(columnName);
-      return this;
+    private ClobColumnDef(Builder builder) {
+        super(builder.columnName, builder.isNullable, null);
     }
 
-    public Builder setIsNullable(boolean isNullable) {
-      this.isNullable = isNullable;
-      return this;
+    public static Builder newClobColumnDefBuilder() {
+        return new Builder();
     }
 
-    public ClobColumnDef build() {
-      validateColumnName(columnName);
-      return new ClobColumnDef(this);
+    @Override
+    public String generateSqlType(Dialect dialect) {
+        switch (dialect.getId()) {
+            case MsSql.ID:
+                return "NVARCHAR (MAX)";
+            case MySql.ID:
+            case MariaDb.ID:
+                return "LONGTEXT";
+            case Oracle.ID:
+                return "CLOB";
+            case H2.ID:
+                return "CLOB(2147483647)";
+            case PostgreSql.ID:
+                return "TEXT";
+            default:
+                throw new IllegalArgumentException("Unsupported dialect id " + dialect.getId());
+        }
     }
-  }
+
+    public static class Builder {
+
+        private String columnName;
+        private boolean isNullable = true;
+
+        public Builder setColumnName(String columnName) {
+            this.columnName = validateColumnName(columnName);
+            return this;
+        }
+
+        public Builder setIsNullable(boolean isNullable) {
+            this.isNullable = isNullable;
+            return this;
+        }
+
+        public ClobColumnDef build() {
+            validateColumnName(columnName);
+            return new ClobColumnDef(this);
+        }
+    }
 
 }
