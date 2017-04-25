@@ -23,6 +23,7 @@ import javax.annotation.CheckForNull;
 import javax.annotation.concurrent.Immutable;
 import org.sonar.db.dialect.Dialect;
 import org.sonar.db.dialect.H2;
+import org.sonar.db.dialect.MariaDb;
 import org.sonar.db.dialect.MsSql;
 import org.sonar.db.dialect.MySql;
 import org.sonar.db.dialect.Oracle;
@@ -33,77 +34,79 @@ import static org.sonar.server.platform.db.migration.def.Validations.validateCol
 @Immutable
 public class DecimalColumnDef extends AbstractColumnDef {
 
-  public static final int DEFAULT_PRECISION = 38;
-  public static final int DEFAULT_SCALE = 20;
+    public static final int DEFAULT_PRECISION = 38;
+    public static final int DEFAULT_SCALE = 20;
 
-  private final int precision;
-  private final int scale;
+    private final int precision;
+    private final int scale;
 
-  private DecimalColumnDef(Builder builder) {
-    super(builder.columnName, builder.isNullable, null);
-    this.precision = builder.precision;
-    this.scale = builder.scale;
-  }
-
-  public static Builder newDecimalColumnDefBuilder() {
-    return new Builder();
-  }
-
-  public int getPrecision() {
-    return precision;
-  }
-
-  public int getScale() {
-    return scale;
-  }
-
-  @Override
-  public String generateSqlType(Dialect dialect) {
-    switch (dialect.getId()) {
-      case PostgreSql.ID:
-      case Oracle.ID:
-        return String.format("NUMERIC (%s,%s)", precision, scale);
-      case MySql.ID:
-      case MsSql.ID:
-        return String.format("DECIMAL (%s,%s)", precision, scale);
-      case H2.ID:
-        return "DOUBLE";
-      default:
-        throw new UnsupportedOperationException(String.format("Unknown dialect '%s'", dialect.getId()));
-    }
-  }
-
-  public static class Builder {
-    @CheckForNull
-    private String columnName;
-    private int precision = DEFAULT_PRECISION;
-    private int scale = DEFAULT_SCALE;
-    private boolean isNullable = true;
-
-    public Builder setColumnName(String columnName) {
-      this.columnName = validateColumnName(columnName);
-      return this;
+    private DecimalColumnDef(Builder builder) {
+        super(builder.columnName, builder.isNullable, null);
+        this.precision = builder.precision;
+        this.scale = builder.scale;
     }
 
-    public Builder setIsNullable(boolean isNullable) {
-      this.isNullable = isNullable;
-      return this;
+    public static Builder newDecimalColumnDefBuilder() {
+        return new Builder();
     }
 
-    public Builder setPrecision(int precision) {
-      this.precision = precision;
-      return this;
+    public int getPrecision() {
+        return precision;
     }
 
-    public Builder setScale(int scale) {
-      this.scale = scale;
-      return this;
+    public int getScale() {
+        return scale;
     }
 
-    public DecimalColumnDef build() {
-      validateColumnName(columnName);
-      return new DecimalColumnDef(this);
+    @Override
+    public String generateSqlType(Dialect dialect) {
+        switch (dialect.getId()) {
+            case PostgreSql.ID:
+            case Oracle.ID:
+                return String.format("NUMERIC (%s,%s)", precision, scale);
+            case MySql.ID:
+            case MariaDb.ID:
+            case MsSql.ID:
+                return String.format("DECIMAL (%s,%s)", precision, scale);
+            case H2.ID:
+                return "DOUBLE";
+            default:
+                throw new UnsupportedOperationException(String.format("Unknown dialect '%s'", dialect.getId()));
+        }
     }
-  }
+
+    public static class Builder {
+
+        @CheckForNull
+        private String columnName;
+        private int precision = DEFAULT_PRECISION;
+        private int scale = DEFAULT_SCALE;
+        private boolean isNullable = true;
+
+        public Builder setColumnName(String columnName) {
+            this.columnName = validateColumnName(columnName);
+            return this;
+        }
+
+        public Builder setIsNullable(boolean isNullable) {
+            this.isNullable = isNullable;
+            return this;
+        }
+
+        public Builder setPrecision(int precision) {
+            this.precision = precision;
+            return this;
+        }
+
+        public Builder setScale(int scale) {
+            this.scale = scale;
+            return this;
+        }
+
+        public DecimalColumnDef build() {
+            validateColumnName(columnName);
+            return new DecimalColumnDef(this);
+        }
+    }
 
 }

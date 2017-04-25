@@ -30,56 +30,58 @@ import org.sonar.db.dialect.PostgreSql;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Collections.singletonList;
+import org.sonar.db.dialect.MariaDb;
 import static org.sonar.server.platform.db.migration.def.Validations.validateTableName;
 
 /**
- * Limitation: only tables with auto-generated ID column can
- * be renamed as the Oracle implementation assumes that
- * the sequence and trigger related to ID column exist.
+ * Limitation: only tables with auto-generated ID column can be renamed as the
+ * Oracle implementation assumes that the sequence and trigger related to ID
+ * column exist.
  */
 public class RenameTableBuilder {
 
-  private final Dialect dialect;
-  private String name;
-  private String newName;
+    private final Dialect dialect;
+    private String name;
+    private String newName;
 
-  public RenameTableBuilder(Dialect dialect) {
-    this.dialect = dialect;
-  }
-
-  public RenameTableBuilder setName(String s) {
-    this.name = s;
-    return this;
-  }
-
-  public RenameTableBuilder setNewName(String s) {
-    this.newName = s;
-    return this;
-  }
-
-  public List<String> build() {
-    validateTableName(name);
-    validateTableName(newName);
-    checkArgument(!name.equals(newName), "Names must be different");
-    return createSqlStatement();
-  }
-
-  private List<String> createSqlStatement() {
-    switch (dialect.getId()) {
-      case H2.ID:
-      case MySql.ID:
-      case PostgreSql.ID:
-        return singletonList("ALTER TABLE " + name + " RENAME TO " + newName);
-      case MsSql.ID:
-        return singletonList("EXEC sp_rename '" + name + "', '" + newName + "'");
-      case Oracle.ID:
-        return Arrays.asList(
-          "DROP TRIGGER " + name + "_idt",
-          "RENAME " + name + " TO " + newName,
-          "RENAME " + name + "_seq TO " + newName + "_seq",
-          CreateTableBuilder.createOracleTriggerForTable(newName));
-      default:
-        throw new IllegalArgumentException("Unsupported dialect id " + dialect.getId());
+    public RenameTableBuilder(Dialect dialect) {
+        this.dialect = dialect;
     }
-  }
+
+    public RenameTableBuilder setName(String s) {
+        this.name = s;
+        return this;
+    }
+
+    public RenameTableBuilder setNewName(String s) {
+        this.newName = s;
+        return this;
+    }
+
+    public List<String> build() {
+        validateTableName(name);
+        validateTableName(newName);
+        checkArgument(!name.equals(newName), "Names must be different");
+        return createSqlStatement();
+    }
+
+    private List<String> createSqlStatement() {
+        switch (dialect.getId()) {
+            case H2.ID:
+            case MySql.ID:
+            case MariaDb.ID:
+            case PostgreSql.ID:
+                return singletonList("ALTER TABLE " + name + " RENAME TO " + newName);
+            case MsSql.ID:
+                return singletonList("EXEC sp_rename '" + name + "', '" + newName + "'");
+            case Oracle.ID:
+                return Arrays.asList(
+                        "DROP TRIGGER " + name + "_idt",
+                        "RENAME " + name + " TO " + newName,
+                        "RENAME " + name + "_seq TO " + newName + "_seq",
+                        CreateTableBuilder.createOracleTriggerForTable(newName));
+            default:
+                throw new IllegalArgumentException("Unsupported dialect id " + dialect.getId());
+        }
+    }
 }

@@ -19,39 +19,36 @@
  */
 package org.sonar.db.dialect;
 
-import org.junit.Test;
-import org.sonar.api.utils.MessageException;
+import org.apache.commons.lang.StringUtils;
 
-import static org.assertj.core.api.Assertions.assertThat;
+/**
+ * @since 6.4
+ */
+public class MariaDb extends AbstractDialect {
 
-public class DialectUtilsTest {
+    public static final String ID = "mariadb";
 
-    @Test
-    public void testFindById() {
-        Dialect d = DialectUtils.find("mysql", null);
-        assertThat(d).isInstanceOf(MySql.class);
+    public MariaDb() {
+        super(ID, "org.mariadb.jdbc.Driver", "true", "false", "SELECT 1");
     }
 
-    @Test
-    public void testFindById2() {
-        Dialect d = DialectUtils.find("mariadb", null);
-        assertThat(d).isInstanceOf(MariaDb.class);
+    @Override
+    public boolean matchesJdbcURL(String jdbcConnectionURL) {
+        return StringUtils.startsWithIgnoreCase(jdbcConnectionURL, "jdbc:mariadb:");
     }
 
-    @Test
-    public void testFindByJdbcUrl() {
-        Dialect d = DialectUtils.find(null, "jdbc:mysql:foo:bar");
-        assertThat(d).isInstanceOf(MySql.class);
+    @Override
+    public int getScrollDefaultFetchSize() {
+        return Integer.MIN_VALUE;
     }
 
-    @Test
-    public void testFindByJdbcUrl2() {
-        Dialect d = DialectUtils.find(null, "jdbc:mariadb:foo:bar");
-        assertThat(d).isInstanceOf(MariaDb.class);
+    @Override
+    public int getScrollSingleRowFetchSize() {
+        return Integer.MIN_VALUE;
     }
 
-    @Test(expected = MessageException.class)
-    public void testFindNoMatch() {
-        DialectUtils.find("foo", "bar");
+    @Override
+    public boolean supportsMigration() {
+        return true;
     }
 }

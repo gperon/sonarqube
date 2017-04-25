@@ -23,6 +23,7 @@ import javax.annotation.CheckForNull;
 import javax.annotation.concurrent.Immutable;
 import org.sonar.db.dialect.Dialect;
 import org.sonar.db.dialect.H2;
+import org.sonar.db.dialect.MariaDb;
 import org.sonar.db.dialect.MsSql;
 import org.sonar.db.dialect.MySql;
 import org.sonar.db.dialect.Oracle;
@@ -32,53 +33,56 @@ import static org.sonar.server.platform.db.migration.def.Validations.validateCol
 
 @Immutable
 public class BlobColumnDef extends AbstractColumnDef {
-  public BlobColumnDef(Builder builder) {
-    super(builder.columnName, builder.isNullable, null);
-  }
 
-  @Override
-  public String generateSqlType(Dialect dialect) {
-    switch (dialect.getId()) {
-      case MsSql.ID:
-        return "VARBINARY(MAX)";
-      case MySql.ID:
-        return "LONGBLOB";
-      case Oracle.ID:
-      case H2.ID:
-        return "BLOB";
-      case PostgreSql.ID:
-        return "BYTEA";
-      default:
-        throw new IllegalArgumentException("Unsupported dialect id " + dialect.getId());
-    }
-  }
-
-  public static Builder newBlobColumnDefBuilder() {
-    return new Builder();
-  }
-
-  public static class Builder {
-    @CheckForNull
-    private String columnName;
-    private boolean isNullable = true;
-
-    private Builder() {
-      // prevents instantiation outside
+    public BlobColumnDef(Builder builder) {
+        super(builder.columnName, builder.isNullable, null);
     }
 
-    public BlobColumnDef.Builder setColumnName(String columnName) {
-      this.columnName = validateColumnName(columnName);
-      return this;
+    @Override
+    public String generateSqlType(Dialect dialect) {
+        switch (dialect.getId()) {
+            case MsSql.ID:
+                return "VARBINARY(MAX)";
+            case MySql.ID:
+            case MariaDb.ID:
+                return "LONGBLOB";
+            case Oracle.ID:
+            case H2.ID:
+                return "BLOB";
+            case PostgreSql.ID:
+                return "BYTEA";
+            default:
+                throw new IllegalArgumentException("Unsupported dialect id " + dialect.getId());
+        }
     }
 
-    public BlobColumnDef.Builder setIsNullable(boolean isNullable) {
-      this.isNullable = isNullable;
-      return this;
+    public static Builder newBlobColumnDefBuilder() {
+        return new Builder();
     }
 
-    public BlobColumnDef build() {
-      validateColumnName(columnName);
-      return new BlobColumnDef(this);
+    public static class Builder {
+
+        @CheckForNull
+        private String columnName;
+        private boolean isNullable = true;
+
+        private Builder() {
+            // prevents instantiation outside
+        }
+
+        public BlobColumnDef.Builder setColumnName(String columnName) {
+            this.columnName = validateColumnName(columnName);
+            return this;
+        }
+
+        public BlobColumnDef.Builder setIsNullable(boolean isNullable) {
+            this.isNullable = isNullable;
+            return this;
+        }
+
+        public BlobColumnDef build() {
+            validateColumnName(columnName);
+            return new BlobColumnDef(this);
+        }
     }
-  }
 }

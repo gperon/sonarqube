@@ -126,6 +126,14 @@
       <scope>provided</scope>
     </dependencySet>
     <dependencySet>
+      <outputDirectory>lib/jdbc/mariadb/</outputDirectory>
+      <includes>
+        <include>org.mariadb.jdbc:mariadb-java-client</include>
+      </includes>
+      <unpack>false</unpack>
+      <scope>provided</scope>
+    </dependencySet>
+    <dependencySet>
       <outputDirectory>lib/jdbc/postgresql/</outputDirectory>
       <includes>
         <include>org.postgresql:postgresql</include>

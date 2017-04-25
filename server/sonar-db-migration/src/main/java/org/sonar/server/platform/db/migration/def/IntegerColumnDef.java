@@ -24,6 +24,7 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 import org.sonar.db.dialect.Dialect;
 import org.sonar.db.dialect.H2;
+import org.sonar.db.dialect.MariaDb;
 import org.sonar.db.dialect.MsSql;
 import org.sonar.db.dialect.MySql;
 import org.sonar.db.dialect.Oracle;
@@ -34,56 +35,58 @@ import static org.sonar.server.platform.db.migration.def.Validations.validateCol
 @Immutable
 public class IntegerColumnDef extends AbstractColumnDef {
 
-  private IntegerColumnDef(Builder builder) {
-    super(builder.columnName, builder.isNullable, builder.defaultValue);
-  }
-
-  public static Builder newIntegerColumnDefBuilder() {
-    return new Builder();
-  }
-
-  @Override
-  public String generateSqlType(Dialect dialect) {
-    switch (dialect.getId()) {
-      case PostgreSql.ID:
-      case MySql.ID:
-      case H2.ID:
-        return "INTEGER";
-      case MsSql.ID:
-        return "INT";
-      case Oracle.ID:
-        return "NUMBER(38,0)";
-      default:
-        throw new IllegalArgumentException("Unsupported dialect id " + dialect.getId());
-    }
-  }
-
-  public static class Builder {
-    @CheckForNull
-    private String columnName;
-    private boolean isNullable = true;
-    @CheckForNull
-    private Integer defaultValue = null;
-
-    public Builder setColumnName(String columnName) {
-      this.columnName = validateColumnName(columnName);
-      return this;
+    private IntegerColumnDef(Builder builder) {
+        super(builder.columnName, builder.isNullable, builder.defaultValue);
     }
 
-    public Builder setIsNullable(boolean isNullable) {
-      this.isNullable = isNullable;
-      return this;
+    public static Builder newIntegerColumnDefBuilder() {
+        return new Builder();
     }
 
-    public Builder setDefaultValue(@Nullable Integer i) {
-      this.defaultValue = i;
-      return this;
+    @Override
+    public String generateSqlType(Dialect dialect) {
+        switch (dialect.getId()) {
+            case PostgreSql.ID:
+            case MySql.ID:
+            case MariaDb.ID:
+            case H2.ID:
+                return "INTEGER";
+            case MsSql.ID:
+                return "INT";
+            case Oracle.ID:
+                return "NUMBER(38,0)";
+            default:
+                throw new IllegalArgumentException("Unsupported dialect id " + dialect.getId());
+        }
     }
 
-    public IntegerColumnDef build() {
-      validateColumnName(columnName);
-      return new IntegerColumnDef(this);
+    public static class Builder {
+
+        @CheckForNull
+        private String columnName;
+        private boolean isNullable = true;
+        @CheckForNull
+        private Integer defaultValue = null;
+
+        public Builder setColumnName(String columnName) {
+            this.columnName = validateColumnName(columnName);
+            return this;
+        }
+
+        public Builder setIsNullable(boolean isNullable) {
+            this.isNullable = isNullable;
+            return this;
+        }
+
+        public Builder setDefaultValue(@Nullable Integer i) {
+            this.defaultValue = i;
+            return this;
+        }
+
+        public IntegerColumnDef build() {
+            validateColumnName(columnName);
+            return new IntegerColumnDef(this);
+        }
     }
-  }
 
 }

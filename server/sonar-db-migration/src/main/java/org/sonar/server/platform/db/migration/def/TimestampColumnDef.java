@@ -22,6 +22,7 @@ package org.sonar.server.platform.db.migration.def;
 import javax.annotation.concurrent.Immutable;
 import org.sonar.db.dialect.Dialect;
 import org.sonar.db.dialect.H2;
+import org.sonar.db.dialect.MariaDb;
 import org.sonar.db.dialect.MsSql;
 import org.sonar.db.dialect.MySql;
 import org.sonar.db.dialect.Oracle;
@@ -32,56 +33,58 @@ import static org.sonar.server.platform.db.migration.def.Validations.validateCol
 /**
  * Used to define TIMESTAMP columns.
  *
- * @deprecated implemented for compatibility with old tables, but {@link BigIntegerColumnDef}
- * must be used for storing datetimes as bigints (no problems regarding timezone
- * nor MySQL precision).
+ * @deprecated implemented for compatibility with old tables, but
+ * {@link BigIntegerColumnDef} must be used for storing datetimes as bigints (no
+ * problems regarding timezone nor MySQL precision).
  */
 @Immutable
 @Deprecated
 public class TimestampColumnDef extends AbstractColumnDef {
 
-  private TimestampColumnDef(Builder builder) {
-    super(builder.columnName, builder.isNullable, null);
-  }
-
-  public static Builder newTimestampColumnDefBuilder() {
-    return new Builder();
-  }
-
-  @Override
-  public String generateSqlType(Dialect dialect) {
-    switch (dialect.getId()) {
-      case MsSql.ID:
-      case MySql.ID:
-        return "DATETIME";
-      case Oracle.ID:
-        return "TIMESTAMP (6)";
-      case H2.ID:
-      case PostgreSql.ID:
-        return "TIMESTAMP";
-      default:
-        throw new IllegalArgumentException("Unsupported dialect id " + dialect.getId());
-    }
-  }
-
-  public static class Builder {
-    private String columnName;
-    private boolean isNullable = true;
-
-    public Builder setColumnName(String columnName) {
-      this.columnName = validateColumnName(columnName);
-      return this;
+    private TimestampColumnDef(Builder builder) {
+        super(builder.columnName, builder.isNullable, null);
     }
 
-    public Builder setIsNullable(boolean b) {
-      this.isNullable = b;
-      return this;
+    public static Builder newTimestampColumnDefBuilder() {
+        return new Builder();
     }
 
-    public TimestampColumnDef build() {
-      validateColumnName(columnName);
-      return new TimestampColumnDef(this);
+    @Override
+    public String generateSqlType(Dialect dialect) {
+        switch (dialect.getId()) {
+            case MsSql.ID:
+            case MySql.ID:
+            case MariaDb.ID:
+                return "DATETIME";
+            case Oracle.ID:
+                return "TIMESTAMP (6)";
+            case H2.ID:
+            case PostgreSql.ID:
+                return "TIMESTAMP";
+            default:
+                throw new IllegalArgumentException("Unsupported dialect id " + dialect.getId());
+        }
     }
-  }
+
+    public static class Builder {
+
+        private String columnName;
+        private boolean isNullable = true;
+
+        public Builder setColumnName(String columnName) {
+            this.columnName = validateColumnName(columnName);
+            return this;
+        }
+
+        public Builder setIsNullable(boolean b) {
+            this.isNullable = b;
+            return this;
+        }
+
+        public TimestampColumnDef build() {
+            validateColumnName(columnName);
+            return new TimestampColumnDef(this);
+        }
+    }
 
 }
