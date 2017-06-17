@@ -26,6 +26,7 @@ import org.sonar.api.resources.Scopes;
 import org.sonar.core.util.Uuids;
 import org.sonar.db.organization.OrganizationDto;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.sonar.db.component.ComponentDto.UUID_PATH_SEPARATOR;
 
@@ -96,15 +97,23 @@ public class ComponentTesting {
     return newModuleDto(Uuids.createFast(), subProjectOrProject);
   }
 
-  public static ComponentDto newProjectDto(OrganizationDto organizationDto) {
-    return newProjectDto(organizationDto.getUuid(), Uuids.createFast());
+  public static ComponentDto newPrivateProjectDto(OrganizationDto organizationDto) {
+    return newProjectDto(organizationDto.getUuid(), Uuids.createFast(), true);
   }
 
-  public static ComponentDto newProjectDto(OrganizationDto organizationDto, String uuid) {
-    return newProjectDto(organizationDto.getUuid(), uuid);
+  public static ComponentDto newPrivateProjectDto(OrganizationDto organizationDto, String uuid) {
+    return newProjectDto(organizationDto.getUuid(), uuid, true);
   }
 
-  private static ComponentDto newProjectDto(String organizationUuid, String uuid) {
+  public static ComponentDto newPublicProjectDto(OrganizationDto organizationDto) {
+    return newProjectDto(organizationDto.getUuid(), Uuids.createFast(), false);
+  }
+
+  public static ComponentDto newPublicProjectDto(OrganizationDto organizationDto, String uuid) {
+    return newProjectDto(organizationDto.getUuid(), uuid, false);
+  }
+
+  private static ComponentDto newProjectDto(String organizationUuid, String uuid, boolean isPrivate) {
     return new ComponentDto()
       .setOrganizationUuid(organizationUuid)
       .setUuid(uuid)
@@ -120,34 +129,8 @@ public class ComponentTesting {
       .setQualifier(Qualifiers.PROJECT)
       .setPath(null)
       .setLanguage(null)
-      .setEnabled(true);
-  }
-
-  public static ComponentDto newDeveloper(OrganizationDto organizationDto, String name) {
-    return newDeveloper(organizationDto.getUuid(), name, Uuids.createFast());
-  }
-
-  public static ComponentDto newDeveloper(OrganizationDto organizationDto, String name, String uuid) {
-    return newDeveloper(organizationDto.getUuid(), name, uuid);
-  }
-
-  private static ComponentDto newDeveloper(String organizationUuid, String name, String uuid) {
-    return new ComponentDto()
-      .setOrganizationUuid(organizationUuid)
-      .setUuid(uuid)
-      .setUuidPath(ComponentDto.UUID_PATH_OF_ROOT)
-      .setProjectUuid(uuid)
-      .setModuleUuidPath(UUID_PATH_SEPARATOR + uuid + UUID_PATH_SEPARATOR)
-      .setRootUuid(uuid)
-      .setKey(uuid)
-      .setName(name)
-      .setLongName(name)
-      .setScope(Scopes.PROJECT)
-      // XXX No constant !
-      .setQualifier("DEV")
-      .setPath(null)
-      .setLanguage(null)
-      .setEnabled(true);
+      .setEnabled(true)
+      .setPrivate(isPrivate);
   }
 
   public static ComponentDto newView(OrganizationDto organizationDto) {
@@ -155,17 +138,18 @@ public class ComponentTesting {
   }
 
   public static ComponentDto newView(OrganizationDto organizationDto, String uuid) {
-    return newProjectDto(organizationDto, uuid)
+    return newPrivateProjectDto(organizationDto, uuid)
       .setUuid(uuid)
       .setScope(Scopes.PROJECT)
-      .setQualifier(Qualifiers.VIEW);
+      .setQualifier(Qualifiers.VIEW)
+      .setPrivate(false);
   }
 
   private static ComponentDto newView(String organizationUuid, String uuid) {
-    return newProjectDto(organizationUuid, uuid)
-        .setUuid(uuid)
-        .setScope(Scopes.PROJECT)
-        .setQualifier(Qualifiers.VIEW);
+    return newProjectDto(organizationUuid, uuid, false)
+      .setUuid(uuid)
+      .setScope(Scopes.PROJECT)
+      .setQualifier(Qualifiers.VIEW);
   }
 
   public static ComponentDto newProjectCopy(String uuid, ComponentDto project, ComponentDto view) {
@@ -182,21 +166,10 @@ public class ComponentTesting {
       .setLanguage(null);
   }
 
-  public static ComponentDto newDevProjectCopy(String uuid, ComponentDto project, ComponentDto developer) {
-    checkNotNull(project.getId(), "The project need to be persisted before creating this technical project.");
-    return newChildComponent(uuid, developer, developer)
-      .setUuid(uuid)
-      .setKey(developer.key() + ":" + project.key())
-      .setName(project.name())
-      .setLongName(project.longName())
-      .setCopyComponentUuid(project.uuid())
-      .setScope(Scopes.PROJECT)
-      .setQualifier("DEV_PRJ")
-      .setPath(null)
-      .setLanguage(null);
-  }
-
   public static ComponentDto newChildComponent(String uuid, ComponentDto moduleOrProject, ComponentDto parent) {
+    checkArgument(moduleOrProject.isPrivate() == parent.isPrivate(),
+      "private flag inconsistent between moduleOrProject (%s) and parent (%s)",
+      moduleOrProject.isPrivate(), parent.isPrivate());
     return new ComponentDto()
       .setOrganizationUuid(parent.getOrganizationUuid())
       .setUuid(uuid)
@@ -206,6 +179,7 @@ public class ComponentTesting {
       .setModuleUuid(moduleOrProject.uuid())
       .setModuleUuidPath(moduleOrProject.moduleUuidPath())
       .setCreatedAt(new Date())
-      .setEnabled(true);
+      .setEnabled(true)
+      .setPrivate(moduleOrProject.isPrivate());
   }
 }

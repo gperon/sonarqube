@@ -24,22 +24,26 @@ import ComponentNav from './nav/component/ComponentNav';
 import { fetchProject } from '../../store/rootActions';
 import { getComponent } from '../../store/rootReducer';
 import { addGlobalErrorMessage } from '../../store/globalMessages/duck';
+import { receiveComponents } from '../../store/components/actions';
 import { parseError } from '../../apps/code/utils';
 import handleRequiredAuthorization from '../utils/handleRequiredAuthorization';
 
 class ProjectContainer extends React.PureComponent {
   props: {
-    addGlobalErrorMessage: () => void,
+    addGlobalErrorMessage: (message: string) => void,
     children?: React.Element<*>,
     location: {
       query: { id: string }
     },
     project?: {
       configuration: {},
+      name: string,
       qualifier: string
     },
-    fetchProject: string => Promise<*>
+    fetchProject: string => Promise<*>,
+    receiveComponents: Array<*> => void
   };
+
   componentDidMount() {
     this.fetchProject();
   }
@@ -60,26 +64,30 @@ class ProjectContainer extends React.PureComponent {
     });
   }
 
+  handleProjectChange = (changes: {}) => {
+    this.props.receiveComponents([{ ...this.props.project, ...changes }]);
+  };
+
   render() {
+    const { project } = this.props;
+
     // check `breadcrumbs` to be sure that /api/navigation/component has been already called
-    if (!this.props.project || this.props.project.breadcrumbs == null) {
+    if (!project || project.breadcrumbs == null) {
       return null;
     }
 
-    const isFile = ['FIL', 'UTS'].includes(this.props.project.qualifier);
-
-    // $FlowFixMe `this.props.project` is always defined at this point
-    const configuration = this.props.project.configuration || {};
+    const isFile = ['FIL', 'UTS'].includes(project.qualifier);
+    const configuration = project.configuration || {};
 
     return (
       <div>
         {!isFile &&
-          <ComponentNav
-            component={this.props.project}
-            conf={configuration}
-            location={this.props.location}
-          />}
-        {this.props.children}
+          <ComponentNav component={project} conf={configuration} location={this.props.location} />}
+        {/* $FlowFixMe */}
+        {React.cloneElement(this.props.children, {
+          component: project,
+          onComponentChange: this.handleProjectChange
+        })}
       </div>
     );
   }
@@ -89,6 +97,6 @@ const mapStateToProps = (state, ownProps) => ({
   project: getComponent(state, ownProps.location.query.id)
 });
 
-const mapDispatchToProps = { addGlobalErrorMessage, fetchProject };
+const mapDispatchToProps = { addGlobalErrorMessage, fetchProject, receiveComponents };
 
 export default connect(mapStateToProps, mapDispatchToProps)(ProjectContainer);

@@ -20,11 +20,11 @@
 package org.sonar.db.ce;
 
 import com.google.common.base.Function;
-import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.junit.Rule;
 import org.junit.Test;
@@ -58,15 +58,17 @@ public class CeActivityDaoTest {
     CeActivityDto inserted = insert("TASK_1", REPORT, "PROJECT_1", CeActivityDto.Status.SUCCESS);
 
     Optional<CeActivityDto> saved = underTest.selectByUuid(db.getSession(), "TASK_1");
-    assertThat(saved.isPresent()).isTrue();
+    assertThat(saved).isPresent();
     CeActivityDto dto = saved.get();
     assertThat(dto.getUuid()).isEqualTo("TASK_1");
     assertThat(dto.getComponentUuid()).isEqualTo("PROJECT_1");
     assertThat(dto.getStatus()).isEqualTo(CeActivityDto.Status.SUCCESS);
     assertThat(dto.getSubmitterLogin()).isEqualTo("henri");
+    assertThat(dto.getSubmittedAt()).isEqualTo(1_300_000_000_000L);
+    assertThat(dto.getWorkerUuid()).isEqualTo("worker uuid");
+    assertThat(dto.getExecutionCount()).isEqualTo(42);
     assertThat(dto.getIsLast()).isTrue();
     assertThat(dto.getIsLastKey()).isEqualTo("REPORTPROJECT_1");
-    assertThat(dto.getSubmittedAt()).isEqualTo(1_300_000_000_000L);
     assertThat(dto.getCreatedAt()).isEqualTo(1_450_000_000_000L);
     assertThat(dto.getStartedAt()).isEqualTo(1_500_000_000_000L);
     assertThat(dto.getExecutedAt()).isEqualTo(1_500_000_000_500L);
@@ -304,7 +306,7 @@ public class CeActivityDaoTest {
 
     underTest.deleteByUuids(db.getSession(), ImmutableSet.of("TASK_1", "TASK_3"));
     assertThat(underTest.selectByUuid(db.getSession(), "TASK_1").isPresent()).isFalse();
-    assertThat(underTest.selectByUuid(db.getSession(), "TASK_2").isPresent()).isTrue();
+    assertThat(underTest.selectByUuid(db.getSession(), "TASK_2")).isPresent();
     assertThat(underTest.selectByUuid(db.getSession(), "TASK_3").isPresent()).isFalse();
   }
 
@@ -315,7 +317,7 @@ public class CeActivityDaoTest {
     // must not fail
     underTest.deleteByUuids(db.getSession(), singleton("TASK_2"));
 
-    assertThat(underTest.selectByUuid(db.getSession(), "TASK_1").isPresent()).isTrue();
+    assertThat(underTest.selectByUuid(db.getSession(), "TASK_1")).isPresent();
   }
 
   @Test
@@ -346,6 +348,8 @@ public class CeActivityDaoTest {
     queueDto.setTaskType(type);
     queueDto.setComponentUuid(componentUuid);
     queueDto.setSubmitterLogin("henri");
+    queueDto.setWorkerUuid("worker uuid");
+    queueDto.setExecutionCount(42);
     queueDto.setCreatedAt(1_300_000_000_000L);
 
     CeActivityDto dto = new CeActivityDto(queueDto);

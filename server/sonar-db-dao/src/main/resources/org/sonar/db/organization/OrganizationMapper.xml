@@ -129,65 +129,25 @@
       and gu.user_id = #{userId,jdbcType=INTEGER}
   </select>
 
-  <select id="selectOrganizationsWithoutLoadedTemplate" parameterType="map" resultType="Organization">
-    select
-      <include refid="selectColumns"/>
-    <include refid="sqlSelectOrganizationsWithoutLoadedTemplate"/>
-    order by
-      org.created_at asc
-    limit #{pagination.pageSize,jdbcType=INTEGER} offset #{pagination.offset,jdbcType=INTEGER}
+  <select id="selectAllUuids" resultType="String">
+    select uuid from organizations
   </select>
-
-  <select id="selectOrganizationsWithoutLoadedTemplate" parameterType="map" resultType="Organization" databaseId="mssql">
-    select * from (
-      select
-        row_number() over(order by org.created_at asc) as number,
-        <include refid="selectColumns"/>
-      <include refid="sqlSelectOrganizationsWithoutLoadedTemplate"/>
-    ) as query
-    where
-      query.number between #{pagination.startRowNumber,jdbcType=INTEGER} and #{pagination.endRowNumber,jdbcType=INTEGER}
-    order by
-      query.createdAt asc
-  </select>
-
-  <select id="selectOrganizationsWithoutLoadedTemplate" parameterType="map" resultType="Organization" databaseId="oracle">
-    select * from (
-      select rownum as rn, t.* from (
-        select
-          <include refid="selectColumns"/>
-        <include refid="sqlSelectOrganizationsWithoutLoadedTemplate"/>
-        order by
-          org.created_at asc
-      ) t
-    ) t
-    where
-      t.rn between #{pagination.startRowNumber,jdbcType=INTEGER} and #{pagination.endRowNumber,jdbcType=INTEGER}
-  </select>
-
-  <sql id="sqlSelectOrganizationsWithoutLoadedTemplate">
-    from
-      organizations org
-    where
-      not exists (
-        select
-          1
-        from
-          loaded_templates lt
-        where
-          lt.template_type=#{loadedTemplateType,jdbcType=VARCHAR}
-          and lt.kee=org.uuid
-      )
-  </sql>
 
   <select id="selectDefaultGroupIdByUuid" resultType="Integer">
-    select org.default_group_id as "defaultGroupId"
+    select org.default_group_id
     from organizations org
     where
     org.uuid = #{uuid, jdbcType=VARCHAR}
   </select>
 
-  <insert id="insert" parameterType="Organization" useGeneratedKeys="false">
+  <select id="selectNewProjectPrivateByUuid" resultType="Boolean">
+    select org.new_project_private
+    from organizations org
+    where
+    org.uuid = #{uuid, jdbcType=VARCHAR}
+  </select>
+
+  <insert id="insert" parameterType="map" useGeneratedKeys="false">
     insert into organizations
     (
       uuid,
@@ -197,6 +157,7 @@
       url,
       avatar_url,
       guarded,
+      new_project_private,
       user_id,
       created_at,
       updated_at
@@ -210,6 +171,7 @@
       #{organization.url, jdbcType=VARCHAR},
       #{organization.avatarUrl, jdbcType=VARCHAR},
       #{organization.guarded, jdbcType=BOOLEAN},
+      #{newProjectPrivate, jdbcType=BOOLEAN},
       #{organization.userId, jdbcType=INTEGER},
       #{organization.createdAt, jdbcType=BIGINT},
       #{organization.updatedAt, jdbcType=BIGINT}
@@ -242,6 +204,15 @@
     update organizations
     set
       default_group_id = #{defaultGroupId, jdbcType=INTEGER},
+      updated_at = #{now, jdbcType=BIGINT}
+    where
+      uuid = #{organizationUuid, jdbcType=VARCHAR}
+  </update>
+
+  <update id="updateNewProjectPrivate">
+    update organizations
+    set
+      new_project_private = #{newProjectPrivate, jdbcType=INTEGER},
       updated_at = #{now, jdbcType=BIGINT}
     where
       uuid = #{organizationUuid, jdbcType=VARCHAR}

@@ -18,7 +18,9 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 import React from 'react';
+import Helmet from 'react-helmet';
 import init from '../init';
+import { translate } from '../../../helpers/l10n';
 
 export default class GroupsAppContainer extends React.PureComponent {
   componentDidMount() {
@@ -26,6 +28,11 @@ export default class GroupsAppContainer extends React.PureComponent {
   }
 
   render() {
-    return <div ref="container" />;
+    return (
+      <div>
+        <Helmet title={translate('user_groups.page')} />
+        <div ref="container" />
+      </div>
+    );
   }
 }

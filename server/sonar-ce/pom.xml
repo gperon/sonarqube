@@ -4,7 +4,7 @@
   <parent>
     <groupId>org.sonarsource.sonarqube</groupId>
     <artifactId>server</artifactId>
-    <version>6.4-SNAPSHOT</version>
+    <version>6.5-SNAPSHOT</version>
     <relativePath>..</relativePath>
   </parent>
   <artifactId>sonar-ce</artifactId>
@@ -14,7 +14,6 @@
     <dependency>
       <groupId>org.sonarsource.sonarqube</groupId>
       <artifactId>sonar-server</artifactId>
-      <version>${project.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -31,6 +30,10 @@
       <artifactId>jsr305</artifactId>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>com.hazelcast</groupId>
+      <artifactId>hazelcast-client</artifactId>
+    </dependency>
 
     <!-- unit tests -->
     <dependency>
@@ -46,6 +49,17 @@
     <dependency>
       <groupId>org.assertj</groupId>
       <artifactId>assertj-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-guava</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <!-- TODO to be removed -->
+      <groupId>org.hamcrest</groupId>
+      <artifactId>hamcrest-all</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>

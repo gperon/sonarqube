@@ -30,7 +30,7 @@ import org.sonar.db.DbTester;
 import org.sonar.db.component.ComponentDto;
 import org.sonar.db.component.SnapshotDto;
 import org.sonar.db.metric.MetricDto;
-import org.sonar.server.component.ComponentFinder;
+import org.sonar.server.component.TestComponentFinder;
 import org.sonar.server.exceptions.ForbiddenException;
 import org.sonar.server.exceptions.NotFoundException;
 import org.sonar.server.startup.RegisterMetrics;
@@ -45,10 +45,8 @@ public class ShowActionTest {
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
-
   @Rule
   public UserSessionRule userSessionRule = UserSessionRule.standalone();
-
   @Rule
   public DbTester db = DbTester.create();
 
@@ -59,7 +57,7 @@ public class ShowActionTest {
 
   @Before
   public void setUp() {
-    tester = new WsTester(new DuplicationsWs(new ShowAction(db.getDbClient(), parser, duplicationsJsonWriter, userSessionRule, new ComponentFinder(db.getDbClient()))));
+    tester = new WsTester(new DuplicationsWs(new ShowAction(db.getDbClient(), parser, duplicationsJsonWriter, userSessionRule, TestComponentFinder.from(db))));
 
     db.getDbClient().metricDao().insert(db.getSession(), dataMetric);
     db.commit();
@@ -79,11 +77,11 @@ public class ShowActionTest {
 
   @Test
   public void return_file_with_missing_duplication_data() throws Exception {
-    ComponentDto project = db.components().insertProject();
+    ComponentDto project = db.components().insertPrivateProject();
     ComponentDto file = db.components().insertComponent(newFileDto(project).setKey("foo.js"));
     db.components().insertSnapshot(newAnalysis(project));
 
-    userSessionRule.addProjectUuidPermissions(UserRole.CODEVIEWER, project.uuid());
+    userSessionRule.addProjectPermission(UserRole.CODEVIEWER, project);
 
     WsTester.Result result = newBaseRequest().setParam("key", file.key()).execute();
 
@@ -102,7 +100,7 @@ public class ShowActionTest {
 
   @Test
   public void return_403_if_user_is_not_allowed_to_access_project() throws Exception {
-    ComponentDto project = db.components().insertProject();
+    ComponentDto project = db.components().insertPrivateProject();
     ComponentDto file = db.components().insertComponent(newFileDto(project));
 
     expectedException.expect(ForbiddenException.class);
@@ -115,7 +113,7 @@ public class ShowActionTest {
   }
 
   private void verifyCallToFileWithDuplications(Function<ComponentDto, WsTester.TestRequest> requestFactory) throws Exception {
-    ComponentDto project = db.components().insertProject();
+    ComponentDto project = db.components().insertPrivateProject();
     ComponentDto file = db.components().insertComponent(newFileDto(project).setKey("foo.js"));
     SnapshotDto snapshot = db.components().insertSnapshot(newAnalysis(project));
     String xml = "<duplications>\n" +
@@ -127,7 +125,7 @@ public class ShowActionTest {
     db.getDbClient().measureDao().insert(db.getSession(), newMeasureDto(dataMetric, file, snapshot).setData(xml));
     db.commit();
 
-    userSessionRule.addProjectUuidPermissions(UserRole.CODEVIEWER, project.uuid());
+    userSessionRule.addProjectPermission(UserRole.CODEVIEWER, project);
 
     WsTester.TestRequest request = requestFactory.apply(file);
     WsTester.Result result = request.execute();

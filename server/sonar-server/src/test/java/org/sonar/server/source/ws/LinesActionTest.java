@@ -34,7 +34,7 @@ import org.sonar.db.component.ComponentDto;
 import org.sonar.db.component.ComponentTesting;
 import org.sonar.db.protobuf.DbFileSources;
 import org.sonar.db.source.FileSourceDto;
-import org.sonar.server.component.ComponentFinder;
+import org.sonar.server.component.TestComponentFinder;
 import org.sonar.server.exceptions.ForbiddenException;
 import org.sonar.server.exceptions.NotFoundException;
 import org.sonar.server.source.HtmlSourceDecorator;
@@ -46,6 +46,7 @@ import org.sonar.server.ws.WsTester;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.sonar.db.component.ComponentTesting.newFileDto;
 
 public class LinesActionTest {
 
@@ -63,10 +64,11 @@ public class LinesActionTest {
   public UserSessionRule userSessionRule = UserSessionRule.standalone();
 
   SourceService sourceService;
-
   HtmlSourceDecorator htmlSourceDecorator;
-
   ComponentDao componentDao;
+
+  ComponentDto project;
+  ComponentDto file;
 
   WsTester wsTester;
 
@@ -82,13 +84,15 @@ public class LinesActionTest {
     sourceService = new SourceService(dbTester.getDbClient(), htmlSourceDecorator);
     componentDao = new ComponentDao();
     wsTester = new WsTester(new SourcesWs(
-      new LinesAction(new ComponentFinder(dbTester.getDbClient()), dbTester.getDbClient(), sourceService, htmlSourceDecorator, userSessionRule)));
+      new LinesAction(TestComponentFinder.from(dbTester), dbTester.getDbClient(), sourceService, htmlSourceDecorator, userSessionRule)));
+    project = ComponentTesting.newPrivateProjectDto(dbTester.organizations().insert(), PROJECT_UUID);
+    file = newFileDto(project, null, FILE_UUID).setKey(FILE_KEY);
   }
 
   @Test
   public void show_source() throws Exception {
-    setUserWithValidPermission();
     insertFileWithData(FileSourceTesting.newFakeData(3).build());
+    setUserWithValidPermission();
 
     WsTester.TestRequest request = wsTester.newGetRequest("api/sources", "lines").setParam("uuid", FILE_UUID);
     request.execute().assertJson(getClass(), "show_source.json");
@@ -143,6 +147,19 @@ public class LinesActionTest {
     request.execute();
   }
 
+  @Test
+  public void fail_when_file_is_removed() throws Exception {
+    ComponentDto file = newFileDto(project).setKey("file-key").setEnabled(false);
+    dbTester.components().insertComponents(project, file);
+    setUserWithValidPermission();
+
+    expectedException.expect(NotFoundException.class);
+    expectedException.expectMessage("Component key 'file-key' not found");
+
+    WsTester.TestRequest request = wsTester.newGetRequest("api/sources", "lines").setParam("key", "file-key");
+    request.execute();
+  }
+
   @Test(expected = ForbiddenException.class)
   public void should_check_permission() throws Exception {
     insertFileWithData(FileSourceTesting.newFakeData(1).build());
@@ -156,8 +173,8 @@ public class LinesActionTest {
 
   @Test
   public void display_deprecated_fields() throws Exception {
-    setUserWithValidPermission();
     insertFileWithData(FileSourceTesting.newFakeData(1).build());
+    setUserWithValidPermission();
 
     WsTester.TestRequest request = wsTester
       .newGetRequest("api/sources", "lines")
@@ -168,7 +185,6 @@ public class LinesActionTest {
 
   @Test
   public void use_deprecated_overall_coverage_fields_if_exists() throws Exception {
-    setUserWithValidPermission();
     DbFileSources.Data.Builder dataBuilder = DbFileSources.Data.newBuilder();
     insertFileWithData(dataBuilder.addLines(newLineBuilder()
       .setDeprecatedOverallLineHits(1)
@@ -180,6 +196,7 @@ public class LinesActionTest {
       .setDeprecatedItLineHits(1)
       .setDeprecatedItConditions(2)
       .setDeprecatedItCoveredConditions(3)).build());
+    setUserWithValidPermission();
 
     WsTester.TestRequest request = wsTester
       .newGetRequest("api/sources", "lines")
@@ -190,7 +207,6 @@ public class LinesActionTest {
 
   @Test
   public void use_deprecated_ut_coverage_fields_if_exists() throws Exception {
-    setUserWithValidPermission();
     DbFileSources.Data.Builder dataBuilder = DbFileSources.Data.newBuilder();
     insertFileWithData(dataBuilder.addLines(newLineBuilder()
       .setDeprecatedUtLineHits(1)
@@ -199,6 +215,7 @@ public class LinesActionTest {
       .setDeprecatedItLineHits(1)
       .setDeprecatedItConditions(2)
       .setDeprecatedItCoveredConditions(3)).build());
+    setUserWithValidPermission();
 
     WsTester.TestRequest request = wsTester
       .newGetRequest("api/sources", "lines")
@@ -209,12 +226,12 @@ public class LinesActionTest {
 
   @Test
   public void use_deprecated_it_coverage_fields_if_exists() throws Exception {
-    setUserWithValidPermission();
     DbFileSources.Data.Builder dataBuilder = DbFileSources.Data.newBuilder();
     insertFileWithData(dataBuilder.addLines(newLineBuilder()
       .setDeprecatedItLineHits(1)
       .setDeprecatedItConditions(2)
       .setDeprecatedItCoveredConditions(3)).build());
+    setUserWithValidPermission();
 
     WsTester.TestRequest request = wsTester
       .newGetRequest("api/sources", "lines")
@@ -233,12 +250,10 @@ public class LinesActionTest {
   }
 
   private void setUserWithValidPermission() {
-    userSessionRule.logIn("login").addProjectUuidPermissions(UserRole.CODEVIEWER, PROJECT_UUID);
+    userSessionRule.logIn("login").addProjectPermission(UserRole.CODEVIEWER, project, file);
   }
 
   private void insertFile() throws IOException {
-    ComponentDto project = ComponentTesting.newProjectDto(dbTester.organizations().insert(), PROJECT_UUID);
-    ComponentDto file = ComponentTesting.newFileDto(project, null, FILE_UUID).setKey(FILE_KEY);
     componentDao.insert(dbTester.getSession(), project, file);
     dbTester.getSession().commit();
   }

@@ -42,6 +42,7 @@ export type Query = {|
   resolved: boolean,
   resolutions: Array<string>,
   rules: Array<string>,
+  sort: string,
   severities: Array<string>,
   sinceLeakPeriod: boolean,
   statuses: Array<string>,
@@ -65,6 +66,9 @@ const parseAsStringArray = (value: ?string): Array<string> => (value ? value.spl
 const parseAsFacetMode = (facetMode: string) =>
   (facetMode === 'debt' || facetMode === 'effort' ? 'effort' : 'count');
 
+// allow sorting by CREATION_DATE only
+const parseAsSort = (sort: string): string => (sort === 'CREATION_DATE' ? 'CREATION_DATE' : '');
+
 export const parseQuery = (query: RawQuery): Query => ({
   assigned: parseAsBoolean(query.assigned),
   assignees: parseAsStringArray(query.assignees),
@@ -83,6 +87,7 @@ export const parseQuery = (query: RawQuery): Query => ({
   resolved: parseAsBoolean(query.resolved),
   resolutions: parseAsStringArray(query.resolutions),
   rules: parseAsStringArray(query.rules),
+  sort: parseAsSort(query.s),
   severities: parseAsStringArray(query.severities),
   sinceLeakPeriod: parseAsBoolean(query.sinceLeakPeriod, false),
   statuses: parseAsStringArray(query.statuses),
@@ -116,6 +121,7 @@ export const serializeQuery = (query: Query): RawQuery => {
     projectUuids: serializeValue(query.projects),
     resolved: query.resolved ? undefined : 'false',
     resolutions: serializeValue(query.resolutions),
+    s: serializeString(query.sort),
     severities: serializeValue(query.severities),
     sinceLeakPeriod: query.sinceLeakPeriod ? 'true' : undefined,
     statuses: serializeValue(query.statuses),
@@ -164,6 +170,15 @@ type RawFacet = {
 
 export type Facet = { [string]: number };
 
+export const mapFacet = (facet: string): string => {
+  const propertyMapping = {
+    files: 'fileUuids',
+    modules: 'moduleUuids',
+    projects: 'projectUuids'
+  };
+  return propertyMapping[facet] || facet;
+};
+
 export const parseFacets = (facets: Array<RawFacet>): { [string]: Facet } => {
   // for readability purpose
   const propertyMapping = {
@@ -202,6 +217,7 @@ export type ReferencedLanguage = {
 
 export type Component = {
   key: string,
+  name: string,
   organization: string,
   qualifier: string
 };
@@ -229,3 +245,24 @@ export const searchAssignees = (query: string, component?: Component) => {
         }))
       );
 };
+
+const LOCALSTORAGE_KEY = 'sonarqube.issues.default';
+const LOCALSTORAGE_MY = 'my';
+const LOCALSTORAGE_ALL = 'all';
+
+export const isMySet = (): boolean => {
+  const setting = window.localStorage.getItem(LOCALSTORAGE_KEY);
+  return setting === LOCALSTORAGE_MY;
+};
+
+const save = (value: string) => {
+  try {
+    window.localStorage.setItem(LOCALSTORAGE_KEY, value);
+  } catch (e) {
+    // usually that means the storage is full
+    // just do nothing in this case
+  }
+};
+
+export const saveMyIssues = (myIssues: boolean) =>
+  save(myIssues ? LOCALSTORAGE_MY : LOCALSTORAGE_ALL);

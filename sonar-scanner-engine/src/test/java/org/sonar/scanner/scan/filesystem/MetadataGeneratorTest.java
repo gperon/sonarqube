@@ -24,6 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -106,6 +107,16 @@ public class MetadataGeneratorTest {
     assertThat(inputFile.nonBlankLines()).isEqualTo(3);
     assertThat(inputFile.hash()).isEqualTo(md5Hex("foo\nbar\nbaz"));
     assertThat(inputFile.originalLineOffsets()).containsOnly(0, 4, 9);
+  }
+
+  @Test
+  public void use_default_charset_if_detection_fails() throws IOException {
+    Path tempFile = temp.newFile().toPath();
+    byte invalidWindows1252 = (byte) 129;
+    byte[] b = {(byte) 0xDF, (byte) 0xFF, (byte) 0xFF, invalidWindows1252};
+    FileUtils.writeByteArrayToFile(tempFile.toFile(), b);
+    DefaultInputFile inputFile = createInputFileWithMetadata(tempFile);
+    assertThat(inputFile.charset()).isEqualTo(StandardCharsets.US_ASCII);
   }
 
   @Test

@@ -25,19 +25,13 @@ import { DrilldownLink } from '../../../components/shared/drilldown-link';
 import Measure from '../../component-measures/components/Measure';
 import { getPeriodValue, isDiffMetric, formatMeasure } from '../../../helpers/measures';
 import { translate } from '../../../helpers/l10n';
-import { getPeriod, getPeriodDate } from '../../../helpers/periods';
 import { getComponentIssuesUrl } from '../../../helpers/urls';
 import IssueTypeIcon from '../../../components/ui/IssueTypeIcon';
+import type { Component } from '../types';
 
 export default class QualityGateCondition extends React.PureComponent {
   props: {
-    component: { key: string },
-    periods: Array<{
-      index: number,
-      date: string,
-      mode: string,
-      parameter?: string
-    }>,
+    component: Component,
     condition: {
       level: string,
       measure: {
@@ -54,6 +48,14 @@ export default class QualityGateCondition extends React.PureComponent {
       warning: string
     }
   };
+
+  getDecimalsNumber(threshold: number, value: number) {
+    const delta = Math.abs(threshold - value);
+    if (delta < 0.1 && delta > 0) {
+      //$FlowFixMe The matching result can't null because of the previous check
+      return delta.toFixed(20).match('[^0\.]').index - 1;
+    }
+  }
 
   getIssuesUrl(sinceLeakPeriod: boolean, customQuery: {}) {
     const query: Object = {
@@ -94,15 +96,12 @@ export default class QualityGateCondition extends React.PureComponent {
   }
 
   wrapWithLink(children: React.Element<*>) {
-    const { component, periods, condition } = this.props;
-
-    const period = getPeriod(periods, condition.period);
-    const periodDate = getPeriodDate(period);
+    const { component, condition } = this.props;
 
     const className = classNames(
       'overview-quality-gate-condition',
       'overview-quality-gate-condition-' + condition.level.toLowerCase(),
-      { 'overview-quality-gate-condition-leak': period != null }
+      { 'overview-quality-gate-condition-leak': condition.period != null }
     );
 
     const metricKey = condition.measure.metric.key;
@@ -113,7 +112,7 @@ export default class QualityGateCondition extends React.PureComponent {
       security_rating: ['VULNERABILITY', false],
       new_security_rating: ['VULNERABILITY', true],
       sqale_rating: ['CODE_SMELL', false],
-      new_sqale_rating: ['CODE_SMELL', true]
+      new_maintainability_rating: ['CODE_SMELL', true]
     };
 
     return RATING_METRICS_MAPPING[metricKey]
@@ -124,34 +123,35 @@ export default class QualityGateCondition extends React.PureComponent {
           className={className}
           component={component.key}
           metric={condition.measure.metric.key}
-          period={condition.period}
-          periodDate={periodDate}>
+          sinceLeakPeriod={condition.period != null}>
           {children}
         </DrilldownLink>;
   }
 
   render() {
-    const { periods, condition } = this.props;
+    const { condition } = this.props;
 
     const { measure } = condition;
     const { metric } = measure;
 
-    const isRating = metric.type === 'RATING';
     const isDiff = isDiffMetric(metric.key);
 
     const threshold = condition.level === 'ERROR' ? condition.error : condition.warning;
-
     const actual = condition.period ? getPeriodValue(measure, condition.period) : measure.value;
-    const period = getPeriod(periods, condition.period);
 
-    const operator = isRating
-      ? translate('quality_gates.operator', condition.op, 'rating')
-      : translate('quality_gates.operator', condition.op);
+    let operator = translate('quality_gates.operator', condition.op);
+    let decimals = null;
+
+    if (metric.type === 'RATING') {
+      operator = translate('quality_gates.operator', condition.op, 'rating');
+    } else if (metric.type === 'PERCENT') {
+      decimals = this.getDecimalsNumber(parseFloat(condition.error), parseFloat(actual));
+    }
 
     return this.wrapWithLink(
       <div className="overview-quality-gate-condition-container">
         <div className="overview-quality-gate-condition-value">
-          <Measure measure={{ value: actual, leak: actual }} metric={metric} />
+          <Measure measure={{ value: actual, leak: actual }} metric={metric} decimals={decimals} />
         </div>
 
         <div>
@@ -160,7 +160,7 @@ export default class QualityGateCondition extends React.PureComponent {
             {metric.name}
           </div>
           {!isDiff &&
-            period != null &&
+            condition.period != null &&
             <div className="overview-quality-gate-condition-period">
               {translate('quality_gates.conditions.leak')}
             </div>}

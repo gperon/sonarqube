@@ -22,7 +22,7 @@ import React from 'react';
 import { Link } from 'react-router';
 import QualifierIcon from '../shared/QualifierIcon';
 import FavoriteContainer from '../controls/FavoriteContainer';
-import { getProjectUrl, getIssuesUrl } from '../../helpers/urls';
+import { getProjectUrl, getComponentIssuesUrl } from '../../helpers/urls';
 import { collapsedDirFromPath, fileFromPath } from '../../helpers/path';
 import { translate } from '../../helpers/l10n';
 import { formatMeasure } from '../../helpers/measures';
@@ -47,18 +47,12 @@ export default class SourceViewerHeader extends React.PureComponent {
       subProjectName?: string,
       uuid: string
     },
-    openNewWindow: () => void,
     showMeasures: () => void
   };
 
   showMeasures = (e: SyntheticInputEvent) => {
     e.preventDefault();
     this.props.showMeasures();
-  };
-
-  openNewWindow = (e: SyntheticInputEvent) => {
-    e.preventDefault();
-    this.props.openNewWindow();
   };
 
   openInWorkspace = (e: SyntheticInputEvent) => {
@@ -129,9 +123,12 @@ export default class SourceViewerHeader extends React.PureComponent {
               </a>
             </li>
             <li>
-              <a className="js-new-window" href="#" onClick={this.openNewWindow}>
+              <Link
+                className="js-new-window"
+                target="_blank"
+                to={{ pathname: '/component', query: { id: this.props.component.key } }}>
                 {translate('component_viewer.new_window')}
-              </a>
+              </Link>
             </li>
             {!workspace &&
               <li>
@@ -171,7 +168,7 @@ export default class SourceViewerHeader extends React.PureComponent {
           <div className="source-viewer-header-measure">
             <span className="source-viewer-header-measure-value">
               <Link
-                to={getIssuesUrl({ resolved: 'false', fileUuids: uuid })}
+                to={getComponentIssuesUrl(project, { resolved: 'false', fileUuids: uuid })}
                 className="source-viewer-header-external-link"
                 target="_blank">
                 {measures.issues != null ? formatMeasure(measures.issues, 'SHORT_INT') : 0}

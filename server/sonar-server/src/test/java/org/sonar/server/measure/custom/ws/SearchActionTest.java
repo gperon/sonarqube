@@ -40,7 +40,7 @@ import org.sonar.db.component.SnapshotTesting;
 import org.sonar.db.measure.custom.CustomMeasureDto;
 import org.sonar.db.metric.MetricDto;
 import org.sonar.db.user.UserDto;
-import org.sonar.server.component.ComponentFinder;
+import org.sonar.server.component.TestComponentFinder;
 import org.sonar.server.es.EsTester;
 import org.sonar.server.exceptions.ForbiddenException;
 import org.sonar.server.exceptions.NotFoundException;
@@ -61,13 +61,10 @@ public class SearchActionTest {
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
-
   @Rule
   public UserSessionRule userSessionRule = UserSessionRule.standalone();
-
   @Rule
   public DbTester db = DbTester.create(System2.INSTANCE);
-
   @Rule
   public EsTester es = new EsTester(new UserIndexDefinition(new MapSettings()));
 
@@ -79,9 +76,9 @@ public class SearchActionTest {
   @Before
   public void setUp() {
     CustomMeasureJsonWriter customMeasureJsonWriter = new CustomMeasureJsonWriter(new UserJsonWriter(userSessionRule));
-    ws = new WsTester(new CustomMeasuresWs(new SearchAction(dbClient, customMeasureJsonWriter, userSessionRule, new ComponentFinder(dbClient))));
+    ws = new WsTester(new CustomMeasuresWs(new SearchAction(dbClient, customMeasureJsonWriter, userSessionRule, TestComponentFinder.from(db))));
     defaultProject = insertDefaultProject();
-    userSessionRule.logIn().addProjectUuidPermissions(UserRole.ADMIN, defaultProject.uuid());
+    userSessionRule.logIn().addProjectPermission(UserRole.ADMIN, defaultProject);
 
     db.getDbClient().userDao().insert(dbSession, new UserDto()
       .setLogin("login")
@@ -200,7 +197,7 @@ public class SearchActionTest {
 
   @Test
   public void search_as_project_admin() throws Exception {
-    userSessionRule.logIn("login").addProjectUuidPermissions(UserRole.ADMIN, DEFAULT_PROJECT_UUID);
+    userSessionRule.logIn("login").addProjectPermission(UserRole.ADMIN, defaultProject);
     MetricDto metric1 = insertCustomMetric(1);
     insertCustomMeasure(1, metric1);
 
@@ -265,7 +262,7 @@ public class SearchActionTest {
   }
 
   private ComponentDto insertProject(String projectUuid, String projectKey) {
-    ComponentDto project = ComponentTesting.newProjectDto(db.organizations().insert(), projectUuid)
+    ComponentDto project = ComponentTesting.newPrivateProjectDto(db.organizations().insert(), projectUuid)
       .setKey(projectKey);
     dbClient.componentDao().insert(dbSession, project);
     dbSession.commit();

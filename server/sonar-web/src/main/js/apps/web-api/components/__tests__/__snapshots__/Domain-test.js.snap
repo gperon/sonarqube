@@ -1,30 +1,130 @@
-exports[`test should not render deprecated actions 1`] = `
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`should also render actions with a description matching the query 1`] = `
 <div
-  className="web-api-domain">
+  className="web-api-domain"
+>
   <header
-    className="web-api-domain-header">
+    className="web-api-domain-header"
+  >
     <h2
-      className="web-api-domain-title">
+      className="web-api-domain-title"
+    >
       api
     </h2>
   </header>
   <div
-    className="web-api-domain-actions" />
+    className="web-api-domain-actions"
+  >
+    <Action
+      action={
+        Object {
+          "description": "foobar",
+          "key": "foo",
+        }
+      }
+      domain={
+        Object {
+          "actions": Array [
+            Object {
+              "description": "foobar",
+              "key": "foo",
+            },
+            Object {
+              "key": "bar",
+            },
+            Object {
+              "key": "baz",
+            },
+          ],
+          "path": "api",
+        }
+      }
+      showDeprecated={false}
+    />
+    <Action
+      action={
+        Object {
+          "key": "bar",
+        }
+      }
+      domain={
+        Object {
+          "actions": Array [
+            Object {
+              "description": "foobar",
+              "key": "foo",
+            },
+            Object {
+              "key": "bar",
+            },
+            Object {
+              "key": "baz",
+            },
+          ],
+          "path": "api",
+        }
+      }
+      showDeprecated={false}
+    />
+  </div>
 </div>
 `;
 
-exports[`test should render deprecated actions 1`] = `
+exports[`should not render deprecated actions 1`] = `
 <div
-  className="web-api-domain">
+  className="web-api-domain"
+>
   <header
-    className="web-api-domain-header">
+    className="web-api-domain-header"
+  >
     <h2
-      className="web-api-domain-title">
+      className="web-api-domain-title"
+    >
       api
     </h2>
   </header>
   <div
-    className="web-api-domain-actions">
+    className="web-api-domain-actions"
+  />
+</div>
+`;
+
+exports[`should not render internal actions 1`] = `
+<div
+  className="web-api-domain"
+>
+  <header
+    className="web-api-domain-header"
+  >
+    <h2
+      className="web-api-domain-title"
+    >
+      api
+    </h2>
+  </header>
+  <div
+    className="web-api-domain-actions"
+  />
+</div>
+`;
+
+exports[`should render deprecated actions 1`] = `
+<div
+  className="web-api-domain"
+>
+  <header
+    className="web-api-domain-header"
+  >
+    <h2
+      className="web-api-domain-title"
+    >
+      api
+    </h2>
+  </header>
+  <div
+    className="web-api-domain-actions"
+  >
     <Action
       action={
         Object {
@@ -43,7 +143,88 @@ exports[`test should render deprecated actions 1`] = `
           "path": "api",
         }
       }
-      showDeprecated={true} />
+      showDeprecated={true}
+    />
+  </div>
+</div>
+`;
+
+exports[`should render internal actions 1`] = `
+<div
+  className="web-api-domain"
+>
+  <header
+    className="web-api-domain-header"
+  >
+    <h2
+      className="web-api-domain-title"
+    >
+      api
+    </h2>
+  </header>
+  <div
+    className="web-api-domain-actions"
+  >
+    <Action
+      action={
+        Object {
+          "internal": true,
+          "key": "foo",
+        }
+      }
+      domain={
+        Object {
+          "actions": Array [
+            Object {
+              "internal": true,
+              "key": "foo",
+            },
+          ],
+          "path": "api",
+        }
+      }
+      showInternal={true}
+    />
+  </div>
+</div>
+`;
+
+exports[`should render only actions matching the query 1`] = `
+<div
+  className="web-api-domain"
+>
+  <header
+    className="web-api-domain-header"
+  >
+    <h2
+      className="web-api-domain-title"
+    >
+      api
+    </h2>
+  </header>
+  <div
+    className="web-api-domain-actions"
+  >
+    <Action
+      action={
+        Object {
+          "key": "foo",
+        }
+      }
+      domain={
+        Object {
+          "actions": Array [
+            Object {
+              "key": "foo",
+            },
+            Object {
+              "key": "bar",
+            },
+          ],
+          "path": "api",
+        }
+      }
+    />
   </div>
 </div>
 `;

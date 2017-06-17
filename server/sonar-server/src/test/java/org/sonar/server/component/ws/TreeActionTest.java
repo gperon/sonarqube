@@ -57,14 +57,14 @@ import org.sonarqube.ws.WsComponents.TreeWsResponse;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.sonar.db.component.ComponentTesting.newDevProjectCopy;
-import static org.sonar.db.component.ComponentTesting.newDeveloper;
+import static org.sonar.db.component.ComponentTesting.newChildComponent;
 import static org.sonar.db.component.ComponentTesting.newDirectory;
 import static org.sonar.db.component.ComponentTesting.newModuleDto;
+import static org.sonar.db.component.ComponentTesting.newPrivateProjectDto;
 import static org.sonar.db.component.ComponentTesting.newProjectCopy;
-import static org.sonar.db.component.ComponentTesting.newProjectDto;
 import static org.sonar.db.component.ComponentTesting.newSubView;
 import static org.sonar.db.component.ComponentTesting.newView;
+import static org.sonarqube.ws.client.component.ComponentsWsParameters.PARAM_COMPONENT;
 import static org.sonarqube.ws.client.component.ComponentsWsParameters.PARAM_COMPONENT_ID;
 import static org.sonarqube.ws.client.component.ComponentsWsParameters.PARAM_QUALIFIERS;
 import static org.sonarqube.ws.client.component.ComponentsWsParameters.PARAM_STRATEGY;
@@ -77,7 +77,7 @@ public class TreeActionTest {
   @Rule
   public DbTester db = DbTester.create(System2.INSTANCE);
 
-  private ResourceTypesRule resourceTypes = new ResourceTypesRule();
+  private ResourceTypesRule resourceTypes = new ResourceTypesRule().setRootQualifiers(Qualifiers.PROJECT);
   private ComponentDbTester componentDb = new ComponentDbTester(db);
   private DbClient dbClient = db.getDbClient();
 
@@ -85,7 +85,7 @@ public class TreeActionTest {
 
   @Before
   public void setUp() {
-    ws = new WsActionTester(new TreeAction(dbClient, new ComponentFinder(dbClient), resourceTypes, userSession, Mockito.mock(I18n.class)));
+    ws = new WsActionTester(new TreeAction(dbClient, new ComponentFinder(dbClient, resourceTypes), resourceTypes, userSession, Mockito.mock(I18n.class)));
     resourceTypes.setChildrenQualifiers(Qualifiers.MODULE, Qualifiers.FILE, Qualifiers.DIRECTORY);
     resourceTypes.setLeavesQualifiers(Qualifiers.FILE, Qualifiers.UNIT_TEST_FILE);
   }
@@ -106,7 +106,7 @@ public class TreeActionTest {
 
   @Test
   public void return_children() throws IOException {
-    ComponentDto project = newProjectDto(db.organizations().insert(), "project-uuid");
+    ComponentDto project = newPrivateProjectDto(db.organizations().insert(), "project-uuid");
     componentDb.insertProjectAndSnapshot(project);
     ComponentDto module = newModuleDto("module-uuid-1", project);
     componentDb.insertComponent(module);
@@ -136,7 +136,7 @@ public class TreeActionTest {
 
   @Test
   public void return_descendants() throws IOException {
-    ComponentDto project = newProjectDto(db.getDefaultOrganization(), "project-uuid");
+    ComponentDto project = newPrivateProjectDto(db.getDefaultOrganization(), "project-uuid");
     SnapshotDto projectSnapshot = componentDb.insertProjectAndSnapshot(project);
     ComponentDto module = newModuleDto("module-uuid-1", project);
     componentDb.insertComponent(module);
@@ -166,7 +166,7 @@ public class TreeActionTest {
 
   @Test
   public void filter_descendants_by_qualifier() throws IOException {
-    ComponentDto project = newProjectDto(db.organizations().insert(), "project-uuid");
+    ComponentDto project = newPrivateProjectDto(db.organizations().insert(), "project-uuid");
     componentDb.insertProjectAndSnapshot(project);
     componentDb.insertComponent(newFileDto(project, 1));
     componentDb.insertComponent(newFileDto(project, 2));
@@ -184,7 +184,7 @@ public class TreeActionTest {
 
   @Test
   public void return_leaves() throws IOException {
-    ComponentDto project = newProjectDto(db.getDefaultOrganization(), "project-uuid");
+    ComponentDto project = newPrivateProjectDto(db.getDefaultOrganization(), "project-uuid");
     componentDb.insertProjectAndSnapshot(project);
     ComponentDto module = newModuleDto("module-uuid-1", project);
     componentDb.insertComponent(module);
@@ -208,7 +208,7 @@ public class TreeActionTest {
 
   @Test
   public void sort_descendants_by_qualifier() throws IOException {
-    ComponentDto project = newProjectDto(db.organizations().insert(), "project-uuid");
+    ComponentDto project = newPrivateProjectDto(db.organizations().insert(), "project-uuid");
     componentDb.insertProjectAndSnapshot(project);
     componentDb.insertComponent(newFileDto(project, 1));
     componentDb.insertComponent(newFileDto(project, 2));
@@ -231,12 +231,13 @@ public class TreeActionTest {
     OrganizationDto organizationDto = db.organizations().insert();
     ComponentDto view = newView(organizationDto, "view-uuid");
     componentDb.insertViewAndSnapshot(view);
-    ComponentDto project = newProjectDto(organizationDto, "project-uuid-1").setName("project-name").setKey("project-key-1");
+    ComponentDto project = newPrivateProjectDto(organizationDto, "project-uuid-1").setName("project-name").setKey("project-key-1");
     componentDb.insertProjectAndSnapshot(project);
     componentDb.insertComponent(newProjectCopy("project-uuid-1-copy", project, view));
     componentDb.insertComponent(newSubView(view, "sub-view-uuid", "sub-view-key").setName("sub-view-name"));
     db.commit();
-    logInWithBrowsePermission(view);
+    userSession.logIn()
+      .registerComponents(view, project);
 
     TreeWsResponse response = ws.newRequest()
       .setParam(PARAM_STRATEGY, "children")
@@ -250,7 +251,7 @@ public class TreeActionTest {
 
   @Test
   public void response_is_empty_on_provisioned_projects() {
-    ComponentDto project = componentDb.insertComponent(newProjectDto(db.getDefaultOrganization(), "project-uuid"));
+    ComponentDto project = componentDb.insertComponent(newPrivateProjectDto(db.getDefaultOrganization(), "project-uuid"));
     logInWithBrowsePermission(project);
 
     TreeWsResponse response = ws.newRequest()
@@ -264,31 +265,14 @@ public class TreeActionTest {
   }
 
   @Test
-  public void return_developers() {
-    ComponentDto project = newProjectDto(db.getDefaultOrganization(), "project-uuid");
-    componentDb.insertProjectAndSnapshot(project);
-    ComponentDto developer = newDeveloper(db.organizations().insert(), "developer-name");
-    componentDb.insertDeveloperAndSnapshot(developer);
-    componentDb.insertComponent(newDevProjectCopy("project-copy-uuid", project, developer));
-    db.commit();
-    logInWithBrowsePermission(developer);
-
-    TreeWsResponse response = ws.newRequest().setParam(PARAM_COMPONENT_ID, developer.uuid()).executeProtobuf(TreeWsResponse.class);
-
-    assertThat(response.getBaseComponent().getId()).isEqualTo(developer.uuid());
-    assertThat(response.getComponentsCount()).isEqualTo(1);
-    assertThat(response.getComponents(0).getId()).isEqualTo("project-copy-uuid");
-    assertThat(response.getComponents(0).getRefId()).isEqualTo("project-uuid");
-  }
-
-  @Test
   public void return_projects_composing_a_view() {
-    ComponentDto project = newProjectDto(db.organizations().insert(), "project-uuid");
+    ComponentDto project = newPrivateProjectDto(db.organizations().insert(), "project-uuid");
     componentDb.insertProjectAndSnapshot(project);
     ComponentDto view = newView(db.getDefaultOrganization(), "view-uuid");
     componentDb.insertViewAndSnapshot(view);
     componentDb.insertComponent(newProjectCopy("project-copy-uuid", project, view));
-    logInWithBrowsePermission(view);
+    userSession.logIn()
+      .registerComponents(project, view);
 
     TreeWsResponse response = ws.newRequest().setParam(PARAM_COMPONENT_ID, view.uuid()).executeProtobuf(TreeWsResponse.class);
 
@@ -300,9 +284,9 @@ public class TreeActionTest {
 
   @Test
   public void fail_when_not_enough_privileges() {
+    ComponentDto project = componentDb.insertComponent(newPrivateProjectDto(db.organizations().insert(), "project-uuid"));
     userSession.logIn()
-      .addProjectUuidPermissions(UserRole.CODEVIEWER, "project-uuid");
-    componentDb.insertComponent(newProjectDto(db.organizations().insert(), "project-uuid"));
+      .addProjectPermission(UserRole.CODEVIEWER, project);
     db.commit();
 
     expectedException.expect(ForbiddenException.class);
@@ -316,7 +300,7 @@ public class TreeActionTest {
   public void fail_when_page_size_above_500() {
     expectedException.expect(BadRequestException.class);
     expectedException.expectMessage("The 'ps' parameter must be less than 500");
-    componentDb.insertComponent(newProjectDto(db.getDefaultOrganization(), "project-uuid"));
+    componentDb.insertComponent(newPrivateProjectDto(db.getDefaultOrganization(), "project-uuid"));
     db.commit();
 
     ws.newRequest()
@@ -329,7 +313,7 @@ public class TreeActionTest {
   public void fail_when_search_query_has_less_than_3_characters() {
     expectedException.expect(BadRequestException.class);
     expectedException.expectMessage("The 'q' parameter must have at least 3 characters");
-    componentDb.insertComponent(newProjectDto(db.organizations().insert(), "project-uuid"));
+    componentDb.insertComponent(newPrivateProjectDto(db.organizations().insert(), "project-uuid"));
     db.commit();
 
     ws.newRequest()
@@ -341,7 +325,7 @@ public class TreeActionTest {
   @Test
   public void fail_when_sort_is_unknown() {
     expectedException.expect(IllegalArgumentException.class);
-    componentDb.insertComponent(newProjectDto(db.getDefaultOrganization(), "project-uuid"));
+    componentDb.insertComponent(newPrivateProjectDto(db.getDefaultOrganization(), "project-uuid"));
     db.commit();
 
     ws.newRequest()
@@ -353,7 +337,7 @@ public class TreeActionTest {
   @Test
   public void fail_when_strategy_is_unknown() {
     expectedException.expect(IllegalArgumentException.class);
-    componentDb.insertComponent(newProjectDto(db.organizations().insert(), "project-uuid"));
+    componentDb.insertComponent(newPrivateProjectDto(db.organizations().insert(), "project-uuid"));
     db.commit();
 
     ws.newRequest()
@@ -368,6 +352,20 @@ public class TreeActionTest {
 
     ws.newRequest()
       .setParam(PARAM_COMPONENT_ID, "project-uuid")
+      .execute();
+  }
+
+  @Test
+  public void fail_when_base_component_is_removed() {
+    ComponentDto project = componentDb.insertComponent(newPrivateProjectDto(db.getDefaultOrganization()));
+    componentDb.insertComponent(ComponentTesting.newFileDto(project).setKey("file-key").setEnabled(false));
+    logInWithBrowsePermission(project);
+
+    expectedException.expect(NotFoundException.class);
+    expectedException.expectMessage("Component key 'file-key' not found");
+
+    ws.newRequest()
+      .setParam(PARAM_COMPONENT, "file-key")
       .execute();
   }
 
@@ -392,10 +390,10 @@ public class TreeActionTest {
 
   private ComponentDto initJsonExampleComponents() throws IOException {
     OrganizationDto organizationDto = db.organizations().insertForKey("my-org-1");
-    ComponentDto project = newProjectDto(organizationDto, "MY_PROJECT_ID")
+    ComponentDto project = newPrivateProjectDto(organizationDto, "MY_PROJECT_ID")
       .setKey("MY_PROJECT_KEY")
       .setName("Project Name");
-    SnapshotDto projectSnapshot = componentDb.insertProjectAndSnapshot(project);
+    componentDb.insertProjectAndSnapshot(project);
     Date now = new Date();
     JsonParser jsonParser = new JsonParser();
     JsonElement jsonTree = jsonParser.parse(IOUtils.toString(getClass().getResource("tree-example.json"), UTF_8));
@@ -403,7 +401,7 @@ public class TreeActionTest {
     for (JsonElement componentAsJsonElement : components) {
       JsonObject componentAsJsonObject = componentAsJsonElement.getAsJsonObject();
       String uuid = getJsonField(componentAsJsonObject, "id");
-      componentDb.insertComponent(ComponentTesting.newChildComponent(uuid, project, project)
+      componentDb.insertComponent(newChildComponent(uuid, project, project)
         .setKey(getJsonField(componentAsJsonObject, "key"))
         .setName(getJsonField(componentAsJsonObject, "name"))
         .setLanguage(getJsonField(componentAsJsonObject, "language"))
@@ -424,6 +422,6 @@ public class TreeActionTest {
   }
 
   private void logInWithBrowsePermission(ComponentDto project) {
-    userSession.logIn().addProjectUuidPermissions(UserRole.USER, project.uuid());
+    userSession.logIn().addProjectPermission(UserRole.USER, project);
   }
 }

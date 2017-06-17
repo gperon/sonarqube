@@ -28,7 +28,7 @@ import org.sonar.db.DbTester;
 import org.sonar.db.component.ComponentDto;
 import org.sonar.db.protobuf.DbFileSources;
 import org.sonar.db.source.FileSourceDto;
-import org.sonar.server.component.ComponentFinder;
+import org.sonar.server.component.TestComponentFinder;
 import org.sonar.server.exceptions.ForbiddenException;
 import org.sonar.server.exceptions.NotFoundException;
 import org.sonar.server.source.HtmlSourceDecorator;
@@ -46,20 +46,18 @@ public class IndexActionTest {
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
-
   @Rule
   public UserSessionRule userSession = UserSessionRule.standalone();
-
   @Rule
   public DbTester db = DbTester.create(System2.INSTANCE);
 
   WsActionTester tester = new WsActionTester(
-    new IndexAction(db.getDbClient(), new SourceService(db.getDbClient(), new HtmlSourceDecorator()), userSession, new ComponentFinder(db.getDbClient())));
+    new IndexAction(db.getDbClient(), new SourceService(db.getDbClient(), new HtmlSourceDecorator()), userSession, TestComponentFinder.from(db)));
 
   @Test
   public void get_json() throws Exception {
-    ComponentDto project = db.components().insertProject();
-    userSession.addProjectUuidPermissions(CODEVIEWER, project.uuid());
+    ComponentDto project = db.components().insertPrivateProject();
+    userSession.addProjectPermission(CODEVIEWER, project);
     ComponentDto file = db.components().insertComponent(newFileDto(project));
     insertFileWithData(file, newData("public class HelloWorld {", "}"));
 
@@ -77,8 +75,8 @@ public class IndexActionTest {
 
   @Test
   public void limit_range() throws Exception {
-    ComponentDto project = db.components().insertProject();
-    userSession.addProjectUuidPermissions(CODEVIEWER, project.uuid());
+    ComponentDto project = db.components().insertPrivateProject();
+    userSession.addProjectPermission(CODEVIEWER, project);
     ComponentDto file = db.components().insertComponent(newFileDto(project));
     insertFileWithData(file, newData("/**", " */", "public class HelloWorld {", "}", "", "foo"));
 
@@ -98,8 +96,8 @@ public class IndexActionTest {
 
   @Test
   public void fail_when_missing_code_viewer_permission() throws Exception {
-    ComponentDto project = db.components().insertProject();
-    userSession.addProjectUuidPermissions(USER, project.uuid());
+    ComponentDto project = db.components().insertPrivateProject();
+    userSession.addProjectPermission(USER, project);
     ComponentDto file = db.components().insertComponent(newFileDto(project));
 
     expectedException.expect(ForbiddenException.class);

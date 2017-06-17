@@ -18,6 +18,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 import React from 'react';
+import Helmet from 'react-helmet';
 import { connect } from 'react-redux';
 import Header from './Header';
 import UpdateForm from './UpdateForm';
@@ -32,7 +33,7 @@ import {
 } from '../../../store/globalMessages/duck';
 import { parseError } from '../../code/utils';
 import { reloadUpdateKeyPage } from './utils';
-import RecentHistory from '../../../app/components/nav/component/RecentHistory';
+import RecentHistory from '../../../app/components/RecentHistory';
 import { getProjectAdminProjectModules, getComponent } from '../../../store/rootReducer';
 
 class Key extends React.PureComponent {
@@ -87,6 +88,7 @@ class Key extends React.PureComponent {
 
     return (
       <div id="project-key" className="page page-limited">
+        <Helmet title={translate('update_key.page')} />
         <Header />
 
         {modules == null && <i className="spinner" />}

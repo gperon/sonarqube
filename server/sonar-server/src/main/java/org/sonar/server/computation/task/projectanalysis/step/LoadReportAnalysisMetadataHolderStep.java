@@ -31,13 +31,16 @@ import org.sonar.core.util.stream.MoreCollectors;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbSession;
 import org.sonar.db.organization.OrganizationDto;
-import org.sonar.db.qualityprofile.QualityProfileDto;
+import org.sonar.db.qualityprofile.QProfileDto;
 import org.sonar.scanner.protocol.output.ScannerReport;
 import org.sonar.scanner.protocol.output.ScannerReport.Metadata.QProfile;
 import org.sonar.server.computation.task.projectanalysis.analysis.MutableAnalysisMetadataHolder;
 import org.sonar.server.computation.task.projectanalysis.analysis.Organization;
 import org.sonar.server.computation.task.projectanalysis.batch.BatchReportReader;
 import org.sonar.server.computation.task.step.ComputationStep;
+import org.sonar.server.organization.BillingValidations;
+import org.sonar.server.organization.BillingValidations.BillingValidationsException;
+import org.sonar.server.organization.BillingValidationsProxy;
 import org.sonar.server.organization.DefaultOrganizationProvider;
 import org.sonar.server.qualityprofile.QualityProfile;
 
@@ -66,14 +69,16 @@ public class LoadReportAnalysisMetadataHolderStep implements ComputationStep {
   private final MutableAnalysisMetadataHolder mutableAnalysisMetadataHolder;
   private final DefaultOrganizationProvider defaultOrganizationProvider;
   private final DbClient dbClient;
+  private final BillingValidations billingValidations;
 
   public LoadReportAnalysisMetadataHolderStep(CeTask ceTask, BatchReportReader reportReader, MutableAnalysisMetadataHolder mutableAnalysisMetadataHolder,
-    DefaultOrganizationProvider defaultOrganizationProvider, DbClient dbClient) {
+    DefaultOrganizationProvider defaultOrganizationProvider, DbClient dbClient, BillingValidationsProxy billingValidations) {
     this.ceTask = ceTask;
     this.reportReader = reportReader;
     this.mutableAnalysisMetadataHolder = mutableAnalysisMetadataHolder;
     this.defaultOrganizationProvider = defaultOrganizationProvider;
     this.dbClient = dbClient;
+    this.billingValidations = billingValidations;
   }
 
   @Override
@@ -84,6 +89,7 @@ public class LoadReportAnalysisMetadataHolderStep implements ComputationStep {
     checkProjectKeyConsistency(reportMetadata);
     Organization organization = toOrganization(ceTask.getOrganizationUuid());
     checkOrganizationKeyConsistency(reportMetadata, organization);
+    checkOrganizationCanExecuteAnalysis(organization);
     checkQualityProfilesConsistency(reportMetadata, organization);
 
     mutableAnalysisMetadataHolder.setRootComponentRef(reportMetadata.getRootComponentRef());
@@ -101,10 +107,10 @@ public class LoadReportAnalysisMetadataHolderStep implements ComputationStep {
       .map(QProfile::getKey)
       .collect(toList(metadata.getQprofilesPerLanguage().size()));
     try (DbSession dbSession = dbClient.openSession(false)) {
-      List<QualityProfileDto> profiles = dbClient.qualityProfileDao().selectByKeys(dbSession, profileKeys);
+      List<QProfileDto> profiles = dbClient.qualityProfileDao().selectByUuids(dbSession, profileKeys);
       String badKeys = profiles.stream()
         .filter(p -> !p.getOrganizationUuid().equals(organization.getUuid()))
-        .map(QualityProfileDto::getKey)
+        .map(QProfileDto::getKee)
         .collect(MoreCollectors.join(Joiner.on(", ")));
       if (!badKeys.isEmpty()) {
         throw MessageException.of(format("Quality profiles with following keys don't exist in organization [%s]: %s", organization.getKey(), badKeys));
@@ -143,6 +149,14 @@ public class LoadReportAnalysisMetadataHolderStep implements ComputationStep {
           resolveReportOrganizationKey,
           organization.getKey()));
       }
+    }
+  }
+
+  private void checkOrganizationCanExecuteAnalysis(Organization organization) {
+    try {
+      billingValidations.checkOnProjectAnalysis(new BillingValidations.Organization(organization.getKey(), organization.getUuid()));
+    } catch (BillingValidationsException e) {
+      throw MessageException.of(e.getMessage());
     }
   }
 

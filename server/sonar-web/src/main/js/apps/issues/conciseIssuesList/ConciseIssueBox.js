@@ -21,6 +21,7 @@
 import React from 'react';
 import classNames from 'classnames';
 import ConciseIssueLocations from './ConciseIssueLocations';
+import ConciseIssueLocationsNavigator from './ConciseIssueLocationsNavigator';
 import SeverityHelper from '../../../components/shared/SeverityHelper';
 import TypeHelper from '../../../components/shared/TypeHelper';
 import type { Issue } from '../../../components/issue/types';
@@ -28,27 +29,87 @@ import type { Issue } from '../../../components/issue/types';
 type Props = {|
   issue: Issue,
   onClick: string => void,
-  selected: boolean
+  onFlowSelect: number => void,
+  onLocationSelect: number => void,
+  scroll: (element: HTMLElement, bottomOffset: ?number) => void,
+  selected: boolean,
+  selectedFlowIndex: ?number,
+  selectedLocationIndex: ?number
 |};
 
-export default function ConciseIssueBox(props: Props) {
-  const { issue, selected } = props;
+export default class ConciseIssueBox extends React.PureComponent {
+  messageElement: HTMLElement;
+  rootElement: HTMLElement;
+  props: Props;
 
-  const handleClick = (event: Event) => {
-    event.preventDefault();
-    props.onClick(issue.key);
+  componentDidMount() {
+    if (this.props.selected) {
+      this.handleScroll();
+    }
+  }
+
+  componentDidUpdate(prevProps: Props) {
+    if (this.props.selected && prevProps.selected !== this.props.selected) {
+      this.handleScroll();
+    }
+  }
+
+  handleScroll = () => {
+    const { selectedFlowIndex } = this.props;
+    const { flows, secondaryLocations } = this.props.issue;
+
+    const locations = selectedFlowIndex != null
+      ? flows[selectedFlowIndex]
+      : flows.length > 0 ? flows[0] : secondaryLocations;
+
+    if (locations == null || locations.length < 15) {
+      // if there are no locations, or there are just few
+      // then ensuse that the whole box is visible
+      this.props.scroll(this.rootElement);
+    } else {
+      // otherwise scroll until the the message element is located on top
+      this.props.scroll(this.messageElement, window.innerHeight - 200);
+    }
   };
 
-  const clickAttributes = selected ? {} : { onClick: handleClick, role: 'listitem', tabIndex: 0 };
+  handleClick = (event: Event) => {
+    event.preventDefault();
+    this.props.onClick(this.props.issue.key);
+  };
 
-  return (
-    <div className={classNames('concise-issue-box', { selected })} {...clickAttributes}>
-      <div className="concise-issue-box-message">{issue.message}</div>
-      <div className="concise-issue-box-attributes">
-        <TypeHelper type={issue.type} />
-        <SeverityHelper className="big-spacer-left" severity={issue.severity} />
-        <ConciseIssueLocations flows={issue.flows} />
+  render() {
+    const { issue, selected } = this.props;
+
+    const clickAttributes = selected
+      ? {}
+      : { onClick: this.handleClick, role: 'listitem', tabIndex: 0 };
+
+    return (
+      <div
+        className={classNames('concise-issue-box', 'clearfix', { selected })}
+        ref={node => (this.rootElement = node)}
+        {...clickAttributes}>
+        <div className="concise-issue-box-message" ref={node => (this.messageElement = node)}>
+          {issue.message}
+        </div>
+        <div className="concise-issue-box-attributes">
+          <TypeHelper type={issue.type} />
+          <SeverityHelper className="big-spacer-left" severity={issue.severity} />
+          <ConciseIssueLocations
+            issue={issue}
+            onFlowSelect={this.props.onFlowSelect}
+            selectedFlowIndex={this.props.selectedFlowIndex}
+          />
+        </div>
+        {selected &&
+          <ConciseIssueLocationsNavigator
+            issue={issue}
+            onLocationSelect={this.props.onLocationSelect}
+            scroll={this.props.scroll}
+            selectedFlowIndex={this.props.selectedFlowIndex}
+            selectedLocationIndex={this.props.selectedLocationIndex}
+          />}
       </div>
-    </div>
-  );
+    );
+  }
 }

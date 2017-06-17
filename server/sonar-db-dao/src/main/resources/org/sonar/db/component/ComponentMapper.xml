@@ -1,24 +1,4 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<!--
-  ~ SonarQube
-  ~ Copyright (C) 2009-2017 SonarSource SA
-  ~ mailto:info AT sonarsource DOT com
-  ~
-  ~ This program is free software; you can redistribute it and/or
-  ~ modify it under the terms of the GNU Lesser General Public
-  ~ License as published by the Free Software Foundation; either
-  ~ version 3 of the License, or (at your option) any later version.
-  ~
-  ~ This program is distributed in the hope that it will be useful,
-  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
-  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  ~ Lesser General Public License for more details.
-  ~
-  ~ You should have received a copy of the GNU Lesser General Public License
-  ~ along with this program; if not, write to the Free Software Foundation,
-  ~ Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-  -->
-
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="org.sonar.db.component.ComponentMapper">
 
@@ -44,6 +24,7 @@
     p.enabled as enabled,
     p.copy_component_uuid as copyComponentUuid,
     p.developer_uuid as developerUuid,
+    p.private as isPrivate,
     p.authorization_updated_at as authorizationUpdatedAt,
     p.created_at as createdAt
   </sql>
@@ -297,6 +278,14 @@
           upper(p.name) like #{query.nameOrKeyUpperLikeQuery,jdbcType=VARCHAR} escape '/'
         )
       </if>
+      <if test="query.private!=null">
+        <if test="query.private.equals(true)">
+          and p.private=${_true}
+        </if>
+        <if test="query.private.equals(false)">
+          and p.private=${_false}
+        </if>
+      </if>
   </sql>
 
   <select id="selectDescendants" resultType="Component">
@@ -476,6 +465,7 @@
     scope,
     language,
     description,
+    private,
     tags,
     root_uuid,
     path,
@@ -511,6 +501,7 @@
     #{scope,jdbcType=VARCHAR},
     #{language,jdbcType=VARCHAR},
     #{description,jdbcType=VARCHAR},
+    #{isPrivate,jdbcType=BOOLEAN},
     #{tagsString, jdbcType=VARCHAR},
     #{rootUuid,jdbcType=VARCHAR},
     #{path,jdbcType=VARCHAR},
@@ -611,6 +602,14 @@
     where
     project_uuid = #{projectUuid,jdbcType=VARCHAR} and
     b_changed = ${_true}
+  </update>
+
+  <update id="setPrivateForRootComponentUuid" parameterType="map" >
+    update projects set
+      private = #{isPrivate,jdbcType=BOOLEAN}
+    where
+      project_uuid = #{projectUuid,jdbcType=VARCHAR}
+      and private &lt;&gt; #{isPrivate,jdbcType=BOOLEAN}
   </update>
 
   <delete id="delete" parameterType="long">

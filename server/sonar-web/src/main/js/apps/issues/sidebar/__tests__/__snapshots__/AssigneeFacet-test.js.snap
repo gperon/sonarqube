@@ -1,13 +1,16 @@
-exports[`test should not render without stats 1`] = `null`;
+// Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`test should render 1`] = `
+exports[`should render 1`] = `
 <FacetBox
-  property="assignees">
+  property="assignees"
+>
   <FacetHeader
-    hasValue={false}
     name="issues.facet.assignees"
+    onClear={[Function]}
     onClick={[Function]}
-    open={true} />
+    open={true}
+    values={0}
+  />
   <FacetItemsList>
     <FacetItem
       active={false}
@@ -17,7 +20,8 @@ exports[`test should render 1`] = `
       name="unassigned"
       onClick={[Function]}
       stat={5}
-      value="" />
+      value=""
+    />
     <FacetItem
       active={false}
       disabled={false}
@@ -28,13 +32,16 @@ exports[`test should render 1`] = `
           <Connect(Avatar)
             className="little-spacer-right"
             hash="avatart-foo"
-            size={16} />
+            name="name-foo"
+            size={16}
+          />
           name-foo
         </span>
       }
       onClick={[Function]}
       stat={13}
-      value="foo" />
+      value="foo"
+    />
     <FacetItem
       active={false}
       disabled={false}
@@ -43,85 +50,115 @@ exports[`test should render 1`] = `
       name="bar"
       onClick={[Function]}
       stat={7}
-      value="bar" />
+      value="bar"
+    />
   </FacetItemsList>
   <FacetFooter
     onSearch={[Function]}
     onSelect={[Function]}
-    renderOption={[Function]} />
+    renderOption={[Function]}
+  />
 </FacetBox>
 `;
 
-exports[`test should render footer select option 1`] = `
+exports[`should render footer select option 1`] = `
 <span>
   <Connect(Avatar)
     className="little-spacer-right"
     hash="avatar-foo"
-    size={16} />
+    name="name-foo"
+    size={16}
+  />
   name-foo
 </span>
 `;
 
-exports[`test should select unassigned 1`] = `
+exports[`should render without stats 1`] = `
 <FacetBox
-  property="assignees">
+  property="assignees"
+>
   <FacetHeader
-    hasValue={true}
     name="issues.facet.assignees"
+    onClear={[Function]}
     onClick={[Function]}
-    open={true} />
-  <FacetItemsList>
-    <FacetItem
-      active={true}
-      disabled={false}
-      facetMode="count"
-      halfWidth={false}
-      name="unassigned"
-      onClick={[Function]}
-      stat={5}
-      value="" />
-    <FacetItem
-      active={false}
-      disabled={false}
-      facetMode="count"
-      halfWidth={false}
-      name={
-        <span>
-          <Connect(Avatar)
-            className="little-spacer-right"
-            hash="avatart-foo"
-            size={16} />
-          name-foo
-        </span>
-      }
-      onClick={[Function]}
-      stat={13}
-      value="foo" />
-    <FacetItem
-      active={false}
-      disabled={false}
-      facetMode="count"
-      halfWidth={false}
-      name="bar"
-      onClick={[Function]}
-      stat={7}
-      value="bar" />
-  </FacetItemsList>
-  <FacetFooter
-    onSearch={[Function]}
-    onSelect={[Function]}
-    renderOption={[Function]} />
+    open={true}
+    values={0}
+  />
 </FacetBox>
 `;
 
-exports[`test should select user 1`] = `
+exports[`should select unassigned 1`] = `
 <FacetBox
-  property="assignees">
+  property="assignees"
+>
   <FacetHeader
-    hasValue={true}
     name="issues.facet.assignees"
+    onClear={[Function]}
     onClick={[Function]}
-    open={true} />
+    open={true}
+    values={1}
+  />
+  <FacetItemsList>
+    <FacetItem
+      active={true}
+      disabled={false}
+      facetMode="count"
+      halfWidth={false}
+      name="unassigned"
+      onClick={[Function]}
+      stat={5}
+      value=""
+    />
+    <FacetItem
+      active={false}
+      disabled={false}
+      facetMode="count"
+      halfWidth={false}
+      name={
+        <span>
+          <Connect(Avatar)
+            className="little-spacer-right"
+            hash="avatart-foo"
+            name="name-foo"
+            size={16}
+          />
+          name-foo
+        </span>
+      }
+      onClick={[Function]}
+      stat={13}
+      value="foo"
+    />
+    <FacetItem
+      active={false}
+      disabled={false}
+      facetMode="count"
+      halfWidth={false}
+      name="bar"
+      onClick={[Function]}
+      stat={7}
+      value="bar"
+    />
+  </FacetItemsList>
+  <FacetFooter
+    onSearch={[Function]}
+    onSelect={[Function]}
+    renderOption={[Function]}
+  />
+</FacetBox>
+`;
+
+exports[`should select user 1`] = `
+<FacetBox
+  property="assignees"
+>
+  <FacetHeader
+    name="issues.facet.assignees"
+    onClear={[Function]}
+    onClick={[Function]}
+    open={true}
+    values={1}
+  />
   <FacetItemsList>
     <FacetItem
       active={false}
@@ -131,7 +168,8 @@ exports[`test should select user 1`] = `
       name="unassigned"
       onClick={[Function]}
       stat={5}
-      value="" />
+      value=""
+    />
     <FacetItem
       active={true}
       disabled={false}
@@ -142,13 +180,16 @@ exports[`test should select user 1`] = `
           <Connect(Avatar)
             className="little-spacer-right"
             hash="avatart-foo"
-            size={16} />
+            name="name-foo"
+            size={16}
+          />
           name-foo
         </span>
       }
       onClick={[Function]}
       stat={13}
-      value="foo" />
+      value="foo"
+    />
     <FacetItem
       active={false}
       disabled={false}
@@ -157,11 +198,13 @@ exports[`test should select user 1`] = `
       name="bar"
       onClick={[Function]}
       stat={7}
-      value="bar" />
+      value="bar"
+    />
   </FacetItemsList>
   <FacetFooter
     onSearch={[Function]}
     onSelect={[Function]}
-    renderOption={[Function]} />
+    renderOption={[Function]}
+  />
 </FacetBox>
 `;

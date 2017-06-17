@@ -22,25 +22,32 @@ package org.sonar.server.qualityprofile.ws;
 import com.google.common.annotations.VisibleForTesting;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 import org.sonar.api.resources.Languages;
 import org.sonar.api.rule.RuleStatus;
 import org.sonar.api.server.ws.Request;
 import org.sonar.api.server.ws.Response;
 import org.sonar.api.server.ws.WebService;
 import org.sonar.api.server.ws.WebService.NewAction;
+import org.sonar.core.util.stream.MoreCollectors;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbSession;
+import org.sonar.db.component.ComponentDto;
 import org.sonar.db.organization.OrganizationDto;
-import org.sonar.db.qualityprofile.QualityProfileDto;
+import org.sonar.db.qualityprofile.QProfileDto;
 import org.sonar.server.util.LanguageParamUtils;
 import org.sonarqube.ws.QualityProfiles.SearchWsResponse;
 import org.sonarqube.ws.QualityProfiles.SearchWsResponse.QualityProfile;
+import org.sonarqube.ws.client.component.ComponentsWsParameters;
 import org.sonarqube.ws.client.qualityprofile.SearchWsRequest;
 
 import static java.lang.String.format;
 import static java.util.function.Function.identity;
 import static org.sonar.api.utils.DateUtils.formatDateTime;
+import static org.sonar.core.util.Protobuf.setNullable;
+import static org.sonar.server.ws.WsUtils.checkFoundWithOptional;
 import static org.sonar.server.ws.WsUtils.checkRequest;
 import static org.sonar.server.ws.WsUtils.writeProtobuf;
 import static org.sonarqube.ws.client.qualityprofile.QualityProfileWsParameters.ACTION_SEARCH;
@@ -72,34 +79,37 @@ public class SearchAction implements QProfileWsAction {
       .setHandler(this)
       .setResponseExample(getClass().getResource("search-example.json"));
 
-    QProfileWsSupport.createOrganizationParam(action)
+    action
+      .createParam(ComponentsWsParameters.PARAM_ORGANIZATION)
+      .setDescription("Organization key. If no organization key is provided, this defaults to the organization of the specified project. If neither organization nor project are" +
+        "specified, the default organization will be used.")
+      .setRequired(false)
+      .setInternal(true)
+      .setExampleValue("my-org")
       .setSince("6.4");
 
     action
-      .createParam(PARAM_LANGUAGE)
-      .setDescription(
-        format("Language key. If provided, only profiles for the given language are returned. " +
-          "It should not be used with '%s', '%s or '%s' at the same time.", PARAM_DEFAULTS, PARAM_PROJECT_KEY, PARAM_PROFILE_NAME))
-      .setPossibleValues(LanguageParamUtils.getLanguageKeys(languages))
-      .setDeprecatedSince("6.4");
-
-    action.createParam(PARAM_PROJECT_KEY)
-      .setDescription(format("Project or module key. If provided, '%s' and '%s' parameters should not be provided.",
-        PARAM_LANGUAGE, PARAM_DEFAULTS))
-      .setExampleValue("my-project-key");
-
-    action
       .createParam(PARAM_DEFAULTS)
-      .setDescription(format("Return the quality profile marked as default for each language. " +
-        "If provided, then the parameters '%s', '%s' must not be set.",
-        PARAM_LANGUAGE, PARAM_PROJECT_KEY))
+      .setDescription(format("If set to true, return only the quality profile marked as default for each language, the '%s' parameter must not be set.", PARAM_PROJECT_KEY))
       .setDefaultValue(false)
       .setBooleanPossibleValues();
 
+    action.createParam(PARAM_PROJECT_KEY)
+      .setDescription(format("Project or module key. If provided, the '%s' parameter should not be provided.", PARAM_DEFAULTS))
+      .setExampleValue("my-project-key");
+
+    action
+      .createParam(PARAM_LANGUAGE)
+      .setDeprecatedSince("6.4")
+      .setDescription(
+        format("Language key. If provided, only profiles for the given language are returned. " +
+          "It should not be used with '%s', '%s or '%s' at the same time.", PARAM_DEFAULTS, PARAM_PROJECT_KEY, PARAM_PROFILE_NAME))
+      .setPossibleValues(LanguageParamUtils.getLanguageKeys(languages));
+
     action.createParam(PARAM_PROFILE_NAME)
+      .setDeprecatedSince("6.4")
       .setDescription(format("Profile name. It should be always used with the '%s' or '%s' parameter.", PARAM_PROJECT_KEY, PARAM_DEFAULTS))
-      .setExampleValue("SonarQube Way")
-      .setDeprecatedSince("6.4");
+      .setExampleValue("SonarQube Way");
   }
 
   @Override
@@ -126,14 +136,46 @@ public class SearchAction implements QProfileWsAction {
 
   private SearchData load(SearchWsRequest request) {
     try (DbSession dbSession = dbClient.openSession(false)) {
-      OrganizationDto organization = wsSupport.getOrganizationByKey(dbSession, request.getOrganizationKey());
+
+      @Nullable ComponentDto project;
+      OrganizationDto organization;
+      if (request.getProjectKey() == null) {
+        project = null;
+        organization = wsSupport.getOrganizationByKey(dbSession, request.getOrganizationKey());
+      } else {
+        project = getProject(request.getProjectKey(), dbSession);
+        organization = dbClient.organizationDao().selectByUuid(dbSession, project.getOrganizationUuid())
+          .orElseThrow(() -> new IllegalStateException(
+            String.format("Organization with uuid '%s' is referenced by project '%s' but could not be found", project.getOrganizationUuid(), project.getKey())));
+        if (request.getOrganizationKey() != null && !request.getOrganizationKey().equals(organization.getKey())) {
+          throw new IllegalArgumentException(String.format("The provided organization key '%s' does not match the organization key '%s' of the component '%s'",
+            request.getOrganizationKey(),
+            organization.getKey(),
+            project.getKey()
+            ));
+        }
+      }
+
+      List<QProfileDto> profiles = dataLoader.findProfiles(dbSession, request, organization, project);
+      List<String> profileUuids = profiles.stream().map(QProfileDto::getKee).collect(MoreCollectors.toList());
+      Set<String> defaultProfiles = dbClient.defaultQProfileDao().selectExistingQProfileUuids(dbSession, organization.getUuid(), profileUuids);
+
       return new SearchData()
         .setOrganization(organization)
-        .setProfiles(dataLoader.findProfiles(dbSession, request, organization))
-        .setActiveRuleCountByProfileKey(dbClient.activeRuleDao().countActiveRulesByProfileKey(dbSession, organization))
-        .setActiveDeprecatedRuleCountByProfileKey(dbClient.activeRuleDao().countActiveRulesForRuleStatusByProfileKey(dbSession, organization, RuleStatus.DEPRECATED))
-        .setProjectCountByProfileKey(dbClient.qualityProfileDao().countProjectsByProfileKey(dbSession, organization));
+        .setProfiles(profiles)
+        .setActiveRuleCountByProfileKey(dbClient.activeRuleDao().countActiveRulesByProfileUuid(dbSession, organization))
+        .setActiveDeprecatedRuleCountByProfileKey(dbClient.activeRuleDao().countActiveRulesForRuleStatusByProfileUuid(dbSession, organization, RuleStatus.DEPRECATED))
+        .setProjectCountByProfileKey(dbClient.qualityProfileDao().countProjectsByProfileUuid(dbSession, organization))
+        .setDefaultProfileKeys(defaultProfiles);
     }
+  }
+
+  private ComponentDto getProject(String moduleKey, DbSession dbSession) {
+    ComponentDto module = checkFoundWithOptional(dbClient.componentDao().selectByKey(dbSession, moduleKey), "Component key '%s' not found", moduleKey);
+    if (module.isRootProject()) {
+      return module;
+    }
+    return dbClient.componentDao().selectOrFailByUuid(dbSession, module.projectUuid());
   }
 
   private static void validateRequest(SearchWsRequest request) {
@@ -149,47 +191,39 @@ public class SearchAction implements QProfileWsAction {
   }
 
   private SearchWsResponse buildResponse(SearchData data) {
-    List<QualityProfileDto> profiles = data.getProfiles();
-    Map<String, QualityProfileDto> profilesByKey = profiles.stream().collect(Collectors.toMap(QualityProfileDto::getKey, identity()));
+    List<QProfileDto> profiles = data.getProfiles();
+    Map<String, QProfileDto> profilesByKey = profiles.stream().collect(Collectors.toMap(QProfileDto::getKee, identity()));
 
     SearchWsResponse.Builder response = SearchWsResponse.newBuilder();
 
-    for (QualityProfileDto profile : profiles) {
+    for (QProfileDto profile : profiles) {
       QualityProfile.Builder profileBuilder = response.addProfilesBuilder();
 
-      String profileKey = profile.getKey();
-      if (profile.getOrganizationUuid() != null) {
-        profileBuilder.setOrganization(data.getOrganization().getKey());
-      }
+      String profileKey = profile.getKee();
+      setNullable(profile.getOrganizationUuid(), o -> profileBuilder.setOrganization(data.getOrganization().getKey()));
       profileBuilder.setKey(profileKey);
-      if (profile.getName() != null) {
-        profileBuilder.setName(profile.getName());
-      }
-      if (profile.getRulesUpdatedAt() != null) {
-        profileBuilder.setRulesUpdatedAt(profile.getRulesUpdatedAt());
-      }
-      if (profile.getLastUsed() != null) {
-        profileBuilder.setLastUsed(formatDateTime(profile.getLastUsed()));
-      }
-      if (profile.getUserUpdatedAt() != null) {
-        profileBuilder.setUserUpdatedAt(formatDateTime(profile.getUserUpdatedAt()));
-      }
+      setNullable(profile.getName(), profileBuilder::setName);
+      setNullable(profile.getRulesUpdatedAt(), profileBuilder::setRulesUpdatedAt);
+      setNullable(profile.getLastUsed(), last -> profileBuilder.setLastUsed(formatDateTime(last)));
+      setNullable(profile.getUserUpdatedAt(), userUpdatedAt -> profileBuilder.setUserUpdatedAt(formatDateTime(userUpdatedAt)));
       profileBuilder.setActiveRuleCount(data.getActiveRuleCount(profileKey));
       profileBuilder.setActiveDeprecatedRuleCount(data.getActiveDeprecatedRuleCount(profileKey));
-      if (!profile.isDefault()) {
+      boolean isDefault = data.isDefault(profile);
+      profileBuilder.setIsDefault(isDefault);
+      if (!isDefault) {
         profileBuilder.setProjectCount(data.getProjectCount(profileKey));
       }
 
       writeLanguageFields(profileBuilder, profile);
       writeParentFields(profileBuilder, profile, profilesByKey);
       profileBuilder.setIsInherited(profile.getParentKee() != null);
-      profileBuilder.setIsDefault(profile.isDefault());
+      profileBuilder.setIsBuiltIn(profile.isBuiltIn());
     }
 
     return response.build();
   }
 
-  private void writeLanguageFields(QualityProfile.Builder profileBuilder, QualityProfileDto profile) {
+  private void writeLanguageFields(QualityProfile.Builder profileBuilder, QProfileDto profile) {
     String languageKey = profile.getLanguage();
     if (languageKey == null) {
       return;
@@ -202,14 +236,14 @@ public class SearchAction implements QProfileWsAction {
     }
   }
 
-  private static void writeParentFields(QualityProfile.Builder profileBuilder, QualityProfileDto profile, Map<String, QualityProfileDto> profilesByKey) {
+  private static void writeParentFields(QualityProfile.Builder profileBuilder, QProfileDto profile, Map<String, QProfileDto> profilesByKey) {
     String parentKey = profile.getParentKee();
     if (parentKey == null) {
       return;
     }
 
     profileBuilder.setParentKey(parentKey);
-    QualityProfileDto parent = profilesByKey.get(parentKey);
+    QProfileDto parent = profilesByKey.get(parentKey);
     if (parent != null && parent.getName() != null) {
       profileBuilder.setParentName(parent.getName());
     }

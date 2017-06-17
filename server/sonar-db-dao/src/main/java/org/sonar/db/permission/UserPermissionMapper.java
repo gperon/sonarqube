@@ -21,29 +21,31 @@ package org.sonar.db.permission;
 
 import java.util.Collection;
 import java.util.List;
-import javax.annotation.Nullable;
+import java.util.Set;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.session.RowBounds;
 
 public interface UserPermissionMapper {
 
-  List<UserPermissionDto> selectByQuery(@Param("query") PermissionQuery query, @Nullable @Param("userLogins") Collection<String> userLogins, RowBounds rowBounds);
+  List<UserPermissionDto> selectUserPermissionsByQueryAndUserIds(@Param("query") PermissionQuery query, @Param("userIds") Collection<Integer> userIds);
+
+  List<Integer> selectUserIdsByQuery(@Param("query") PermissionQuery query);
 
   /**
-   * Count the number of distinct users returned by {@link #selectByQuery(PermissionQuery, Collection, RowBounds)}
+   * Count the number of distinct users returned by {@link #selectUserIdsByQuery(PermissionQuery)}
    * {@link PermissionQuery#getPageOffset()} and {@link PermissionQuery#getPageSize()} are ignored.
-   *
-   * @param useNull must always be null. It is needed for using the sql of 
-   * {@link #selectByQuery(PermissionQuery, Collection, RowBounds)}
    */
-  int countUsersByQuery(@Param("organizationUuid") String organizationUuid, @Param("query") PermissionQuery query,
-    @Nullable @Param("userLogins") Collection<String> useNull);
+  int countUsersByQuery(@Param("query") PermissionQuery query);
 
   /**
    * Count the number of users per permission for a given list of projects.
    * @param projectIds a non-null and non-empty list of project ids
    */
   List<CountPerProjectPermission> countUsersByProjectPermission(@Param("projectIds") List<Long> projectIds);
+
+  /**
+   * select id of users with at least one permission on the specified project but which do not have the specified permission.
+   */
+  Set<Integer> selectUserIdsWithPermissionOnProjectBut(@Param("projectId") long projectId, @Param("permission") String permission);
 
   void insert(UserPermissionDto dto);
 
@@ -54,6 +56,8 @@ public interface UserPermissionMapper {
     @Param("projectId") long projectId);
 
   void deleteProjectPermissions(@Param("projectId") long projectId);
+
+  int deleteProjectPermissionOfAnyUser(@Param("projectId") long projectId, @Param("permission") String permission);
 
   List<String> selectGlobalPermissionsOfUser(@Param("userId") int userId, @Param("organizationUuid") String organizationUuid);
 

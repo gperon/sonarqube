@@ -25,7 +25,7 @@ import org.apache.ibatis.annotations.Param;
 import org.sonar.db.Pagination;
 
 public interface OrganizationMapper {
-  void insert(@Param("organization") OrganizationDto organization);
+  void insert(@Param("organization") OrganizationDto organization, @Param("newProjectPrivate") boolean newProjectPrivate);
 
   int countByQuery(@Param("query") OrganizationQuery organizationQuery);
 
@@ -42,16 +42,13 @@ public interface OrganizationMapper {
 
   List<OrganizationDto> selectByPermission(@Param("userId") Integer userId, @Param("permission") String permission);
 
-  /**
-   * Assuming the key of the loaded template with the specified type is an organization's UUID, select all organizations
-   * which does not have a row in table LOADED_TEMPLATES with the specified type.
-   */
-  List<OrganizationDto> selectOrganizationsWithoutLoadedTemplate(@Param("loadedTemplateType") String type,
-    @Param("pagination") Pagination pagination);
+  List<String> selectAllUuids();
 
   DefaultTemplates selectDefaultTemplatesByUuid(@Param("uuid") String uuid);
 
   Integer selectDefaultGroupIdByUuid(@Param("uuid") String uuid);
+
+  boolean selectNewProjectPrivateByUuid(@Param("uuid") String uuid);
 
   /**
    * Update the organization with UUID specified by {@link OrganizationDto#getUuid()}.
@@ -67,6 +64,8 @@ public interface OrganizationMapper {
 
   void updateDefaultGroupId(@Param("organizationUuid") String organizationUuid,
     @Param("defaultGroupId") int defaultGroupId, @Param("now") long now);
+
+  void updateNewProjectPrivate(@Param("organizationUuid") String organizationUuid, @Param("newProjectPrivate") boolean newProjectPrivate, @Param("now") long now);
 
   int deleteByUuid(@Param("uuid") String uuid);
 }

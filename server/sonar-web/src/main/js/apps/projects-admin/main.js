@@ -17,24 +17,47 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
+// @flow
 import React from 'react';
+import Helmet from 'react-helmet';
 import { debounce, uniq, without } from 'lodash';
 import Header from './header';
 import Search from './search';
 import Projects from './projects';
+import CreateProjectForm from './CreateProjectForm';
+import ListFooter from '../../components/controls/ListFooter';
 import { PAGE_SIZE, TYPE } from './constants';
 import { getComponents, getProvisioned, getGhosts, deleteComponents } from '../../api/components';
-import ListFooter from '../../components/controls/ListFooter';
+import { translate } from '../../helpers/l10n';
+import type { Organization } from '../../store/organizations/duck';
+
+type Props = {|
+  hasProvisionPermission: boolean,
+  onVisibilityChange: string => void,
+  onRequestFail: Object => void,
+  organization: Organization
+|};
+
+type State = {
+  createProjectForm: boolean,
+  ready: boolean,
+  projects: Array<{ key: string }>,
+  total: number,
+  page: number,
+  query: string,
+  qualifiers: string,
+  type: string,
+  selection: Array<string>
+};
 
 export default class Main extends React.PureComponent {
-  static propTypes = {
-    hasProvisionPermission: React.PropTypes.bool.isRequired,
-    organization: React.PropTypes.object
-  };
+  props: Props;
+  state: State;
 
-  constructor(props) {
+  constructor(props: Props) {
     super(props);
     this.state = {
+      createProjectForm: false,
       ready: false,
       projects: [],
       total: 0,
@@ -52,15 +75,15 @@ export default class Main extends React.PureComponent {
   }
 
   getFilters = () => {
-    const filters = { ps: PAGE_SIZE };
+    const filters: { [string]: string | number } = {
+      organization: this.props.organization.key,
+      ps: PAGE_SIZE
+    };
     if (this.state.page !== 1) {
       filters.p = this.state.page;
     }
     if (this.state.query) {
       filters.q = this.state.query;
-    }
-    if (this.props.organization) {
-      filters.organization = this.props.organization.key;
     }
     return filters;
   };
@@ -108,7 +131,7 @@ export default class Main extends React.PureComponent {
       if (this.state.page > 1) {
         projects = [].concat(this.state.projects, projects);
       }
-      this.setState({ ready: true, projects, total: r.total });
+      this.setState({ ready: true, projects, total: r.paging.total });
     });
   };
 
@@ -128,7 +151,7 @@ export default class Main extends React.PureComponent {
     this.setState({ ready: false, page: this.state.page + 1 }, this.requestProjects);
   };
 
-  onSearch = query => {
+  onSearch = (query: string) => {
     this.setState(
       {
         ready: false,
@@ -140,7 +163,7 @@ export default class Main extends React.PureComponent {
     );
   };
 
-  onTypeChanged = newType => {
+  onTypeChanged = (newType: string) => {
     this.setState(
       {
         ready: false,
@@ -154,7 +177,7 @@ export default class Main extends React.PureComponent {
     );
   };
 
-  onQualifierChanged = newQualifier => {
+  onQualifierChanged = (newQualifier: string) => {
     this.setState(
       {
         ready: false,
@@ -168,12 +191,12 @@ export default class Main extends React.PureComponent {
     );
   };
 
-  onProjectSelected = project => {
+  onProjectSelected = (project: { key: string }) => {
     const newSelection = uniq([].concat(this.state.selection, project.key));
     this.setState({ selection: newSelection });
   };
 
-  onProjectDeselected = project => {
+  onProjectDeselected = (project: { key: string }) => {
     const newSelection = without(this.state.selection, project.key);
     this.setState({ selection: newSelection });
   };
@@ -190,25 +213,32 @@ export default class Main extends React.PureComponent {
   deleteProjects = () => {
     this.setState({ ready: false });
     const projects = this.state.selection.join(',');
-    const data = { projects };
-    if (this.props.organization) {
-      Object.assign(data, { organization: this.props.organization.key });
-    }
+    const data = {
+      organization: this.props.organization.key,
+      projects
+    };
     deleteComponents(data).then(() => {
       this.setState({ page: 1, selection: [] }, this.requestProjects);
     });
   };
 
+  openCreateProjectForm = () => {
+    this.setState({ createProjectForm: true });
+  };
+
+  closeCreateProjectForm = () => {
+    this.setState({ createProjectForm: false });
+  };
+
   render() {
     return (
-      <div className="page page-limited">
+      <div className="page page-limited" id="projects-management-page">
+        <Helmet title={translate('projects_management')} />
+
         <Header
           hasProvisionPermission={this.props.hasProvisionPermission}
-          selection={this.state.selection}
-          total={this.state.total}
-          query={this.state.query}
-          qualifier={this.state.qualifiers}
-          refresh={this.requestProjects}
+          onProjectCreate={this.openCreateProjectForm}
+          onVisibilityChange={this.props.onVisibilityChange}
           organization={this.props.organization}
         />
 
@@ -239,6 +269,14 @@ export default class Main extends React.PureComponent {
           total={this.state.total}
           loadMore={this.loadMore}
         />
+
+        {this.state.createProjectForm &&
+          <CreateProjectForm
+            onClose={this.closeCreateProjectForm}
+            onProjectCreated={this.requestProjects}
+            onRequestFail={this.props.onRequestFail}
+            organization={this.props.organization}
+          />}
       </div>
     );
   }

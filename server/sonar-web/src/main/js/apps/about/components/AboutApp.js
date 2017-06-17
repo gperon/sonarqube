@@ -36,7 +36,7 @@ import { getFacet } from '../../../api/issues';
 import { getAppState, getCurrentUser, getSettingValue } from '../../../store/rootReducer';
 import { translate } from '../../../helpers/l10n';
 import { fetchAboutPageSettings } from '../actions';
-import AboutAppForSonarQubeDotCom from './AboutAppForSonarQubeDotCom';
+import AboutAppForSonarQubeDotComLazyLoader from './AboutAppForSonarQubeDotComLazyLoader';
 import '../styles.css';
 
 type State = {
@@ -104,28 +104,28 @@ class AboutApp extends React.PureComponent {
   }
 
   render() {
-    if (this.state.loading) {
-      return null;
-    }
-
     const { customText, sonarqubeDotCom } = this.props;
+    const { loading, issueTypes, projectsCount } = this.state;
 
-    // $FlowFixMe
-    const bugs = this.state.issueTypes['BUG'].count;
-    // $FlowFixMe
-    const vulnerabilities = this.state.issueTypes['VULNERABILITY'].count;
-    // $FlowFixMe
-    const codeSmells = this.state.issueTypes['CODE_SMELL'].count;
+    let bugs;
+    let vulnerabilities;
+    let codeSmells;
+    if (!loading && issueTypes) {
+      bugs = issueTypes['BUG'] && issueTypes['BUG'].count;
+      vulnerabilities = issueTypes['VULNERABILITY'] && issueTypes['VULNERABILITY'].count;
+      codeSmells = issueTypes['CODE_SMELL'] && issueTypes['CODE_SMELL'].count;
+    }
 
     if (sonarqubeDotCom && sonarqubeDotCom.value === 'true') {
       return (
-        <AboutAppForSonarQubeDotCom
+        <AboutAppForSonarQubeDotComLazyLoader
           appState={this.props.appState}
           bugs={bugs}
           codeSmells={codeSmells}
           currentUser={this.props.currentUser}
           customText={customText}
-          projectsCount={this.state.projectsCount}
+          loading={loading}
+          projectsCount={projectsCount}
           vulnerabilities={vulnerabilities}
         />
       );
@@ -152,11 +152,12 @@ class AboutApp extends React.PureComponent {
             </div>
 
             <div className="about-page-instance">
-              <AboutProjects count={this.state.projectsCount} />
+              <AboutProjects count={projectsCount} loading={loading} />
               <EntryIssueTypes
                 bugs={bugs}
-                vulnerabilities={vulnerabilities}
                 codeSmells={codeSmells}
+                loading={loading}
+                vulnerabilities={vulnerabilities}
               />
             </div>
           </div>

@@ -19,8 +19,8 @@
  */
 package org.sonar.ce.queue;
 
-import com.google.common.base.Optional;
 import java.util.List;
+import java.util.Optional;
 import javax.annotation.Nullable;
 import org.junit.Rule;
 import org.junit.Test;
@@ -44,6 +44,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.startsWith;
 
 public class CeQueueImplTest {
+
+  private static final String WORKER_UUID = "workerUuid";
+  private static final int MAX_EXECUTION_COUNT = 3;
 
   private System2 system2 = new TestSystem2().setNow(1_450_000_000_000L);
 
@@ -70,7 +73,7 @@ public class CeQueueImplTest {
 
   @Test
   public void submit_populates_component_name_and_key_of_CeTask_if_component_exists() {
-    ComponentDto componentDto = insertComponent(ComponentTesting.newProjectDto(dbTester.organizations().insert(), "PROJECT_1"));
+    ComponentDto componentDto = insertComponent(ComponentTesting.newPrivateProjectDto(dbTester.organizations().insert(), "PROJECT_1"));
     CeTaskSubmit taskSubmit = createTaskSubmit(CeTaskTypes.REPORT, componentDto.uuid(), null);
 
     CeTask task = underTest.submit(taskSubmit);
@@ -113,7 +116,7 @@ public class CeQueueImplTest {
 
   @Test
   public void massSubmit_populates_component_name_and_key_of_CeTask_if_component_exists() {
-    ComponentDto componentDto1 = insertComponent(ComponentTesting.newProjectDto(dbTester.getDefaultOrganization(), "PROJECT_1"));
+    ComponentDto componentDto1 = insertComponent(ComponentTesting.newPrivateProjectDto(dbTester.getDefaultOrganization(), "PROJECT_1"));
     CeTaskSubmit taskSubmit1 = createTaskSubmit(CeTaskTypes.REPORT, componentDto1.uuid(), null);
     CeTaskSubmit taskSubmit2 = createTaskSubmit("something", "non existing component uuid", null);
 
@@ -146,7 +149,7 @@ public class CeQueueImplTest {
 
     CeTask task = submit(CeTaskTypes.REPORT, "PROJECT_1");
 
-    dbTester.getDbClient().ceQueueDao().peek(session);
+    dbTester.getDbClient().ceQueueDao().peek(session, WORKER_UUID, MAX_EXECUTION_COUNT);
 
     underTest.cancel(task.getUuid());
   }
@@ -157,7 +160,7 @@ public class CeQueueImplTest {
     CeTask pendingTask1 = submit(CeTaskTypes.REPORT, "PROJECT_2");
     CeTask pendingTask2 = submit(CeTaskTypes.REPORT, "PROJECT_3");
 
-    dbTester.getDbClient().ceQueueDao().peek(session);
+    dbTester.getDbClient().ceQueueDao().peek(session, WORKER_UUID, MAX_EXECUTION_COUNT);
 
     int canceledCount = underTest.cancelAll();
     assertThat(canceledCount).isEqualTo(2);

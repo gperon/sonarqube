@@ -26,8 +26,10 @@ import { formatLeak, isDiffMetric, getRatingTooltip } from '../utils';
 
 export default class Measure extends React.PureComponent {
   static propTypes = {
+    className: React.PropTypes.string,
     measure: React.PropTypes.object,
-    metric: React.PropTypes.object
+    metric: React.PropTypes.object,
+    decimals: React.PropTypes.number
   };
 
   renderRating(measure, metric) {
@@ -51,7 +53,7 @@ export default class Measure extends React.PureComponent {
   }
 
   render() {
-    const { measure, metric } = this.props;
+    const { measure, metric, decimals, className } = this.props;
     const finalMetric = metric || measure.metric;
 
     if (finalMetric.type === 'RATING') {
@@ -63,11 +65,10 @@ export default class Measure extends React.PureComponent {
     }
 
     const formattedValue = isDiffMetric(finalMetric)
-      ? formatLeak(measure.leak, finalMetric)
-      : formatMeasure(measure.value, finalMetric.type);
-
+      ? formatLeak(measure.leak, finalMetric, { decimals })
+      : formatMeasure(measure.value, finalMetric.type, { decimals });
     return (
-      <span>
+      <span className={className}>
         {formattedValue != null ? formattedValue : '–'}
       </span>
     );

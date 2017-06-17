@@ -10,6 +10,7 @@
             uuid="THE_PROJECT"
             uuid_path="NOT_USED"
             root_uuid="THE_PROJECT"
+            project_uuid="THE_PROJECT"
             module_uuid="[null]"
             module_uuid_path="."
             path="[null]"
@@ -17,11 +18,13 @@
             scope="PRJ"
             qualifier="TRK"
             kee="the_project"
-            name="TheProject"/>
+            name="TheProject"
+            private="[false]"/>
   <projects organization_uuid="org1"
             uuid="THE_FILE"
             uuid_path="NOT_USED"
             root_uuid="THE_PROJECT"
+            project_uuid="THE_PROJECT"
             module_uuid="THE_PROJECT"
             module_uuid_path=".THE_PROJECT."
             path="src/main/java/TheFile.java"
@@ -29,7 +32,8 @@
             scope="FIL"
             qualifier="FIL"
             kee="abcde"
-            name="TheFile"/>
+            name="TheFile"
+            private="[false]"/>
 
   <issues id="1"
           kee="ABCDE"

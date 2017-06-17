@@ -21,7 +21,6 @@
 import React from 'react';
 import Modal from 'react-modal';
 import Select from 'react-select';
-import { css } from 'glamor';
 import { pickBy, sortBy } from 'lodash';
 import SearchSelect from './SearchSelect';
 import Checkbox from '../../../components/controls/Checkbox';
@@ -161,16 +160,20 @@ export default class BulkChangeModal extends React.PureComponent {
 
   handleSubmit = (e: Event) => {
     e.preventDefault();
-    const query = pickBy({
-      assign: this.state.assignee,
-      set_type: this.state.type,
-      set_severity: this.state.severity,
-      add_tags: this.state.addTags && this.state.addTags.join(),
-      remove_tags: this.state.removeTags && this.state.removeTags.join(),
-      do_transition: this.state.transition,
-      comment: this.state.comment,
-      sendNotifications: this.state.notifications
-    });
+    const query = pickBy(
+      {
+        assign: this.state.assignee,
+        set_type: this.state.type,
+        set_severity: this.state.severity,
+        add_tags: this.state.addTags && this.state.addTags.join(),
+        remove_tags: this.state.removeTags && this.state.removeTags.join(),
+        do_transition: this.state.transition,
+        comment: this.state.comment,
+        sendNotifications: this.state.notifications
+      },
+      // remove null, but keep empty string
+      x => x != null
+    );
     const issueKeys = this.state.issues.map(issue => issue.key);
 
     this.setState({ submitting: true });
@@ -228,11 +231,7 @@ export default class BulkChangeModal extends React.PureComponent {
   );
 
   renderCheckbox = (field: string) => (
-    <Checkbox
-      className={css({ paddingTop: 6, paddingRight: 8 })}
-      checked={this.state[field] != null}
-      onCheck={this.handleFieldCheck(field)}
-    />
+    <Checkbox checked={this.state[field] != null} onCheck={this.handleFieldCheck(field)} />
   );
 
   renderAffected = (affected: number) => (
@@ -257,6 +256,7 @@ export default class BulkChangeModal extends React.PureComponent {
           className="little-spacer-right"
           email={option.email}
           hash={option.avatar}
+          name={option.label}
           size={16}
         />}
       {option.label}

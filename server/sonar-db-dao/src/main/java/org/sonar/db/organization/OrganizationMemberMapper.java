@@ -45,4 +45,5 @@ public interface OrganizationMemberMapper {
   void deleteByOrganization(@Param("organizationUuid") String organizationUuid);
 
   void deleteByUserId(@Param("userId") int userId);
+
 }

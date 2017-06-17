@@ -38,7 +38,7 @@ type Props = {|
   onFail: Error => void,
   onFilter?: (property: string, issue: Issue) => void,
   selected: boolean,
-  togglePopup: string => void
+  togglePopup: (string, boolean | void) => void
 |};
 
 export default class IssueView extends React.PureComponent {
@@ -60,11 +60,11 @@ export default class IssueView extends React.PureComponent {
   };
 
   editComment = (comment: string, text: string) => {
-    updateIssue(this.props.onChange, editIssueComment({ comment, text }));
+    updateIssue(this.props.onChange, this.props.onFail, editIssueComment({ comment, text }));
   };
 
   deleteComment = (comment: string) => {
-    updateIssue(this.props.onChange, deleteIssueComment({ comment }));
+    updateIssue(this.props.onChange, this.props.onFail, deleteIssueComment({ comment }));
   };
 
   render() {

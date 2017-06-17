@@ -23,9 +23,12 @@ import { connect } from 'react-redux';
 import Extension from './Extension';
 import ExtensionNotFound from './ExtensionNotFound';
 import { getOrganizationByKey } from '../../../store/rootReducer';
+import { fetchOrganization } from '../../../apps/organizations/actions';
 import type { Organization } from '../../../store/organizations/duck';
 
 type Props = {
+  fetchOrganization: string => void,
+  location: {},
   organization: Organization,
   params: {
     extensionKey: string,
@@ -36,6 +39,8 @@ type Props = {
 
 class OrganizationPageExtension extends React.PureComponent {
   props: Props;
+
+  refreshOrganization = () => this.props.fetchOrganization(this.props.organization.key);
 
   render() {
     const { extensionKey, pluginKey } = this.props.params;
@@ -48,7 +53,11 @@ class OrganizationPageExtension extends React.PureComponent {
 
     const extension = pages.find(p => p.key === `${pluginKey}/${extensionKey}`);
     return extension
-      ? <Extension extension={extension} options={{ organization }} />
+      ? <Extension
+          extension={extension}
+          location={this.props.location}
+          options={{ organization, refreshOrganization: this.refreshOrganization }}
+        />
       : <ExtensionNotFound />;
   }
 }
@@ -57,4 +66,6 @@ const mapStateToProps = (state, ownProps: Props) => ({
   organization: getOrganizationByKey(state, ownProps.params.organizationKey)
 });
 
-export default connect(mapStateToProps)(OrganizationPageExtension);
+const mapDispatchToProps = { fetchOrganization };
+
+export default connect(mapStateToProps, mapDispatchToProps)(OrganizationPageExtension);

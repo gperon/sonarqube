@@ -40,6 +40,10 @@ public class ProcessProperties {
   public static final String CLUSTER_NAME = "sonar.cluster.name";
   public static final String HAZELCAST_LOG_LEVEL = "sonar.log.level.app.hazelcast";
   public static final String CLUSTER_WEB_LEADER = "sonar.cluster.web.startupLeader";
+  // Internal property used by sonar-application to share the local endpoint of Hazelcast
+  public static final String CLUSTER_LOCALENDPOINT = "sonar.cluster.hazelcast.localEndPoint";
+  // Internal property used by sonar-application to share the local UUID of the Hazelcast member
+  public static final String CLUSTER_MEMBERUUID = "sonar.cluster.hazelcast.memberUUID";
 
   public static final String JDBC_URL = "sonar.jdbc.url";
   public static final String JDBC_DRIVER_PATH = "sonar.jdbc.driverPath";
@@ -62,6 +66,9 @@ public class ProcessProperties {
   public static final String SEARCH_HTTP_PORT = "sonar.search.httpPort";
   public static final String SEARCH_JAVA_OPTS = "sonar.search.javaOpts";
   public static final String SEARCH_JAVA_ADDITIONAL_OPTS = "sonar.search.javaAdditionalOpts";
+  public static final String SEARCH_REPLICAS = "sonar.search.replicas";
+  public static final String SEARCH_MINIMUM_MASTER_NODES = "sonar.search.minimumMasterNodes";
+  public static final String SEARCH_INITIAL_STATE_TIMEOUT = "sonar.search.initialStateTimeout";
 
   public static final String WEB_JAVA_OPTS = "sonar.web.javaOpts";
 

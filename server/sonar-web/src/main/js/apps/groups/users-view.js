@@ -17,6 +17,7 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
+import escapeHtml from 'escape-html';
 import Modal from '../../components/common/modals';
 import '../../components/SelectList';
 import Template from './templates/groups-users.hbs';
@@ -24,23 +25,33 @@ import Template from './templates/groups-users.hbs';
 export default Modal.extend({
   template: Template,
 
+  initialize(options) {
+    this.organization = options.organization;
+  },
+
   onRender() {
     Modal.prototype.onRender.apply(this, arguments);
+
+    const extra = {
+      name: this.model.get('name')
+    };
+    if (this.organization) {
+      extra.organization = this.organization.key;
+    }
+
     new window.SelectList({
       el: this.$('#groups-users'),
       width: '100%',
       readOnly: false,
       focusSearch: false,
-      format(item) {
-        return `${item.name}<br><span class="note">${item.login}</span>`;
+      dangerouslyUnescapedHtmlFormat(item) {
+        return `${escapeHtml(item.name)}<br><span class="note">${escapeHtml(item.login)}</span>`;
       },
       queryParam: 'q',
       searchUrl: window.baseUrl + '/api/user_groups/users?ps=100&id=' + this.model.id,
       selectUrl: window.baseUrl + '/api/user_groups/add_user',
       deselectUrl: window.baseUrl + '/api/user_groups/remove_user',
-      extra: {
-        id: this.model.id
-      },
+      extra,
       selectParameter: 'login',
       selectParameterValue: 'login',
       parse(r) {

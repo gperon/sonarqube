@@ -37,8 +37,11 @@ import org.elasticsearch.search.aggregations.bucket.filters.InternalFilters.Buck
 import org.elasticsearch.search.aggregations.metrics.tophits.InternalTopHits;
 import org.elasticsearch.search.aggregations.metrics.tophits.TopHitsBuilder;
 import org.elasticsearch.search.highlight.HighlightBuilder;
+import org.elasticsearch.search.sort.FieldSortBuilder;
+import org.elasticsearch.search.sort.ScoreSortBuilder;
 import org.sonar.server.es.EsClient;
 import org.sonar.server.es.textsearch.ComponentTextSearchFeature;
+import org.sonar.server.es.textsearch.ComponentTextSearchFeatureRepertoire;
 import org.sonar.server.es.textsearch.ComponentTextSearchQueryFactory;
 import org.sonar.server.es.textsearch.ComponentTextSearchQueryFactory.ComponentTextSearchQuery;
 import org.sonar.server.permission.index.AuthorizationTypeSupport;
@@ -78,7 +81,7 @@ public class ComponentIndex {
   }
 
   public ComponentIndexResults search(ComponentIndexQuery query) {
-    return search(query, ComponentTextSearchFeature.values());
+    return search(query, ComponentTextSearchFeatureRepertoire.values());
   }
 
   @VisibleForTesting
@@ -113,8 +116,11 @@ public class ComponentIndex {
       .setHighlighterEncoder("html")
       .setHighlighterPreTags("<mark>")
       .setHighlighterPostTags("</mark>")
-      .addHighlightedField(createHighlighter());
-    query.getLimit().ifPresent(sub::setSize);
+      .addHighlightedField(createHighlighter())
+      .setFrom(query.getSkip())
+      .setSize(query.getLimit())
+      .addSort(new ScoreSortBuilder())
+      .addSort(new FieldSortBuilder(ComponentIndexDefinition.FIELD_NAME));
     return sub.setFetchSource(false);
   }
 

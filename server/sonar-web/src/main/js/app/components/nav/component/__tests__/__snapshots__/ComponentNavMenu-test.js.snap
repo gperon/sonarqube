@@ -1,6 +1,9 @@
-exports[`test should work with extensions 1`] = `
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`should work with extensions 1`] = `
 <ul
-  className="nav navbar-nav nav-tabs">
+  className="nav navbar-nav nav-tabs"
+>
   <li>
     <Link
       activeClassName="active"
@@ -13,9 +16,11 @@ exports[`test should work with extensions 1`] = `
             "id": "foo",
           },
         }
-      }>
+      }
+    >
       <i
-        className="icon-home" />
+        className="icon-home"
+      />
     </Link>
   </li>
   <li>
@@ -31,7 +36,8 @@ exports[`test should work with extensions 1`] = `
             "resolved": "false",
           },
         }
-      }>
+      }
+    >
       issues.page
     </Link>
   </li>
@@ -47,7 +53,8 @@ exports[`test should work with extensions 1`] = `
             "id": "foo",
           },
         }
-      }>
+      }
+    >
       layout.measures
     </Link>
   </li>
@@ -63,7 +70,8 @@ exports[`test should work with extensions 1`] = `
             "id": "foo",
           },
         }
-      }>
+      }
+    >
       code.page
     </Link>
   </li>
@@ -79,24 +87,29 @@ exports[`test should work with extensions 1`] = `
             "id": "foo",
           },
         }
-      }>
+      }
+    >
       project_activity.page
     </Link>
   </li>
   <li
-    className="dropdown">
+    className="dropdown"
+  >
     <a
       className="dropdown-toggle navbar-admin-link"
       data-toggle="dropdown"
       href="#"
-      id="component-navigation-admin">
+      id="component-navigation-admin"
+    >
       layout.settings
        
       <i
-        className="icon-dropdown" />
+        className="icon-dropdown"
+      />
     </a>
     <ul
-      className="dropdown-menu">
+      className="dropdown-menu"
+    >
       <li>
         <Link
           activeClassName="active"
@@ -109,7 +122,8 @@ exports[`test should work with extensions 1`] = `
                 "id": "foo",
               },
             }
-          }>
+          }
+        >
           project_settings.page
         </Link>
       </li>
@@ -125,7 +139,8 @@ exports[`test should work with extensions 1`] = `
                 "id": "foo",
               },
             }
-          }>
+          }
+        >
           Foo
         </Link>
       </li>
@@ -141,8 +156,283 @@ exports[`test should work with extensions 1`] = `
                 "id": "foo",
               },
             }
-          }>
+          }
+        >
           deletion.page
+        </Link>
+      </li>
+    </ul>
+  </li>
+  <li
+    className="dropdown"
+  >
+    <a
+      className="dropdown-toggle"
+      data-toggle="dropdown"
+      href="#"
+      id="component-navigation-more"
+    >
+      more
+       
+      <i
+        className="icon-dropdown"
+      />
+    </a>
+    <ul
+      className="dropdown-menu"
+    >
+      <li>
+        <Link
+          activeClassName="active"
+          onlyActiveOnIndex={false}
+          style={Object {}}
+          to={
+            Object {
+              "pathname": "/project/extension/component-foo",
+              "query": Object {
+                "id": "foo",
+              },
+            }
+          }
+        >
+          ComponentFoo
+        </Link>
+      </li>
+    </ul>
+  </li>
+</ul>
+`;
+
+exports[`should work with multiple extensions 1`] = `
+<ul
+  className="nav navbar-nav nav-tabs"
+>
+  <li>
+    <Link
+      activeClassName="active"
+      onlyActiveOnIndex={false}
+      style={Object {}}
+      to={
+        Object {
+          "pathname": "/dashboard",
+          "query": Object {
+            "id": "foo",
+          },
+        }
+      }
+    >
+      <i
+        className="icon-home"
+      />
+    </Link>
+  </li>
+  <li>
+    <Link
+      activeClassName="active"
+      onlyActiveOnIndex={false}
+      style={Object {}}
+      to={
+        Object {
+          "pathname": "/project/issues",
+          "query": Object {
+            "id": "foo",
+            "resolved": "false",
+          },
+        }
+      }
+    >
+      issues.page
+    </Link>
+  </li>
+  <li>
+    <Link
+      activeClassName="active"
+      onlyActiveOnIndex={false}
+      style={Object {}}
+      to={
+        Object {
+          "pathname": "/component_measures",
+          "query": Object {
+            "id": "foo",
+          },
+        }
+      }
+    >
+      layout.measures
+    </Link>
+  </li>
+  <li>
+    <Link
+      activeClassName="active"
+      onlyActiveOnIndex={false}
+      style={Object {}}
+      to={
+        Object {
+          "pathname": "/code",
+          "query": Object {
+            "id": "foo",
+          },
+        }
+      }
+    >
+      code.page
+    </Link>
+  </li>
+  <li>
+    <Link
+      activeClassName="active"
+      onlyActiveOnIndex={false}
+      style={Object {}}
+      to={
+        Object {
+          "pathname": "/project/activity",
+          "query": Object {
+            "id": "foo",
+          },
+        }
+      }
+    >
+      project_activity.page
+    </Link>
+  </li>
+  <li
+    className="dropdown"
+  >
+    <a
+      className="dropdown-toggle navbar-admin-link"
+      data-toggle="dropdown"
+      href="#"
+      id="component-navigation-admin"
+    >
+      layout.settings
+       
+      <i
+        className="icon-dropdown"
+      />
+    </a>
+    <ul
+      className="dropdown-menu"
+    >
+      <li>
+        <Link
+          activeClassName="active"
+          onlyActiveOnIndex={false}
+          style={Object {}}
+          to={
+            Object {
+              "pathname": "/project/settings",
+              "query": Object {
+                "id": "foo",
+              },
+            }
+          }
+        >
+          project_settings.page
+        </Link>
+      </li>
+      <li>
+        <Link
+          activeClassName="active"
+          onlyActiveOnIndex={false}
+          style={Object {}}
+          to={
+            Object {
+              "pathname": "/project/admin/extension/foo",
+              "query": Object {
+                "id": "foo",
+              },
+            }
+          }
+        >
+          Foo
+        </Link>
+      </li>
+      <li>
+        <Link
+          activeClassName="active"
+          onlyActiveOnIndex={false}
+          style={Object {}}
+          to={
+            Object {
+              "pathname": "/project/admin/extension/bar",
+              "query": Object {
+                "id": "foo",
+              },
+            }
+          }
+        >
+          Bar
+        </Link>
+      </li>
+      <li>
+        <Link
+          activeClassName="active"
+          onlyActiveOnIndex={false}
+          style={Object {}}
+          to={
+            Object {
+              "pathname": "/project/deletion",
+              "query": Object {
+                "id": "foo",
+              },
+            }
+          }
+        >
+          deletion.page
+        </Link>
+      </li>
+    </ul>
+  </li>
+  <li
+    className="dropdown"
+  >
+    <a
+      className="dropdown-toggle"
+      data-toggle="dropdown"
+      href="#"
+      id="component-navigation-more"
+    >
+      more
+       
+      <i
+        className="icon-dropdown"
+      />
+    </a>
+    <ul
+      className="dropdown-menu"
+    >
+      <li>
+        <Link
+          activeClassName="active"
+          onlyActiveOnIndex={false}
+          style={Object {}}
+          to={
+            Object {
+              "pathname": "/project/extension/component-foo",
+              "query": Object {
+                "id": "foo",
+              },
+            }
+          }
+        >
+          ComponentFoo
+        </Link>
+      </li>
+      <li>
+        <Link
+          activeClassName="active"
+          onlyActiveOnIndex={false}
+          style={Object {}}
+          to={
+            Object {
+              "pathname": "/project/extension/component-bar",
+              "query": Object {
+                "id": "foo",
+              },
+            }
+          }
+        >
+          ComponentBar
         </Link>
       </li>
     </ul>

@@ -32,8 +32,9 @@ import org.sonar.db.DbSession;
 import org.sonar.db.DbTester;
 import org.sonar.db.component.ComponentDbTester;
 import org.sonar.db.component.ComponentDto;
-import org.sonar.server.component.ComponentFinder;
+import org.sonar.db.component.ComponentTesting;
 import org.sonar.server.component.ComponentService;
+import org.sonar.server.component.TestComponentFinder;
 import org.sonar.server.exceptions.NotFoundException;
 import org.sonar.server.ws.TestRequest;
 import org.sonar.server.ws.WsActionTester;
@@ -43,23 +44,24 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.sonar.db.component.ComponentTesting.newProjectDto;
 import static org.sonarqube.ws.client.project.ProjectsWsParameters.PARAM_FROM;
 import static org.sonarqube.ws.client.project.ProjectsWsParameters.PARAM_PROJECT_ID;
 import static org.sonarqube.ws.client.project.ProjectsWsParameters.PARAM_TO;
 
 public class UpdateKeyActionTest {
   private static final String ANOTHER_KEY = "another_key";
+
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
   @Rule
   public DbTester db = DbTester.create(System2.INSTANCE);
+
   ComponentDbTester componentDb = new ComponentDbTester(db);
   DbClient dbClient = db.getDbClient();
 
   ComponentService componentService = mock(ComponentService.class);
 
-  WsActionTester ws = new WsActionTester(new org.sonar.server.project.ws.UpdateKeyAction(dbClient, new ComponentFinder(dbClient), componentService));
+  WsActionTester ws = new WsActionTester(new org.sonar.server.project.ws.UpdateKeyAction(dbClient, TestComponentFinder.from(db), componentService));
 
   @Test
   public void call_by_key() {
@@ -129,7 +131,7 @@ public class UpdateKeyActionTest {
   }
 
   private ComponentDto insertProject() {
-    return componentDb.insertComponent(newProjectDto(db.organizations().insert()));
+    return componentDb.insertComponent(ComponentTesting.newPrivateProjectDto(db.organizations().insert()));
   }
 
   private String callByUuid(@Nullable String uuid, @Nullable String newKey) {

@@ -24,13 +24,14 @@ import { getComponentPermissionsUrl } from '../../helpers/urls';
 import ApplyTemplateView from '../permissions/project/views/ApplyTemplateView';
 import Checkbox from '../../components/controls/Checkbox';
 import QualifierIcon from '../../components/shared/QualifierIcon';
+import PrivateBadge from '../../components/common/PrivateBadge';
 import { translate } from '../../helpers/l10n';
 
 export default class Projects extends React.PureComponent {
   static propTypes = {
     projects: React.PropTypes.array.isRequired,
     selection: React.PropTypes.array.isRequired,
-    organization: React.PropTypes.object
+    organization: React.PropTypes.object.isRequired
   };
 
   componentWillMount() {
@@ -81,6 +82,9 @@ export default class Projects extends React.PureComponent {
         <td className="nowrap">
           <span className="note">{project.key}</span>
         </td>
+        <td className="width-20">
+          {project.visibility === 'private' && <PrivateBadge />}
+        </td>
         <td className="thin nowrap">
           <div className="dropdown">
             <button className="dropdown-toggle" data-toggle="dropdown">
@@ -110,7 +114,7 @@ export default class Projects extends React.PureComponent {
     const className = classNames('data', 'zebra', { 'new-loading': !this.props.ready });
 
     return (
-      <table className={className}>
+      <table className={className} id="projects-management-page-projects">
         <tbody>{this.props.projects.map(this.renderProject)}</tbody>
       </table>
     );

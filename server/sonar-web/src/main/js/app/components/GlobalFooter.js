@@ -20,55 +20,66 @@
 // @flow
 import React from 'react';
 import { Link } from 'react-router';
-import { connect } from 'react-redux';
-import { getAppState } from '../../store/rootReducer';
+import GlobalFooterForSonarQubeDotCom from './GlobalFooterForSonarQubeDotCom';
 import GlobalFooterBranding from './GlobalFooterBranding';
+import { translate, translateWithParameters } from '../../helpers/l10n';
 
-function GlobalFooter(props: Object) {
-  const { sonarqubeVersion, productionDatabase } = props;
+type Props = {
+  hideLoggedInInfo?: boolean,
+  productionDatabase: boolean,
+  sonarqubeDotCom?: { value: string },
+  sonarqubeVersion?: string
+};
+
+export default function GlobalFooter({
+  hideLoggedInInfo,
+  productionDatabase,
+  sonarqubeDotCom,
+  sonarqubeVersion
+}: Props) {
+  if (sonarqubeDotCom && sonarqubeDotCom.value === 'true') {
+    return <GlobalFooterForSonarQubeDotCom hideLoggedInInfo={hideLoggedInInfo} />;
+  }
 
   return (
     <div id="footer" className="page-footer page-container">
       {productionDatabase === false &&
         <div className="alert alert-danger">
           <p className="big" id="evaluation_warning">
-            Embedded database should be used for evaluation purpose only
+            {translate('footer.production_database_warning')}
           </p>
           <p>
-            The embedded database will not scale, it will not support upgrading to newer
-            {' '}
-            versions of SonarQube, and there is no support for migrating your data out of it
-            {' '}
-            into a different database engine.
+            {translate('footer.production_database_explanation')}
           </p>
         </div>}
 
       <GlobalFooterBranding />
 
       <div>
-        Version {sonarqubeVersion}
+        {!hideLoggedInInfo &&
+          sonarqubeVersion &&
+          translateWithParameters('footer.version_x', sonarqubeVersion)}
+        {!hideLoggedInInfo && sonarqubeVersion && ' - '}
+        <a href="http://www.gnu.org/licenses/lgpl-3.0.txt">{translate('footer.licence')}</a>
         {' - '}
-        <a href="http://www.gnu.org/licenses/lgpl-3.0.txt">LGPL v3</a>
+        <a href="http://www.sonarqube.org">{translate('footer.community')}</a>
         {' - '}
-        <a href="http://www.sonarqube.org">Community</a>
+        <a href="https://redirect.sonarsource.com/doc/home.html">
+          {translate('footer.documentation')}
+        </a>
         {' - '}
-        <a href="https://redirect.sonarsource.com/doc/home.html">Documentation</a>
+        <a href="https://redirect.sonarsource.com/doc/community.html">
+          {translate('footer.support')}
+        </a>
         {' - '}
-        <a href="https://redirect.sonarsource.com/doc/community.html">Get Support</a>
-        {' - '}
-        <a href="https://redirect.sonarsource.com/doc/plugin-library.html">Plugins</a>
-        {' - '}
-        <Link to="/web_api">Web API</Link>
-        {' - '}
-        <Link to="/about">About</Link>
+        <a href="https://redirect.sonarsource.com/doc/plugin-library.html">
+          {translate('footer.plugins')}
+        </a>
+        {!hideLoggedInInfo && ' - '}
+        {!hideLoggedInInfo && <Link to="/web_api">{translate('footer.web_api')}</Link>}
+        {!hideLoggedInInfo && ' - '}
+        {!hideLoggedInInfo && <Link to="/about">{translate('footer.about')}</Link>}
       </div>
     </div>
   );
 }
-
-const mapStateToProps = state => ({
-  sonarqubeVersion: getAppState(state).version,
-  productionDatabase: getAppState(state).productionDatabase
-});
-
-export default connect(mapStateToProps)(GlobalFooter);

@@ -31,6 +31,10 @@
   background-color: #fff;
   opacity: 0;
   transition: all 0.2s ease;
+
+  &:focus {
+    outline: none;
+  }
 }
 
 .modal.in,
@@ -173,6 +177,11 @@ ul.modal-head-metadata li {
   input[type="checkbox"] {
     margin-top: 5px;
     margin-bottom: 4px;
+  }
+
+  & > .icon-checkbox {
+    padding-top: 6px;
+    padding-right: 8px;
   }
 }
 

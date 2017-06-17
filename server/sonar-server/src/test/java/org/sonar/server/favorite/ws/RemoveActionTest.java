@@ -27,7 +27,7 @@ import org.sonar.api.server.ws.WebService;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbTester;
 import org.sonar.db.component.ComponentDto;
-import org.sonar.server.component.ComponentFinder;
+import org.sonar.server.component.TestComponentFinder;
 import org.sonar.server.exceptions.BadRequestException;
 import org.sonar.server.exceptions.NotFoundException;
 import org.sonar.server.exceptions.UnauthorizedException;
@@ -41,7 +41,7 @@ import static java.net.HttpURLConnection.HTTP_NO_CONTENT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.sonar.core.util.Protobuf.setNullable;
 import static org.sonar.db.component.ComponentTesting.newFileDto;
-import static org.sonar.db.component.ComponentTesting.newProjectDto;
+import static org.sonar.db.component.ComponentTesting.newPrivateProjectDto;
 import static org.sonarqube.ws.client.favorite.FavoritesWsParameters.PARAM_COMPONENT;
 
 public class RemoveActionTest {
@@ -55,10 +55,11 @@ public class RemoveActionTest {
   public UserSessionRule userSession = UserSessionRule.standalone();
   @Rule
   public DbTester db = DbTester.create();
+
   private DbClient dbClient = db.getDbClient();
 
   private FavoriteUpdater favoriteUpdater = new FavoriteUpdater(dbClient);
-  private WsActionTester ws = new WsActionTester(new RemoveAction(userSession, dbClient, favoriteUpdater, new ComponentFinder(dbClient)));
+  private WsActionTester ws = new WsActionTester(new RemoveAction(userSession, dbClient, favoriteUpdater, TestComponentFinder.from(db)));
 
   @Test
   public void remove_a_favorite_project() {
@@ -112,7 +113,7 @@ public class RemoveActionTest {
   }
 
   private ComponentDto insertProject() {
-    return db.components().insertComponent(newProjectDto(db.organizations().insert(), PROJECT_UUID).setKey(PROJECT_KEY));
+    return db.components().insertComponent(newPrivateProjectDto(db.organizations().insert(), PROJECT_UUID).setKey(PROJECT_KEY));
   }
 
   private ComponentDto insertProjectAndPermissions() {

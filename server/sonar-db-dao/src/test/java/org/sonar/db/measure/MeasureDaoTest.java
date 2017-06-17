@@ -20,7 +20,6 @@
 package org.sonar.db.measure;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -28,7 +27,6 @@ import javax.annotation.Nullable;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.sonar.api.resources.Scopes;
 import org.sonar.api.utils.System2;
 import org.sonar.core.util.UuidFactoryImpl;
 import org.sonar.db.DbClient;
@@ -37,18 +35,14 @@ import org.sonar.db.DbTester;
 import org.sonar.db.component.ComponentDto;
 import org.sonar.db.component.SnapshotDto;
 import org.sonar.db.component.SnapshotTesting;
-import org.sonar.db.organization.OrganizationDto;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.sonar.api.resources.Qualifiers.FILE;
-import static org.sonar.api.resources.Qualifiers.PROJECT;
 import static org.sonar.api.resources.Qualifiers.UNIT_TEST_FILE;
-import static org.sonar.api.resources.Qualifiers.VIEW;
 import static org.sonar.api.utils.DateUtils.parseDate;
-import static org.sonar.db.component.ComponentTesting.newDeveloper;
 import static org.sonar.db.component.ComponentTesting.newFileDto;
 import static org.sonar.db.component.ComponentTesting.newModuleDto;
 import static org.sonar.db.component.SnapshotTesting.newAnalysis;
@@ -77,7 +71,7 @@ public class MeasureDaoTest {
 
   @Test
   public void test_inserted_and_selected_columns() {
-    ComponentDto project = db.components().insertProject();
+    ComponentDto project = db.components().insertPrivateProject();
     insertAnalysis(LAST_ANALYSIS_UUID, project.uuid(), true);
     db.components().insertComponent(newFileDto(project).setUuid("C4"));
 
@@ -111,7 +105,7 @@ public class MeasureDaoTest {
 
   @Test
   public void selectByQuery() {
-    ComponentDto project1 = db.components().insertProject();
+    ComponentDto project1 = db.components().insertPrivateProject();
     ComponentDto module = db.components().insertComponent(newModuleDto(project1));
     db.components().insertComponent(newFileDto(module).setUuid("C1"));
     db.components().insertComponent(newFileDto(module).setUuid("C2"));
@@ -119,7 +113,7 @@ public class MeasureDaoTest {
     insertAnalysis(OTHER_ANALYSIS_UUID, project1.uuid(), false);
 
     String project2LastAnalysisUuid = "P2_LAST_ANALYSIS";
-    ComponentDto project2 = db.components().insertProject();
+    ComponentDto project2 = db.components().insertPrivateProject();
     insertAnalysis(project2LastAnalysisUuid, project2.uuid(), true);
 
     // project 1
@@ -206,7 +200,7 @@ public class MeasureDaoTest {
 
   @Test
   public void selectSingle() {
-    ComponentDto project = db.components().insertProject();
+    ComponentDto project = db.components().insertPrivateProject();
     db.components().insertComponent(newFileDto(project).setUuid("C1"));
     insertAnalysis(LAST_ANALYSIS_UUID, project.uuid(), true);
     insertMeasure("M1", LAST_ANALYSIS_UUID, "C1", NCLOC_METRIC_ID);
@@ -226,48 +220,8 @@ public class MeasureDaoTest {
   }
 
   @Test
-  public void selectProjectMeasuresOfDeveloper() {
-    OrganizationDto organizationDto = db.organizations().insert();
-    ComponentDto dev = db.components().insertComponent(newDeveloper(organizationDto, "DEV"));
-    insertAnalysis(LAST_ANALYSIS_UUID, dev.uuid(), true);
-    insertAnalysis(PREVIOUS_ANALYSIS_UUID, dev.uuid(), false);
-    List<Integer> allMetricIds = Arrays.asList(NCLOC_METRIC_ID, COMPLEXITY_METRIC_ID, COVERAGE_METRIC_ID);
-    long developerId = dev.getId();
-    assertThat(underTest.selectProjectMeasuresOfDeveloper(db.getSession(), developerId, allMetricIds)).isEmpty();
-
-    String projectUuid = insertComponent(Scopes.PROJECT, PROJECT, true);
-    String viewUuid = insertComponent(Scopes.PROJECT, VIEW, true);
-    String disabledProjectUuid = insertComponent(Scopes.PROJECT, PROJECT, false);
-    insertMeasure("M1", LAST_ANALYSIS_UUID, projectUuid, NCLOC_METRIC_ID);
-    insertMeasure("M2", LAST_ANALYSIS_UUID, projectUuid, COMPLEXITY_METRIC_ID);
-    insertMeasure("M3", LAST_ANALYSIS_UUID, projectUuid, COVERAGE_METRIC_ID);
-    insertMeasure("M4", PREVIOUS_ANALYSIS_UUID, projectUuid, NCLOC_METRIC_ID);
-    insertMeasure("M5", PREVIOUS_ANALYSIS_UUID, projectUuid, COMPLEXITY_METRIC_ID);
-    insertMeasure("M6", PREVIOUS_ANALYSIS_UUID, projectUuid, COVERAGE_METRIC_ID);
-    insertMeasure("M11", LAST_ANALYSIS_UUID, projectUuid, developerId, NCLOC_METRIC_ID);
-    insertMeasure("M12", LAST_ANALYSIS_UUID, projectUuid, developerId, COMPLEXITY_METRIC_ID);
-    insertMeasure("M13", LAST_ANALYSIS_UUID, projectUuid, developerId, COVERAGE_METRIC_ID);
-    insertMeasure("M14", PREVIOUS_ANALYSIS_UUID, projectUuid, NCLOC_METRIC_ID);
-    insertMeasure("M15", PREVIOUS_ANALYSIS_UUID, projectUuid, COMPLEXITY_METRIC_ID);
-    insertMeasure("M16", PREVIOUS_ANALYSIS_UUID, projectUuid, COVERAGE_METRIC_ID);
-    insertMeasure("M51", LAST_ANALYSIS_UUID, viewUuid, NCLOC_METRIC_ID);
-    insertMeasure("M52", LAST_ANALYSIS_UUID, viewUuid, COMPLEXITY_METRIC_ID);
-    insertMeasure("M53", LAST_ANALYSIS_UUID, viewUuid, COVERAGE_METRIC_ID);
-    insertMeasure("M54", LAST_ANALYSIS_UUID, disabledProjectUuid, developerId, NCLOC_METRIC_ID);
-    insertMeasure("M55", LAST_ANALYSIS_UUID, disabledProjectUuid, developerId, COMPLEXITY_METRIC_ID);
-    insertMeasure("M56", LAST_ANALYSIS_UUID, disabledProjectUuid, developerId, COVERAGE_METRIC_ID);
-
-    assertThat(underTest.selectProjectMeasuresOfDeveloper(db.getSession(), developerId, allMetricIds))
-      .extracting(MeasureDto::getData)
-      .containsOnly("M11", "M12", "M13", "M54", "M55", "M56");
-    assertThat(underTest.selectProjectMeasuresOfDeveloper(db.getSession(), developerId, singletonList(NCLOC_METRIC_ID)))
-      .extracting(MeasureDto::getData)
-      .containsOnly("M11", "M54");
-  }
-
-  @Test
   public void select_tree_by_query() {
-    ComponentDto project = db.components().insertProject();
+    ComponentDto project = db.components().insertPrivateProject();
     ComponentDto module1 = db.components().insertComponent(newModuleDto(project));
     ComponentDto module2 = db.components().insertComponent(newModuleDto(project));
     ComponentDto file1 = db.components().insertComponent(newFileDto(module1).setUuid("C1").setName("File One"));
@@ -318,7 +272,7 @@ public class MeasureDaoTest {
 
   @Test
   public void select_tree_by_query_use_only_latest_analysis() {
-    ComponentDto project = db.components().insertProject();
+    ComponentDto project = db.components().insertPrivateProject();
     ComponentDto file1 = db.components().insertComponent(newFileDto(project).setUuid("C1").setName("File One"));
     db.components().insertComponent(newFileDto(project).setUuid("C2").setName("File Two").setQualifier(UNIT_TEST_FILE));
     insertAnalysis(LAST_ANALYSIS_UUID, project.uuid(), true);
@@ -351,7 +305,7 @@ public class MeasureDaoTest {
 
   @Test
   public void select_past_measures_with_several_analyses() {
-    ComponentDto project = db.components().insertProject();
+    ComponentDto project = db.components().insertPrivateProject();
     long lastAnalysisDate = parseDate("2017-01-25").getTime();
     long previousAnalysisDate = lastAnalysisDate - 10_000_000_000L;
     long oldAnalysisDate = lastAnalysisDate - 100_000_000_000L;
@@ -375,7 +329,7 @@ public class MeasureDaoTest {
 
   @Test
   public void selectByComponentsAndMetrics() {
-    ComponentDto project1 = db.components().insertProject(db.getDefaultOrganization(), "P1");
+    ComponentDto project1 = db.components().insertPrivateProject(db.getDefaultOrganization(), "P1");
     ComponentDto module = db.components().insertComponent(newModuleDto(project1));
     db.components().insertComponent(newFileDto(module).setUuid("C1"));
     db.components().insertComponent(newFileDto(module).setUuid("C2"));
@@ -383,7 +337,7 @@ public class MeasureDaoTest {
     insertAnalysis(OTHER_ANALYSIS_UUID, project1.uuid(), false);
 
     String project2LastAnalysisUuid = "P2_LAST_ANALYSIS";
-    ComponentDto project2 = db.components().insertProject(db.getDefaultOrganization(), "P2");
+    ComponentDto project2 = db.components().insertPrivateProject(db.getDefaultOrganization(), "P2");
     insertAnalysis(project2LastAnalysisUuid, project2.uuid(), true);
 
     // project 1

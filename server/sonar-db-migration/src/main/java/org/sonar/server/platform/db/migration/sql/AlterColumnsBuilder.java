@@ -32,6 +32,7 @@ import org.sonar.server.platform.db.migration.def.ColumnDef;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.Lists.newArrayList;
 import org.sonar.db.dialect.MariaDb;
+import static org.sonar.server.platform.db.migration.def.Validations.validateTableName;
 
 /**
  * Generate SQL queries to update multiple columns of a single table.
@@ -52,99 +53,97 @@ public class AlterColumnsBuilder {
     private final String tableName;
     private final List<ColumnDef> columnDefs = newArrayList();
 
-    public AlterColumnsBuilder(Dialect dialect, String tableName) {
-        this.dialect = dialect;
-        this.tableName = tableName;
+  public AlterColumnsBuilder(Dialect dialect, String tableName) {
+    this.dialect = dialect;
+    this.tableName = validateTableName(tableName);
+  }
+
+  public AlterColumnsBuilder updateColumn(ColumnDef columnDef) {
+    // limitation of Oracle, only attribute changes must be defined in ALTER.
+    checkArgument(columnDef.getDefaultValue()==null, "Default value is not supported on alter of column '%s'", columnDef.getName());
+    columnDefs.add(columnDef);
+    return this;
+  }
+
+  public List<String> build() {
+    if (columnDefs.isEmpty()) {
+      throw new IllegalStateException("No column has been defined");
     }
-
-    public AlterColumnsBuilder updateColumn(ColumnDef columnDef) {
-        // limitation of Oracle, only attribute changes must be defined in ALTER.
-        checkArgument(columnDef.getDefaultValue() == null, "Default value is not supported on alter of column '%s'", columnDef.getName());
-        columnDefs.add(columnDef);
-        return this;
+    switch (dialect.getId()) {
+      case PostgreSql.ID:
+        return createPostgresQuery();
+      case MySql.ID:
+      case MariaDb.ID:
+        return createMySqlQuery();
+      case Oracle.ID:
+        return createOracleQuery();
+      default:
+        return createMsSqlAndH2Queries();
     }
+  }
 
-    public List<String> build() {
-        if (columnDefs.isEmpty()) {
-            throw new IllegalStateException("No column has been defined");
-        }
-        switch (dialect.getId()) {
-            case PostgreSql.ID:
-                return createPostgresQuery();
-            case MySql.ID:
-            case MariaDb.ID:
-                return createMySqlQuery();
-            case Oracle.ID:
-                return createOracleQuery();
-            default:
-                return createMsSqlAndH2Queries();
-        }
+  private List<String> createPostgresQuery() {
+    StringBuilder sql = new StringBuilder(ALTER_TABLE + tableName + " ");
+    for (Iterator<ColumnDef> columnDefIterator = columnDefs.iterator(); columnDefIterator.hasNext();) {
+      ColumnDef columnDef = columnDefIterator.next();
+      sql.append(ALTER_COLUMN);
+      addColumn(sql, columnDef, "TYPE ", false);
+      sql.append(", ");
+      sql.append(ALTER_COLUMN);
+      sql.append(columnDef.getName());
+      sql.append(' ').append(columnDef.isNullable() ? "DROP" : "SET").append(" NOT NULL");
+      if (columnDefIterator.hasNext()) {
+        sql.append(", ");
+      }
     }
+    return Collections.singletonList(sql.toString());
+  }
 
-    private List<String> createPostgresQuery() {
-        StringBuilder sql = new StringBuilder(ALTER_TABLE + tableName + " ");
-        for (Iterator<ColumnDef> columnDefIterator = columnDefs.iterator(); columnDefIterator.hasNext();) {
-            ColumnDef columnDef = columnDefIterator.next();
-            sql.append(ALTER_COLUMN);
-            addColumn(sql, columnDef, "TYPE ", false);
-            sql.append(", ");
-            sql.append(ALTER_COLUMN);
-            sql.append(columnDef.getName());
-            sql.append(' ').append(columnDef.isNullable() ? "DROP" : "SET").append(" NOT NULL");
-            if (columnDefIterator.hasNext()) {
-                sql.append(", ");
-            }
-        }
-        return Collections.singletonList(sql.toString());
+  private List<String> createMySqlQuery() {
+    StringBuilder sql = new StringBuilder(ALTER_TABLE + tableName + " ");
+    addColumns(sql, "MODIFY COLUMN ", "", true);
+    return Collections.singletonList(sql.toString());
+  }
+
+  private List<String> createOracleQuery() {
+    List<String> sqls = new ArrayList<>();
+    for (ColumnDef columnDef : columnDefs) {
+      StringBuilder sql = new StringBuilder(ALTER_TABLE + tableName + " ").append("MODIFY (");
+      addColumn(sql, columnDef, "", true);
+      sql.append(")");
+      sqls.add(sql.toString());
     }
+    return sqls;
+  }
 
-    private List<String> createMySqlQuery() {
-        StringBuilder sql = new StringBuilder(ALTER_TABLE + tableName + " ");
-        addColumns(sql, "MODIFY COLUMN ", "", true);
-        return Collections.singletonList(sql.toString());
+  private List<String> createMsSqlAndH2Queries() {
+    List<String> sqls = new ArrayList<>();
+    for (ColumnDef columnDef : columnDefs) {
+      StringBuilder defaultQuery = new StringBuilder(ALTER_TABLE + tableName + " ");
+      defaultQuery.append(ALTER_COLUMN);
+      addColumn(defaultQuery, columnDef, "", true);
+      sqls.add(defaultQuery.toString());
     }
+    return sqls;
+  }
 
-    private List<String> createOracleQuery() {
-        List<String> sqls = new ArrayList<>();
-        for (ColumnDef columnDef : columnDefs) {
-            StringBuilder sql = new StringBuilder(ALTER_TABLE + tableName + " ").append("MODIFY (");
-            addColumn(sql, columnDef, "", true);
-            sql.append(")");
-            sqls.add(sql.toString());
-        }
-        return sqls;
+  private void addColumns(StringBuilder sql, String updateKeyword, String typePrefix, boolean addNotNullableProperty) {
+    for (Iterator<ColumnDef> columnDefIterator = columnDefs.iterator(); columnDefIterator.hasNext();) {
+      sql.append(updateKeyword);
+      addColumn(sql, columnDefIterator.next(), typePrefix, addNotNullableProperty);
+      if (columnDefIterator.hasNext()) {
+        sql.append(", ");
+      }
     }
+  }
 
-    private List<String> createMsSqlAndH2Queries() {
-        List<String> sqls = new ArrayList<>();
-        for (ColumnDef columnDef : columnDefs) {
-            StringBuilder defaultQuery = new StringBuilder(ALTER_TABLE + tableName + " ");
-            defaultQuery.append(ALTER_COLUMN);
-            addColumn(defaultQuery, columnDef, "", true);
-            sqls.add(defaultQuery.toString());
-        }
-        return sqls;
+  private void addColumn(StringBuilder sql, ColumnDef columnDef, String typePrefix, boolean addNotNullableProperty) {
+    sql.append(columnDef.getName())
+      .append(" ")
+      .append(typePrefix)
+      .append(columnDef.generateSqlType(dialect));
+    if (addNotNullableProperty) {
+      sql.append(columnDef.isNullable() ? " NULL" : " NOT NULL");
     }
-
-    private void addColumns(StringBuilder sql, String updateKeyword, String typePrefix, boolean addNotNullableProperty) {
-        for (Iterator<ColumnDef> columnDefIterator = columnDefs.iterator(); columnDefIterator.hasNext();) {
-            sql.append(updateKeyword);
-            addColumn(sql, columnDefIterator.next(), typePrefix, addNotNullableProperty);
-            if (columnDefIterator.hasNext()) {
-                sql.append(", ");
-            }
-        }
-    }
-
-    private void addColumn(StringBuilder sql, ColumnDef columnDef, String typePrefix, boolean addNotNullableProperty) {
-        sql.append(columnDef.getName())
-                .append(" ")
-                .append(typePrefix)
-                .append(columnDef.generateSqlType(dialect));
-        if (addNotNullableProperty) {
-            sql.append(columnDef.isNullable() ? " NULL" : " NOT NULL");
-        }
-
-    }
-
+  }
 }

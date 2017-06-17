@@ -19,11 +19,11 @@
  */
 // @flow
 import React from 'react';
-import classNames from 'classnames';
 import moment from 'moment';
 import { max } from 'lodash';
 import FacetBox from './components/FacetBox';
 import FacetHeader from './components/FacetHeader';
+import FacetItem from './components/FacetItem';
 import { BarChart } from '../../../components/charts/bar-chart';
 import DateInput from '../../../components/controls/DateInput';
 import { translate } from '../../../helpers/l10n';
@@ -55,8 +55,19 @@ export default class CreationDateFacet extends React.PureComponent {
 
   property = 'createdAt';
 
+  hasValue = (): boolean =>
+    this.props.createdAfter.length > 0 ||
+    this.props.createdAt.length > 0 ||
+    this.props.createdBefore.length > 0 ||
+    this.props.createdInLast.length > 0 ||
+    this.props.sinceLeakPeriod;
+
   handleHeaderClick = () => {
     this.props.onToggle(this.property);
+  };
+
+  handleClear = () => {
+    this.resetTo({});
   };
 
   resetTo = (changes: {}) => {
@@ -89,15 +100,11 @@ export default class CreationDateFacet extends React.PureComponent {
     });
   };
 
-  handlePeriodClick = (period?: string) => (e: Event & { target: HTMLElement }) => {
-    e.preventDefault();
-    e.target.blur;
+  handlePeriodClick = (period: string) => {
     this.resetTo({ createdInLast: period });
   };
 
-  handleLeakPeriodClick = () => (e: Event & { target: HTMLElement }) => {
-    e.preventDefault();
-    e.target.blur;
+  handleLeakPeriodClick = () => {
     this.resetTo({ sinceLeakPeriod: true });
   };
 
@@ -196,39 +203,51 @@ export default class CreationDateFacet extends React.PureComponent {
   renderPrefefinedPeriods() {
     const { component, createdInLast, sinceLeakPeriod } = this.props;
     return (
-      <div className="spacer-top">
-        <span className="spacer-right">{translate('issues.facet.createdAt.or')}</span>
-        <a className="spacer-right" href="#" onClick={this.handlePeriodClick()}>
-          {translate('issues.facet.createdAt.all')}
-        </a>
+      <div className="spacer-top issues-predefined-periods">
+        <FacetItem
+          active={!this.hasValue()}
+          facetMode=""
+          name={translate('issues.facet.createdAt.all')}
+          onClick={this.handlePeriodClick}
+          stat={null}
+          value=""
+        />
         {component == null &&
-          <a
-            className={classNames('spacer-right', { 'active-link': createdInLast === '1w' })}
-            href="#"
-            onClick={this.handlePeriodClick('1w')}>
-            {translate('issues.facet.createdAt.last_week')}
-          </a>}
+          <FacetItem
+            active={createdInLast === '1w'}
+            facetMode=""
+            name={translate('issues.facet.createdAt.last_week')}
+            onClick={this.handlePeriodClick}
+            stat={null}
+            value="1w"
+          />}
         {component == null &&
-          <a
-            className={classNames('spacer-right', { 'active-link': createdInLast === '1m' })}
-            href="#"
-            onClick={this.handlePeriodClick('1m')}>
-            {translate('issues.facet.createdAt.last_month')}
-          </a>}
+          <FacetItem
+            active={createdInLast === '1m'}
+            facetMode=""
+            name={translate('issues.facet.createdAt.last_month')}
+            onClick={this.handlePeriodClick}
+            stat={null}
+            value="1m"
+          />}
         {component == null &&
-          <a
-            className={classNames('spacer-right', { 'active-link': createdInLast === '1y' })}
-            href="#"
-            onClick={this.handlePeriodClick('1y')}>
-            {translate('issues.facet.createdAt.last_year')}
-          </a>}
+          <FacetItem
+            active={createdInLast === '1y'}
+            facetMode=""
+            name={translate('issues.facet.createdAt.last_year')}
+            onClick={this.handlePeriodClick}
+            stat={null}
+            value="1y"
+          />}
         {component != null &&
-          <a
-            className={classNames('spacer-right', { 'active-link': sinceLeakPeriod })}
-            href="#"
-            onClick={this.handleLeakPeriodClick()}>
-            {translate('issues.leak_period')}
-          </a>}
+          <FacetItem
+            active={sinceLeakPeriod}
+            facetMode=""
+            name={translate('issues.leak_period')}
+            onClick={this.handleLeakPeriodClick}
+            stat={null}
+            value=""
+          />}
       </div>
     );
   }
@@ -245,26 +264,14 @@ export default class CreationDateFacet extends React.PureComponent {
   }
 
   render() {
-    const hasValue =
-      this.props.createdAfter.length > 0 ||
-      this.props.createdAt.length > 0 ||
-      this.props.createdBefore.length > 0 ||
-      this.props.createdInLast.length > 0 ||
-      this.props.sinceLeakPeriod;
-
-    const { stats } = this.props;
-
-    if (!stats) {
-      return null;
-    }
-
     return (
       <FacetBox property={this.property}>
         <FacetHeader
-          hasValue={hasValue}
           name={translate('issues.facet', this.property)}
+          onClear={this.handleClear}
           onClick={this.handleHeaderClick}
           open={this.props.open}
+          values={this.hasValue() ? 1 : 0}
         />
 
         {this.props.open && this.renderInner()}

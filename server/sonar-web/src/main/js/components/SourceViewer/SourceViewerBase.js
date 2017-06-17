@@ -23,7 +23,6 @@ import classNames from 'classnames';
 import { intersection, uniqBy } from 'lodash';
 import SourceViewerHeader from './SourceViewerHeader';
 import SourceViewerCode from './SourceViewerCode';
-import SourceViewerIssueLocations from './SourceViewerIssueLocations';
 import CoveragePopupView from './popups/coverage-popup';
 import DuplicationPopupView from './popups/duplication-popup';
 import LineActionsPopupView from './popups/line-actions-popup';
@@ -34,18 +33,10 @@ import getCoverageStatus from './helpers/getCoverageStatus';
 import {
   issuesByLine,
   locationsByLine,
-  locationsByIssueAndLine,
-  locationMessagesByIssueAndLine,
   duplicationsByLine,
-  symbolsByLine,
-  findLocationByIndex
+  symbolsByLine
 } from './helpers/indexing';
-import type {
-  LinearIssueLocation,
-  IndexedIssueLocation,
-  IndexedIssueLocationsByIssueAndLine,
-  IndexedIssueLocationMessagesByIssueAndLine
-} from './helpers/indexing';
+import type { LinearIssueLocation } from './helpers/indexing';
 import {
   getComponentForSourceViewer,
   getSources,
@@ -55,7 +46,7 @@ import {
 import { translate } from '../../helpers/l10n';
 import { scrollToElement } from '../../helpers/scrolling';
 import type { SourceLine } from './types';
-import type { Issue } from '../issue/types';
+import type { Issue, FlowLocation } from '../issue/types';
 import './styles.css';
 
 // TODO react-virtualized
@@ -66,14 +57,18 @@ type Props = {
   displayAllIssues: boolean,
   filterLine?: (line: SourceLine) => boolean,
   highlightedLine?: number,
+  highlightedLocations?: Array<FlowLocation>,
+  highlightedLocationMessage?: { index: number, text: string },
   loadComponent: string => Promise<*>,
   loadIssues: (string, number, number) => Promise<*>,
   loadSources: (string, number, number) => Promise<*>,
   onLoaded?: (component: Object, sources: Array<*>, issues: Array<*>) => void,
+  onLocationSelect?: number => void,
   onIssueChange?: Issue => void,
   onIssueSelect?: string => void,
   onIssueUnselect?: () => void,
   onReceiveComponent: ({ canMarkAsFavorite: boolean, fav: boolean, key: string }) => void,
+  scroll?: HTMLElement => void,
   selectedIssue?: string
 };
 
@@ -95,25 +90,19 @@ type State = {
   issues?: Array<Issue>,
   issuesByLine: { [number]: Array<Issue> },
   issueLocationsByLine: { [number]: Array<LinearIssueLocation> },
-  issueSecondaryLocationsByIssueByLine: IndexedIssueLocationsByIssueAndLine,
-  issueSecondaryLocationMessagesByIssueByLine: IndexedIssueLocationMessagesByIssueAndLine,
   loading: boolean,
   loadingSourcesAfter: boolean,
   loadingSourcesBefore: boolean,
-  locationsPanelHeight: number,
   notAccessible: boolean,
   notExist: boolean,
   openIssuesByLine: { [number]: boolean },
   selectedIssue?: string,
-  selectedIssueLocation: IndexedIssueLocation | null,
   sources?: Array<SourceLine>,
+  sourceRemoved: boolean,
   symbolsByLine: { [number]: Array<string> }
 };
 
 const LINES = 500;
-
-const LOCATIONS_PANEL_DEFAULT_HEIGHT = 200;
-const LOCATIONS_PANEL_HEIGHT_LOCAL_STORAGE_KEY = 'sonarqube.locations.height';
 
 const loadComponent = (key: string): Promise<*> => {
   return getComponentForSourceViewer(key);
@@ -151,12 +140,12 @@ export default class SourceViewerBase extends React.PureComponent {
       loading: true,
       loadingSourcesAfter: false,
       loadingSourcesBefore: false,
-      locationsPanelHeight: this.getInitialLocationsPanelHeight(),
       notAccessible: false,
       notExist: false,
       openIssuesByLine: {},
       selectedIssue: props.selectedIssue,
       selectedIssueLocation: null,
+      sourceRemoved: false,
       symbolsByLine: {}
     };
   }
@@ -168,11 +157,11 @@ export default class SourceViewerBase extends React.PureComponent {
 
   componentWillReceiveProps(nextProps: Props) {
     if (nextProps.onIssueSelect != null && nextProps.selectedIssue !== this.props.selectedIssue) {
-      this.setState({ selectedIssue: nextProps.selectedIssue, selectedIssueLocation: null });
+      this.setState({ selectedIssue: nextProps.selectedIssue });
     }
   }
 
-  componentDidUpdate(prevProps: Props, prevState: State) {
+  componentDidUpdate(prevProps: Props) {
     if (prevProps.component !== this.props.component) {
       this.fetchComponent();
     } else if (
@@ -181,13 +170,16 @@ export default class SourceViewerBase extends React.PureComponent {
       this.isLineOutsideOfRange(this.props.aroundLine)
     ) {
       this.fetchSources();
-    }
-
-    if (
-      prevState.selectedIssueLocation !== this.state.selectedIssueLocation &&
-      this.state.selectedIssueLocation != null
-    ) {
-      this.scrollToLine(this.state.selectedIssueLocation.line);
+    } else {
+      const { selectedIssue } = this.props;
+      const { issues } = this.state;
+      if (
+        selectedIssue != null &&
+        issues != null &&
+        issues.find(issue => issue.key === selectedIssue) == null
+      ) {
+        this.reloadIssues();
+      }
     }
   }
 
@@ -200,7 +192,7 @@ export default class SourceViewerBase extends React.PureComponent {
       `.source-line-code[data-line-number="${line}"] .source-line-issue-locations`
     );
     if (lineElement) {
-      scrollToElement(lineElement, 125, this.state.locationsPanelHeight + 75);
+      scrollToElement(lineElement, { topOffset: 125, bottomOffset: 75 });
     }
   }
 
@@ -231,11 +223,10 @@ export default class SourceViewerBase extends React.PureComponent {
               issues,
               issuesByLine: issuesByLine(issues),
               issueLocationsByLine: locationsByLine(issues),
-              issueSecondaryLocationsByIssueByLine: locationsByIssueAndLine(issues),
-              issueSecondaryLocationMessagesByIssueByLine: locationMessagesByIssueAndLine(issues),
               loading: false,
               hasSourcesAfter: sources.length > LINES,
               sources: this.computeCoverageStatus(finalSources),
+              sourceRemoved: false,
               symbolsByLine: symbolsByLine(sources.slice(0, LINES))
             },
             () => {
@@ -260,6 +251,8 @@ export default class SourceViewerBase extends React.PureComponent {
       if (this.mounted) {
         if (response.status === 403) {
           this.setState({ component, loading: false, notAccessible: true });
+        } else if (response.status === 404) {
+          this.setState({ component, loading: false, sourceRemoved: true });
         }
       }
     };
@@ -295,22 +288,47 @@ export default class SourceViewerBase extends React.PureComponent {
     });
   }
 
+  reloadIssues() {
+    if (!this.state.sources) {
+      return;
+    }
+    const firstSourceLine = this.state.sources[0];
+    const lastSourceLine = this.state.sources[this.state.sources.length - 1];
+    this.props
+      .loadIssues(this.props.component, firstSourceLine.line, lastSourceLine.line)
+      .then(issues => {
+        if (this.mounted) {
+          this.setState({
+            issues,
+            issuesByLine: issuesByLine(issues),
+            issueLocationsByLine: locationsByLine(issues)
+          });
+        }
+      });
+  }
+
   loadSources() {
     return new Promise((resolve, reject) => {
       const onFailLoadSources = ({ response }) => {
         // TODO handle other statuses
         if (this.mounted) {
-          if (response.status === 403) {
+          if ([403, 404].includes(response.status)) {
             reject(response);
-          } else if (response.status === 404) {
+          } else {
             resolve([]);
           }
         }
       };
 
       const from = this.props.aroundLine ? Math.max(1, this.props.aroundLine - LINES / 2 + 1) : 1;
+
+      let to = this.props.aroundLine ? this.props.aroundLine + LINES / 2 + 1 : LINES + 1;
+      // make sure we try to download `LINES` lines
+      if (from === 1 && to < LINES) {
+        to = LINES;
+      }
       // request one additional line to define `hasSourcesAfter`
-      const to = this.props.aroundLine ? this.props.aroundLine + LINES / 2 + 1 : LINES + 1;
+      to++;
 
       return this.props
         .loadSources(this.props.component, from, to)
@@ -328,12 +346,17 @@ export default class SourceViewerBase extends React.PureComponent {
     this.props.loadSources(this.props.component, from, firstSourceLine.line - 1).then(sources => {
       this.props.loadIssues(this.props.component, from, firstSourceLine.line - 1).then(issues => {
         if (this.mounted) {
-          this.setState(prevState => ({
-            issues: uniqBy([...issues, ...prevState.issues], issue => issue.key),
-            loadingSourcesBefore: false,
-            sources: [...this.computeCoverageStatus(sources), ...prevState.sources],
-            symbolsByLine: { ...prevState.symbolsByLine, ...symbolsByLine(sources) }
-          }));
+          this.setState(prevState => {
+            const nextIssues = uniqBy([...issues, ...prevState.issues], issue => issue.key);
+            return {
+              issues: nextIssues,
+              issuesByLine: issuesByLine(nextIssues),
+              issueLocationsByLine: locationsByLine(nextIssues),
+              loadingSourcesBefore: false,
+              sources: [...this.computeCoverageStatus(sources), ...prevState.sources],
+              symbolsByLine: { ...prevState.symbolsByLine, ...symbolsByLine(sources) }
+            };
+          });
         }
       });
     });
@@ -351,19 +374,30 @@ export default class SourceViewerBase extends React.PureComponent {
     this.props.loadSources(this.props.component, fromLine, toLine).then(sources => {
       this.props.loadIssues(this.props.component, fromLine, toLine).then(issues => {
         if (this.mounted) {
-          this.setState(prevState => ({
-            issues: uniqBy([...prevState.issues, ...issues], issue => issue.key),
-            hasSourcesAfter: sources.length > LINES,
-            loadingSourcesAfter: false,
-            sources: [...prevState.sources, ...this.computeCoverageStatus(sources.slice(0, LINES))],
-            symbolsByLine: { ...prevState.symbolsByLine, ...symbolsByLine(sources.slice(0, LINES)) }
-          }));
+          this.setState(prevState => {
+            const nextIssues = uniqBy([...prevState.issues, ...issues], issue => issue.key);
+            return {
+              issues: nextIssues,
+              issuesByLine: issuesByLine(nextIssues),
+              issueLocationsByLine: locationsByLine(nextIssues),
+              hasSourcesAfter: sources.length > LINES,
+              loadingSourcesAfter: false,
+              sources: [
+                ...prevState.sources,
+                ...this.computeCoverageStatus(sources.slice(0, LINES))
+              ],
+              symbolsByLine: {
+                ...prevState.symbolsByLine,
+                ...symbolsByLine(sources.slice(0, LINES))
+              }
+            };
+          });
         }
       });
     });
   };
 
-  loadDuplications = (line: SourceLine, element: HTMLElement) => {
+  loadDuplications = (line: SourceLine) => {
     getDuplications(this.props.component).then(r => {
       if (this.mounted) {
         this.setState(
@@ -376,41 +410,12 @@ export default class SourceViewerBase extends React.PureComponent {
           () => {
             // immediately show dropdown popup if there is only one duplicated block
             if (r.duplications.length === 1) {
-              this.handleDuplicationClick(0, line.line, element);
+              this.handleDuplicationClick(0, line.line);
             }
           }
         );
       }
     });
-  };
-
-  getInitialLocationsPanelHeight() {
-    try {
-      const rawValue = window.localStorage.getItem(LOCATIONS_PANEL_HEIGHT_LOCAL_STORAGE_KEY);
-      if (!rawValue) {
-        return LOCATIONS_PANEL_DEFAULT_HEIGHT;
-      }
-      const intValue = Number(rawValue);
-      return !isNaN(intValue) ? intValue : LOCATIONS_PANEL_DEFAULT_HEIGHT;
-    } catch (e) {
-      return LOCATIONS_PANEL_DEFAULT_HEIGHT;
-    }
-  }
-
-  storeLocationsPanelHeight(height: number) {
-    window.localStorage.setItem(LOCATIONS_PANEL_HEIGHT_LOCAL_STORAGE_KEY, height);
-  }
-
-  openNewWindow = () => {
-    const { component } = this.state;
-    if (component != null) {
-      let query = 'id=' + encodeURIComponent(component.key);
-      const windowParams = 'resizable=1,scrollbars=1,status=1';
-      if (this.state.highlightedLine) {
-        query = query + '&line=' + this.state.highlightedLine;
-      }
-      window.open(window.baseUrl + '/component/index?' + query, component.name, windowParams);
-    }
   };
 
   showMeasures = () => {
@@ -486,27 +491,11 @@ export default class SourceViewerBase extends React.PureComponent {
     popup.render();
   };
 
-  handleSelectIssueLocation = (flowIndex: number, locationIndex: number) => {
-    this.setState(prevState => {
-      const selectedIssueLocation = findLocationByIndex(
-        prevState.issueSecondaryLocationsByIssueByLine,
-        flowIndex,
-        locationIndex
-      );
-      return { selectedIssueLocation };
-    });
-  };
-
-  handleLocationsPanelResize = (height: number) => {
-    this.setState({ locationsPanelHeight: height });
-    this.storeLocationsPanelHeight(height);
-  };
-
   handleIssueSelect = (issue: string) => {
     if (this.props.onIssueSelect) {
       this.props.onIssueSelect(issue);
     } else {
-      this.setState({ selectedIssue: issue, selectedIssueLocation: null });
+      this.setState({ selectedIssue: issue });
     }
   };
 
@@ -514,7 +503,7 @@ export default class SourceViewerBase extends React.PureComponent {
     if (this.props.onIssueUnselect) {
       this.props.onIssueUnselect();
     } else {
-      this.setState({ selectedIssue: undefined, selectedIssueLocation: null });
+      this.setState({ selectedIssue: undefined });
     }
   };
 
@@ -554,14 +543,12 @@ export default class SourceViewerBase extends React.PureComponent {
         hasSourcesAfter={this.state.hasSourcesAfter}
         filterLine={this.props.filterLine}
         highlightedLine={this.state.highlightedLine}
+        highlightedLocations={this.props.highlightedLocations}
+        highlightedLocationMessage={this.props.highlightedLocationMessage}
         highlightedSymbols={this.state.highlightedSymbols}
         issues={this.state.issues}
         issuesByLine={this.state.issuesByLine}
         issueLocationsByLine={this.state.issueLocationsByLine}
-        issueSecondaryLocationsByIssueByLine={this.state.issueSecondaryLocationsByIssueByLine}
-        issueSecondaryLocationMessagesByIssueByLine={
-          this.state.issueSecondaryLocationMessagesByIssueByLine
-        }
         loadDuplications={this.loadDuplications}
         loadSourcesAfter={this.loadSourcesAfter}
         loadSourcesBefore={this.loadSourcesBefore}
@@ -575,12 +562,12 @@ export default class SourceViewerBase extends React.PureComponent {
         onIssuesOpen={this.handleOpenIssues}
         onIssuesClose={this.handleCloseIssues}
         onLineClick={this.handleLineClick}
+        onLocationSelect={this.props.onLocationSelect}
         onSCMClick={this.handleSCMClick}
-        onLocationSelect={this.handleSelectIssueLocation}
         onSymbolClick={this.handleSymbolClick}
         openIssuesByLine={this.state.openIssuesByLine}
+        scroll={this.props.scroll}
         selectedIssue={this.state.selectedIssue}
-        selectedIssueLocation={this.state.selectedIssueLocation}
         sources={sources}
         symbolsByLine={this.state.symbolsByLine}
       />
@@ -588,7 +575,7 @@ export default class SourceViewerBase extends React.PureComponent {
   }
 
   render() {
-    const { component, loading } = this.state;
+    const { component, loading, sources, notAccessible, sourceRemoved } = this.state;
 
     if (loading) {
       return null;
@@ -610,31 +597,20 @@ export default class SourceViewerBase extends React.PureComponent {
       'source-duplications-expanded': this.state.displayDuplications
     });
 
-    const selectedIssueObj = this.state.selectedIssue && this.state.issues != null
-      ? this.state.issues.find(issue => issue.key === this.state.selectedIssue)
-      : null;
+    const displaySources = !notAccessible && !sourceRemoved;
 
     return (
       <div className={className} ref={node => (this.node = node)}>
-        <SourceViewerHeader
-          component={this.state.component}
-          openNewWindow={this.openNewWindow}
-          showMeasures={this.showMeasures}
-        />
-        {this.state.notAccessible &&
+        <SourceViewerHeader component={this.state.component} showMeasures={this.showMeasures} />
+        {notAccessible &&
           <div className="alert alert-warning spacer-top">
             {translate('code_viewer.no_source_code_displayed_due_to_security')}
           </div>}
-        {this.state.sources != null && this.renderCode(this.state.sources)}
-        {selectedIssueObj != null &&
-          selectedIssueObj.flows.length > 0 &&
-          <SourceViewerIssueLocations
-            height={this.state.locationsPanelHeight}
-            issue={selectedIssueObj}
-            onResize={this.handleLocationsPanelResize}
-            onSelectLocation={this.handleSelectIssueLocation}
-            selectedLocation={this.state.selectedIssueLocation}
-          />}
+        {sourceRemoved &&
+          <div className="alert alert-warning spacer-top">
+            {translate('code_viewer.no_source_code_displayed_due_to_source_removed')}
+          </div>}
+        {displaySources && sources != null && this.renderCode(sources)}
       </div>
     );
   }

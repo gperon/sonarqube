@@ -30,6 +30,7 @@ import org.sonar.db.DbClient;
 import org.sonar.db.DbSession;
 import org.sonar.db.DbTester;
 import org.sonar.db.component.ComponentDto;
+import org.sonar.db.component.ComponentTesting;
 import org.sonar.db.component.SnapshotDto;
 import org.sonar.db.event.EventDto;
 import org.sonar.server.exceptions.ForbiddenException;
@@ -42,7 +43,6 @@ import org.sonarqube.ws.ProjectAnalyses.UpdateEventResponse;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.sonar.core.util.Protobuf.setNullable;
-import static org.sonar.db.component.ComponentTesting.newProjectDto;
 import static org.sonar.db.component.SnapshotTesting.newAnalysis;
 import static org.sonar.db.event.EventTesting.newEvent;
 import static org.sonar.test.JsonAssert.assertJson;
@@ -66,7 +66,7 @@ public class UpdateEventActionTest {
 
   @Test
   public void json_example() {
-    ComponentDto project = db.components().insertProject();
+    ComponentDto project = db.components().insertPrivateProject();
     SnapshotDto analysis = db.components().insertSnapshot(newAnalysis(project).setUuid("A2"));
     db.events().insertEvent(newEvent(analysis)
       .setUuid("E1")
@@ -82,6 +82,7 @@ public class UpdateEventActionTest {
 
     assertJson(result).isSimilarTo(getClass().getResource("update_event-example.json"));
   }
+
   @Test
   public void update_name_in_db() {
     SnapshotDto analysis = createAnalysisAndLogInAsProjectAdministrator("5.6");
@@ -158,10 +159,10 @@ public class UpdateEventActionTest {
 
   @Test
   public void throw_ForbiddenException_if_not_project_administrator() {
-    ComponentDto project = newProjectDto(db.organizations().insert());
+    ComponentDto project = ComponentTesting.newPrivateProjectDto(db.organizations().insert());
     SnapshotDto analysis = db.components().insertProjectAndSnapshot(project);
     db.events().insertEvent(newEvent(analysis).setUuid("E1"));
-    userSession.logIn().addProjectUuidPermissions(project.uuid(), UserRole.USER);
+    userSession.logIn().addProjectPermission(UserRole.USER, project);
 
     expectedException.expect(ForbiddenException.class);
 
@@ -232,11 +233,11 @@ public class UpdateEventActionTest {
   }
 
   private void logInAsProjectAdministrator(ComponentDto project) {
-    userSession.logIn().addProjectUuidPermissions(UserRole.ADMIN, project.uuid());
+    userSession.logIn().addProjectPermission(UserRole.ADMIN, project);
   }
 
   private SnapshotDto createAnalysisAndLogInAsProjectAdministrator(String version) {
-    ComponentDto project = db.components().insertProject();
+    ComponentDto project = db.components().insertPrivateProject();
     SnapshotDto analysis = db.components().insertSnapshot(newAnalysis(project).setVersion(version));
     logInAsProjectAdministrator(project);
     return analysis;

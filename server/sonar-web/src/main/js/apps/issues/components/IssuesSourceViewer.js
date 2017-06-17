@@ -24,10 +24,13 @@ import { scrollToElement } from '../../../helpers/scrolling';
 import type { Issue } from '../../../components/issue/types';
 
 type Props = {|
-  loadIssues: () => Promise<*>,
+  loadIssues: (string, number, number) => Promise<*>,
   onIssueChange: Issue => void,
   onIssueSelect: string => void,
-  openIssue: Issue
+  onLocationSelect: number => void,
+  openIssue: Issue,
+  selectedFlowIndex: ?number,
+  selectedLocationIndex: ?number
 |};
 
 export default class IssuesSourceViewer extends React.PureComponent {
@@ -35,31 +38,57 @@ export default class IssuesSourceViewer extends React.PureComponent {
   props: Props;
 
   componentDidUpdate(prevProps: Props) {
-    if (prevProps.openIssue.component === this.props.openIssue.component) {
+    if (
+      prevProps.openIssue !== this.props.openIssue &&
+      prevProps.openIssue.component === this.props.openIssue.component
+    ) {
       this.scrollToIssue();
     }
   }
 
-  scrollToIssue = () => {
+  scrollToIssue = (smooth: boolean = true) => {
     const element = this.node.querySelector(`[data-issue="${this.props.openIssue.key}"]`);
     if (element) {
-      scrollToElement(element, 100, 100);
+      this.handleScroll(element, smooth);
     }
   };
 
+  handleScroll = (element: HTMLElement, smooth: boolean = true) => {
+    const offset = window.innerHeight / 2;
+    scrollToElement(element, { topOffset: offset - 100, bottomOffset: offset, smooth });
+  };
+
+  handleLoaded = () => {
+    this.scrollToIssue(false);
+  };
+
   render() {
-    const { openIssue } = this.props;
+    const { openIssue, selectedFlowIndex, selectedLocationIndex } = this.props;
+
+    const locations = selectedFlowIndex != null
+      ? openIssue.flows[selectedFlowIndex]
+      : openIssue.flows.length > 0 ? openIssue.flows[0] : openIssue.secondaryLocations;
+
+    const locationMessage = locations != null &&
+      selectedLocationIndex != null &&
+      locations.length >= selectedLocationIndex
+      ? { index: selectedLocationIndex, text: locations[selectedLocationIndex].msg }
+      : undefined;
 
     return (
       <div ref={node => (this.node = node)}>
         <SourceViewer
-          aroundLine={openIssue.line}
+          aroundLine={openIssue.textRange ? openIssue.textRange.endLine : undefined}
           component={openIssue.component}
           displayAllIssues={true}
+          highlightedLocations={locations}
+          highlightedLocationMessage={locationMessage}
           loadIssues={this.props.loadIssues}
-          onLoaded={this.scrollToIssue}
+          onLoaded={this.handleLoaded}
+          onLocationSelect={this.props.onLocationSelect}
           onIssueChange={this.props.onIssueChange}
           onIssueSelect={this.props.onIssueSelect}
+          scroll={this.handleScroll}
           selectedIssue={openIssue.key}
         />
       </div>

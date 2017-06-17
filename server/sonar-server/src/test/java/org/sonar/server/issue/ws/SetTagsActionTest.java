@@ -26,6 +26,7 @@ import javax.annotation.Nullable;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.mockito.ArgumentCaptor;
 import org.sonar.api.config.MapSettings;
 import org.sonar.api.server.ws.Request;
 import org.sonar.api.server.ws.Response;
@@ -65,7 +66,6 @@ import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.sonar.api.web.UserRole.ISSUE_ADMIN;
-import static org.sonar.api.web.UserRole.USER;
 import static org.sonar.core.util.Protobuf.setNullable;
 import static org.sonar.core.util.stream.MoreCollectors.join;
 import static org.sonar.db.component.ComponentTesting.newFileDto;
@@ -86,6 +86,7 @@ public class SetTagsActionTest {
   private DefaultOrganizationProvider defaultOrganizationProvider = TestDefaultOrganizationProvider.from(db);
   private OperationResponseWriter responseWriter = mock(OperationResponseWriter.class);
   private IssueIndexer issueIndexer = new IssueIndexer(esTester.client(), new IssueIteratorFactory(dbClient));
+  private ArgumentCaptor<SearchResponseData> preloadedSearchResponseDataCaptor = ArgumentCaptor.forClass(SearchResponseData.class);
 
   private WsActionTester ws = new WsActionTester(new SetTagsAction(userSession, dbClient, new IssueFinder(dbClient, userSession), new IssueFieldsSetter(),
     new IssueUpdater(dbClient,
@@ -95,11 +96,12 @@ public class SetTagsActionTest {
   @Test
   public void set_tags() {
     IssueDto issueDto = db.issues().insertIssue(newIssue().setTags(singletonList("old-tag")));
-    setUserWithBrowsePermission(issueDto.getProjectUuid());
+    logIn(issueDto);
 
     call(issueDto.getKey(), "bug", "todo");
 
-    verify(responseWriter).write(eq(issueDto.getKey()), any(Request.class), any(Response.class));
+    verify(responseWriter).write(eq(issueDto.getKey()), preloadedSearchResponseDataCaptor.capture(), any(Request.class), any(Response.class));
+    verifyContentOfPreloadedSearchResponseData(issueDto);
     IssueDto issueReloaded = dbClient.issueDao().selectByKey(db.getSession(), issueDto.getKey()).get();
     assertThat(issueReloaded.getTags()).containsOnly("bug", "todo");
   }
@@ -107,7 +109,7 @@ public class SetTagsActionTest {
   @Test
   public void remove_existing_tags_when_value_is_not_set() {
     IssueDto issueDto = db.issues().insertIssue(newIssue().setTags(singletonList("old-tag")));
-    setUserWithBrowsePermission(issueDto.getProjectUuid());
+    logIn(issueDto);
 
     call(issueDto.getKey());
 
@@ -118,7 +120,7 @@ public class SetTagsActionTest {
   @Test
   public void remove_existing_tags_when_value_is_empty_string() {
     IssueDto issueDto = db.issues().insertIssue(newIssue().setTags(singletonList("old-tag")));
-    setUserWithBrowsePermission(issueDto.getProjectUuid());
+    logIn(issueDto);
 
     call(issueDto.getKey(), "");
 
@@ -129,7 +131,7 @@ public class SetTagsActionTest {
   @Test
   public void set_tags_using_deprecated_key_param() {
     IssueDto issueDto = db.issues().insertIssue(newIssue().setTags(singletonList("old-tag")));
-    setUserWithBrowsePermission(issueDto.getProjectUuid());
+    logIn(issueDto);
 
     ws.newRequest().setParam("key", issueDto.getKey()).setParam("tags", "bug").execute();
 
@@ -140,7 +142,7 @@ public class SetTagsActionTest {
   @Test
   public void tags_are_stored_as_lowercase() {
     IssueDto issueDto = db.issues().insertIssue(newIssue().setTags(singletonList("old-tag")));
-    setUserWithBrowsePermission(issueDto.getProjectUuid());
+    logIn(issueDto);
 
     call(issueDto.getKey(), "bug", "Convention");
 
@@ -151,7 +153,7 @@ public class SetTagsActionTest {
   @Test
   public void empty_tags_are_ignored() {
     IssueDto issueDto = db.issues().insertIssue(newIssue().setTags(singletonList("old-tag")));
-    setUserWithBrowsePermission(issueDto.getProjectUuid());
+    logIn(issueDto);
 
     call(issueDto.getKey(), "security", "", "convention");
 
@@ -162,7 +164,7 @@ public class SetTagsActionTest {
   @Test
   public void insert_entry_in_changelog_when_setting_tags() throws Exception {
     IssueDto issueDto = db.issues().insertIssue(newIssue().setTags(singletonList("old-tag")));
-    setUserWithBrowsePermission(issueDto.getProjectUuid());
+    logIn(issueDto);
 
     call(issueDto.getKey(), "new-tag");
 
@@ -176,7 +178,7 @@ public class SetTagsActionTest {
   @Test
   public void fail_when_bad_tag_format() {
     IssueDto issueDto = db.issues().insertIssue(newIssue().setTags(singletonList("old-tag")));
-    setUserWithBrowsePermission(issueDto.getProjectUuid());
+    logIn(issueDto);
 
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("Tag 'pol op' is invalid. Rule tags accept only the characters: a-z, 0-9, '+', '-', '#', '.'");
@@ -194,7 +196,7 @@ public class SetTagsActionTest {
   @Test
   public void fail_when_missing_browse_permission() throws Exception {
     IssueDto issueDto = db.issues().insertIssue();
-    userSession.logIn("john").addProjectUuidPermissions(ISSUE_ADMIN, issueDto.getProjectUuid());
+    logInAndAddProjectPermission(issueDto, ISSUE_ADMIN);
 
     expectedException.expect(ForbiddenException.class);
 
@@ -232,13 +234,32 @@ public class SetTagsActionTest {
 
   private IssueDto newIssue() {
     RuleDefinitionDto rule = db.rules().insert();
-    ComponentDto project = db.components().insertProject();
+    ComponentDto project = db.components().insertPublicProject();
     ComponentDto file = db.components().insertComponent(newFileDto(project));
     return IssueTesting.newIssue(rule, file, project);
   }
 
-  private void setUserWithBrowsePermission(String projectUuid) {
-    userSession.logIn("john").addProjectUuidPermissions(USER, projectUuid);
+  private void logIn(IssueDto issueDto) {
+    userSession.logIn("john").registerComponents(
+      dbClient.componentDao().selectByUuid(db.getSession(), issueDto.getProjectUuid()).get(),
+      dbClient.componentDao().selectByUuid(db.getSession(), issueDto.getComponentUuid()).get());
+  }
+
+  private void logInAndAddProjectPermission(IssueDto issueDto, String permission) {
+    userSession.logIn("john").addProjectPermission(permission, dbClient.componentDao().selectByUuid(db.getSession(), issueDto.getProjectUuid()).get());
+  }
+
+  private void verifyContentOfPreloadedSearchResponseData(IssueDto issue) {
+    SearchResponseData preloadedSearchResponseData = preloadedSearchResponseDataCaptor.getValue();
+    assertThat(preloadedSearchResponseData.getIssues())
+      .extracting(IssueDto::getKey)
+      .containsOnly(issue.getKey());
+    assertThat(preloadedSearchResponseData.getRules())
+      .extracting(RuleDefinitionDto::getKey)
+      .containsOnly(issue.getRuleKey());
+    assertThat(preloadedSearchResponseData.getComponents())
+      .extracting(ComponentDto::uuid)
+      .containsOnly(issue.getComponentUuid(), issue.getProjectUuid());
   }
 
 }

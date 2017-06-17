@@ -20,7 +20,7 @@
 import React from 'react';
 import { Link } from 'react-router';
 import { translate } from '../../../../helpers/l10n';
-import { isUserAdmin } from '../../../../helpers/users';
+import { isMySet } from '../../../../apps/issues/utils';
 
 export default class GlobalNavMenu extends React.PureComponent {
   static propTypes = {
@@ -61,8 +61,8 @@ export default class GlobalNavMenu extends React.PureComponent {
   }
 
   renderIssuesLink() {
-    const query = this.props.currentUser.isLoggedIn
-      ? { myIssues: 'true', resolved: 'false' }
+    const query = this.props.currentUser.isLoggedIn && isMySet()
+      ? { resolved: 'false', myIssues: 'true' }
       : { resolved: 'false' };
     const active = this.props.location.pathname === 'issues';
     return (
@@ -105,7 +105,7 @@ export default class GlobalNavMenu extends React.PureComponent {
   }
 
   renderAdministrationLink() {
-    if (!isUserAdmin(this.props.currentUser)) {
+    if (!this.props.appState.canAdmin) {
       return null;
     }
     return (

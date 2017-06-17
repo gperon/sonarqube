@@ -1,24 +1,6 @@
-exports[`test should render all facets 1`] = `
-Array [
-  "FacetMode",
-  "TypeFacet",
-  "ResolutionFacet",
-  "SeverityFacet",
-  "StatusFacet",
-  "CreationDateFacet",
-  "RuleFacet",
-  "TagFacet",
-  "ProjectFacet",
-  "ModuleFacet",
-  "DirectoryFacet",
-  "FileFacet",
-  "AssigneeFacet",
-  "AuthorFacet",
-  "LanguageFacet",
-]
-`;
+// Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`test should render facets for developer 1`] = `
+exports[`should render facets for developer 1`] = `
 Array [
   "FacetMode",
   "TypeFacet",
@@ -37,7 +19,7 @@ Array [
 ]
 `;
 
-exports[`test should render facets for directory 1`] = `
+exports[`should render facets for directory 1`] = `
 Array [
   "FacetMode",
   "TypeFacet",
@@ -54,45 +36,7 @@ Array [
 ]
 `;
 
-exports[`test should render facets for module 1`] = `
-Array [
-  "FacetMode",
-  "TypeFacet",
-  "ResolutionFacet",
-  "SeverityFacet",
-  "StatusFacet",
-  "CreationDateFacet",
-  "RuleFacet",
-  "TagFacet",
-  "ModuleFacet",
-  "DirectoryFacet",
-  "FileFacet",
-  "AssigneeFacet",
-  "AuthorFacet",
-  "LanguageFacet",
-]
-`;
-
-exports[`test should render facets for project 1`] = `
-Array [
-  "FacetMode",
-  "TypeFacet",
-  "ResolutionFacet",
-  "SeverityFacet",
-  "StatusFacet",
-  "CreationDateFacet",
-  "RuleFacet",
-  "TagFacet",
-  "ModuleFacet",
-  "DirectoryFacet",
-  "FileFacet",
-  "AssigneeFacet",
-  "AuthorFacet",
-  "LanguageFacet",
-]
-`;
-
-exports[`test should render facets when my issues are selected 1`] = `
+exports[`should render facets for global page 1`] = `
 Array [
   "FacetMode",
   "TypeFacet",
@@ -103,9 +47,61 @@ Array [
   "RuleFacet",
   "TagFacet",
   "ProjectFacet",
+  "AssigneeFacet",
+  "AuthorFacet",
+  "LanguageFacet",
+]
+`;
+
+exports[`should render facets for module 1`] = `
+Array [
+  "FacetMode",
+  "TypeFacet",
+  "ResolutionFacet",
+  "SeverityFacet",
+  "StatusFacet",
+  "CreationDateFacet",
+  "RuleFacet",
+  "TagFacet",
   "ModuleFacet",
   "DirectoryFacet",
   "FileFacet",
+  "AssigneeFacet",
+  "AuthorFacet",
+  "LanguageFacet",
+]
+`;
+
+exports[`should render facets for project 1`] = `
+Array [
+  "FacetMode",
+  "TypeFacet",
+  "ResolutionFacet",
+  "SeverityFacet",
+  "StatusFacet",
+  "CreationDateFacet",
+  "RuleFacet",
+  "TagFacet",
+  "ModuleFacet",
+  "DirectoryFacet",
+  "FileFacet",
+  "AssigneeFacet",
+  "AuthorFacet",
+  "LanguageFacet",
+]
+`;
+
+exports[`should render facets when my issues are selected 1`] = `
+Array [
+  "FacetMode",
+  "TypeFacet",
+  "ResolutionFacet",
+  "SeverityFacet",
+  "StatusFacet",
+  "CreationDateFacet",
+  "RuleFacet",
+  "TagFacet",
+  "ProjectFacet",
   "AuthorFacet",
   "LanguageFacet",
 ]

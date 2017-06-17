@@ -65,7 +65,7 @@ public abstract class DatabaseCommands {
     abstract List<String> resetSequenceSql(String table, int minSequenceValue);
 
     String truncateSql(String table) {
-        return "TRUNCATE TABLE " + table;
+      return "DELETE FROM " + table;
     }
 
     boolean useLoginAsSchema() {

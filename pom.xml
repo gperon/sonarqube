@@ -11,7 +11,7 @@
   <groupId>org.sonarsource.sonarqube</groupId>
   <artifactId>sonarqube</artifactId>
   <packaging>pom</packaging>
-  <version>6.4-SNAPSHOT</version>
+  <version>6.5-SNAPSHOT</version>
   <name>SonarQube</name>
   <url>http://www.sonarqube.org/</url>
   <description>Open source platform for continuous inspection of code quality</description>
@@ -47,17 +47,19 @@
 
   <properties>
     <!-- see http://repo1.maven.org/maven2/org/sonarsource/dotnet/sonar-csharp-plugin/ -->
-    <sonarCSharp.version>5.7.0.612</sonarCSharp.version>
+    <sonarCSharp.version>5.10.1.1411</sonarCSharp.version>
     <!-- see http://repo1.maven.org/maven2/org/sonarsource/java/sonar-java-plugin/ -->
-    <sonarJava.version>4.5.0.8398</sonarJava.version>
+    <sonarJava.version>4.9.0.9858</sonarJava.version>
     <!-- see http://repo1.maven.org/maven2/org/sonarsource/javascript/sonar-javascript-plugin/ -->
-    <sonarJavaScript.version>2.20.0.4207</sonarJavaScript.version>
+    <sonarJavaScript.version>3.0.0.4962</sonarJavaScript.version>
     <!-- see http://repo1.maven.org/maven2/org/sonarsource/php/sonar-php-plugin/ -->
-    <sonarPhp.version>2.9.2.1744</sonarPhp.version>
+    <sonarPhp.version>2.10.0.2087</sonarPhp.version>
     <!-- see http://repo1.maven.org/maven2/org/sonarsource/python/sonar-python-plugin/ -->
     <sonarPython.version>1.7.0.1195</sonarPython.version>
-    <!-- http://repo1.maven.org/maven2/org/sonarsource/flex/sonar-flex-plugin/ -->
+    <!-- see http://repo1.maven.org/maven2/org/sonarsource/flex/sonar-flex-plugin/ -->
     <sonarFlex.version>2.3</sonarFlex.version>
+    <!-- see http://http://repo1.maven.org/maven2/org/sonarsource/xml/sonar-xml-plugin/ -->
+    <sonarXml.version>1.4.2.885</sonarXml.version>
     <sonarGit.version>1.2</sonarGit.version>
     <sonarSvn.version>1.4.0.522</sonarSvn.version>
     <sonarUpdateCenter.version>1.18.0.487</sonarUpdateCenter.version>
@@ -67,8 +69,8 @@
     <slf4j.version>1.7.21</slf4j.version>
     <tomcat.version>8.5.11</tomcat.version>
     <elasticsearch.version>2.4.4</elasticsearch.version>
-    <orchestrator.version>3.15.0.917</orchestrator.version>
-    <okhttp.version>3.3.1</okhttp.version>
+    <orchestrator.version>3.15.0.1090</orchestrator.version>
+    <okhttp.version>3.7.0</okhttp.version>
     <jackson.version>2.6.6</jackson.version>
 
     <protobuf.version>3.0.0-beta-2</protobuf.version>
@@ -194,7 +196,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-shade-plugin</artifactId>
-          <version>2.3</version>
+          <version>3.0.0</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -438,6 +440,11 @@
         <version>${sonarUpdateCenter.version}</version>
       </dependency>
       <dependency>
+        <groupId>org.sonarsource.sonarqube</groupId>
+        <artifactId>sonar-ce-api</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>sonar-server</artifactId>
         <version>${project.version}</version>
@@ -660,6 +667,22 @@
         </exclusions>
       </dependency>
       <dependency>
+        <groupId>org.sonarsource.xml</groupId>
+        <artifactId>sonar-xml-plugin</artifactId>
+        <version>${sonarXml.version}</version>
+        <type>sonar-plugin</type>
+        <exclusions>
+          <!--
+          no need for transitive dependencies as only the JAR file
+          is needed for the zip bundle
+          -->
+          <exclusion>
+            <groupId>org.sonarsource.xml</groupId>
+            <artifactId>xml-squid</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
         <groupId>net.java.dev.jna</groupId>
         <artifactId>jna</artifactId>
         <version>4.1.0</version>
@@ -841,7 +864,7 @@
       <dependency>
         <groupId>mysql</groupId>
         <artifactId>mysql-connector-java</artifactId>
-        <version>5.1.39</version>
+        <version>5.1.42</version>
       </dependency>
       <dependency>
         <groupId>org.mariadb.jdbc</groupId>

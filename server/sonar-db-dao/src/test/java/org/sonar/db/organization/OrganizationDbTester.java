@@ -61,7 +61,7 @@ public class OrganizationDbTester {
    */
   public OrganizationDto insert(OrganizationDto dto) {
     DbSession dbSession = dbTester.getSession();
-    dbTester.getDbClient().organizationDao().insert(dbSession, dto);
+    dbTester.getDbClient().organizationDao().insert(dbSession, dto, false);
     dbSession.commit();
     return dto;
   }
@@ -93,4 +93,12 @@ public class OrganizationDbTester {
     dbTester.commit();
   }
 
+  public void setNewProjectPrivate(OrganizationDto organization, boolean newProjectPrivate) {
+    dbTester.getDbClient().organizationDao().setNewProjectPrivate(dbTester.getSession(), organization, newProjectPrivate);
+    dbTester.commit();
+  }
+
+  public boolean getNewProjectPrivate(OrganizationDto organization) {
+    return dbTester.getDbClient().organizationDao().getNewProjectPrivate(dbTester.getSession(), organization);
+  }
 }

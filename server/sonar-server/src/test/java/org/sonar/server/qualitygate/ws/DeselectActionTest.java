@@ -33,6 +33,7 @@ import org.sonar.db.component.ComponentDto;
 import org.sonar.db.property.PropertyDto;
 import org.sonar.db.qualitygate.QualityGateDto;
 import org.sonar.server.component.ComponentFinder;
+import org.sonar.server.component.TestComponentFinder;
 import org.sonar.server.exceptions.ForbiddenException;
 import org.sonar.server.exceptions.NotFoundException;
 import org.sonar.server.qualitygate.QualityGates;
@@ -48,10 +49,8 @@ public class DeselectActionTest {
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
-
   @Rule
   public UserSessionRule userSession = UserSessionRule.standalone();
-
   @Rule
   public DbTester db = DbTester.create(System2.INSTANCE);
 
@@ -65,11 +64,11 @@ public class DeselectActionTest {
 
   @Before
   public void setUp() {
-    ComponentFinder componentFinder = new ComponentFinder(dbClient);
+    ComponentFinder componentFinder = TestComponentFinder.from(db);
     underTest = new DeselectAction(qualityGates, dbClient, componentFinder);
     ws = new WsActionTester(underTest);
 
-    project = db.components().insertProject();
+    project = db.components().insertPrivateProject();
     gate = insertQualityGate();
   }
 
@@ -77,7 +76,7 @@ public class DeselectActionTest {
   public void deselect_by_id() throws Exception {
     logInAsRoot();
 
-    ComponentDto anotherProject = db.components().insertProject();
+    ComponentDto anotherProject = db.components().insertPrivateProject();
     String gateId = String.valueOf(gate.getId());
     associateProjectToQualityGate(project.getId(), gateId);
     associateProjectToQualityGate(anotherProject.getId(), gateId);
@@ -117,7 +116,7 @@ public class DeselectActionTest {
     String gateId = String.valueOf(gate.getId());
     associateProjectToQualityGate(project.getId(), gateId);
 
-    userSession.logIn().addProjectUuidPermissions(UserRole.ADMIN, project.uuid());
+    userSession.logIn().addProjectPermission(UserRole.ADMIN, project);
 
     callByKey(gateId, project.getKey());
 
@@ -162,7 +161,7 @@ public class DeselectActionTest {
   public void fail_when_not_project_admin() throws Exception {
     String gateId = String.valueOf(gate.getId());
 
-    userSession.logIn().addProjectUuidPermissions(UserRole.ISSUE_ADMIN, project.uuid());
+    userSession.logIn().addProjectPermission(UserRole.ISSUE_ADMIN, project);
 
     expectedException.expect(ForbiddenException.class);
 

@@ -32,7 +32,7 @@ import org.sonar.db.DbTester;
 import org.sonar.db.component.ComponentDto;
 import org.sonar.db.property.PropertyDto;
 import org.sonar.db.property.PropertyQuery;
-import org.sonar.server.component.ComponentFinder;
+import org.sonar.server.component.TestComponentFinder;
 import org.sonar.server.exceptions.ForbiddenException;
 import org.sonar.server.exceptions.NotFoundException;
 import org.sonar.server.exceptions.UnauthorizedException;
@@ -46,7 +46,7 @@ import static java.net.HttpURLConnection.HTTP_NO_CONTENT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.sonar.core.util.Protobuf.setNullable;
 import static org.sonar.db.component.ComponentTesting.newFileDto;
-import static org.sonar.db.component.ComponentTesting.newProjectDto;
+import static org.sonar.db.component.ComponentTesting.newPrivateProjectDto;
 import static org.sonarqube.ws.client.favorite.FavoritesWsParameters.PARAM_COMPONENT;
 
 public class AddActionTest {
@@ -60,11 +60,12 @@ public class AddActionTest {
   public UserSessionRule userSession = UserSessionRule.standalone();
   @Rule
   public DbTester db = DbTester.create();
+
   private DbClient dbClient = db.getDbClient();
   private DbSession dbSession = db.getSession();
 
   private FavoriteUpdater favoriteUpdater = new FavoriteUpdater(dbClient);
-  private WsActionTester ws = new WsActionTester(new AddAction(userSession, dbClient, favoriteUpdater, new ComponentFinder(dbClient)));
+  private WsActionTester ws = new WsActionTester(new AddAction(userSession, dbClient, favoriteUpdater, TestComponentFinder.from(db)));
 
   @Test
   public void add_a_project() {
@@ -88,7 +89,7 @@ public class AddActionTest {
   public void add_a_file() {
     ComponentDto project = insertProjectAndPermissions();
     ComponentDto file = db.components().insertComponent(newFileDto(project));
-    userSession.addComponentUuidPermission(UserRole.USER, PROJECT_UUID, file.uuid());
+    userSession.addProjectPermission(UserRole.USER, project, file);
 
     call(file.key());
 
@@ -105,9 +106,9 @@ public class AddActionTest {
 
   @Test
   public void fail_when_no_browse_permission_on_the_project() {
-    insertProject();
+    ComponentDto project = insertProject();
     userSession.logIn();
-    userSession.addProjectUuidPermissions(UserRole.ADMIN, PROJECT_UUID);
+    userSession.addProjectPermission(UserRole.ADMIN, project);
 
     expectedException.expect(ForbiddenException.class);
 
@@ -142,16 +143,17 @@ public class AddActionTest {
   }
 
   private ComponentDto insertProject() {
-    return db.components().insertComponent(newProjectDto(db.organizations().insert(), PROJECT_UUID).setKey(PROJECT_KEY));
+    return db.components().insertComponent(newPrivateProjectDto(db.organizations().insert(), PROJECT_UUID).setKey(PROJECT_KEY));
   }
 
   private ComponentDto insertProjectAndPermissions() {
+    ComponentDto project = insertProject();
     userSession
       .logIn()
       .setUserId(USER_ID)
-      .addProjectUuidPermissions(UserRole.USER, PROJECT_UUID);
+      .addProjectPermission(UserRole.USER, project);
 
-    return insertProject();
+    return project;
   }
 
   private TestResponse call(@Nullable String componentKey) {

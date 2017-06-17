@@ -24,6 +24,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.mockito.ArgumentCaptor;
 import org.sonar.api.config.MapSettings;
 import org.sonar.api.server.ws.Request;
 import org.sonar.api.server.ws.Response;
@@ -31,9 +32,11 @@ import org.sonar.api.server.ws.WebService;
 import org.sonar.api.utils.System2;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbTester;
+import org.sonar.db.component.ComponentDto;
 import org.sonar.db.issue.IssueChangeDto;
 import org.sonar.db.issue.IssueDbTester;
 import org.sonar.db.issue.IssueDto;
+import org.sonar.db.rule.RuleDefinitionDto;
 import org.sonar.server.es.EsTester;
 import org.sonar.server.exceptions.ForbiddenException;
 import org.sonar.server.exceptions.NotFoundException;
@@ -93,6 +96,7 @@ public class AddCommentActionTest {
   private ServerIssueStorage serverIssueStorage = new ServerIssueStorage(system2, new DefaultRuleFinder(dbClient, defaultOrganizationProvider), dbClient, issueIndexer);
   private IssueUpdater issueUpdater = new IssueUpdater(dbClient, serverIssueStorage, mock(NotificationManager.class));
   private OperationResponseWriter responseWriter = mock(OperationResponseWriter.class);
+  private ArgumentCaptor<SearchResponseData> preloadedSearchResponseDataCaptor = ArgumentCaptor.forClass(SearchResponseData.class);
 
   private WsActionTester tester = new WsActionTester(
     new AddCommentAction(system2, userSession, dbClient, new IssueFinder(dbClient, userSession), issueUpdater, new IssueFieldsSetter(), responseWriter));
@@ -105,11 +109,13 @@ public class AddCommentActionTest {
   @Test
   public void add_comment() throws Exception {
     IssueDto issueDto = issueDbTester.insertIssue();
-    userSession.logIn("john").addProjectUuidPermissions(USER, issueDto.getProjectUuid());
+    loginWithBrowsePermission(issueDto, USER);
 
     call(issueDto.getKey(), "please fix it");
 
-    verify(responseWriter).write(eq(issueDto.getKey()), any(Request.class), any(Response.class));
+    verify(responseWriter).write(eq(issueDto.getKey()), preloadedSearchResponseDataCaptor.capture(), any(Request.class), any(Response.class));
+    verifyContentOfPreloadedSearchResponseData(issueDto);
+
     IssueChangeDto issueComment = dbClient.issueChangeDao().selectByTypeAndIssueKeys(dbTester.getSession(), singletonList(issueDto.getKey()), TYPE_COMMENT).get(0);
     assertThat(issueComment.getKey()).isNotNull();
     assertThat(issueComment.getUserLogin()).isEqualTo("john");
@@ -151,7 +157,7 @@ public class AddCommentActionTest {
   @Test
   public void fail_when_empty_comment_text() throws Exception {
     IssueDto issueDto = issueDbTester.insertIssue();
-    userSession.logIn("john").addProjectUuidPermissions(USER, issueDto.getProjectUuid());
+    loginWithBrowsePermission(issueDto, USER);
 
     expectedException.expect(IllegalArgumentException.class);
     call(issueDto.getKey(), "");
@@ -166,7 +172,7 @@ public class AddCommentActionTest {
   @Test
   public void fail_when_not_enough_permission() throws Exception {
     IssueDto issueDto = issueDbTester.insertIssue();
-    userSession.logIn("john").addProjectUuidPermissions(CODEVIEWER, issueDto.getProjectUuid());
+    loginWithBrowsePermission(issueDto, CODEVIEWER);
 
     expectedException.expect(ForbiddenException.class);
     call(issueDto.getKey(), "please fix it");
@@ -179,7 +185,20 @@ public class AddCommentActionTest {
     assertThat(action.isPost()).isTrue();
     assertThat(action.isInternal()).isFalse();
     assertThat(action.params()).hasSize(2);
-    assertThat(action.responseExample()).isNotNull();
+    assertThat(action.responseExampleAsString()).isNotEmpty();
+  }
+
+  private void verifyContentOfPreloadedSearchResponseData(IssueDto issue) {
+    SearchResponseData preloadedSearchResponseData = preloadedSearchResponseDataCaptor.getValue();
+    assertThat(preloadedSearchResponseData.getIssues())
+      .extracting(IssueDto::getKey)
+      .containsOnly(issue.getKey());
+    assertThat(preloadedSearchResponseData.getRules())
+      .extracting(RuleDefinitionDto::getKey)
+      .containsOnly(issue.getRuleKey());
+    assertThat(preloadedSearchResponseData.getComponents())
+      .extracting(ComponentDto::uuid)
+      .containsOnly(issue.getComponentUuid(), issue.getProjectUuid());
   }
 
   private TestResponse call(@Nullable String issueKey, @Nullable String commentText) {
@@ -187,6 +206,12 @@ public class AddCommentActionTest {
     setNullable(issueKey, issue -> request.setParam("issue", issue));
     setNullable(commentText, text -> request.setParam("text", text));
     return request.execute();
+  }
+
+  private void loginWithBrowsePermission(IssueDto issueDto, String permission) {
+    userSession.logIn("john").addProjectPermission(permission,
+      dbClient.componentDao().selectByUuid(dbTester.getSession(), issueDto.getProjectUuid()).get(),
+      dbClient.componentDao().selectByUuid(dbTester.getSession(), issueDto.getComponentUuid()).get());
   }
 
 }

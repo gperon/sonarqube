@@ -25,44 +25,22 @@ import type { Issue } from '../../../components/issue/types';
 
 type Props = {|
   issues: Array<Issue>,
+  onFlowSelect: number => void,
   onIssueSelect: string => void,
-  selected?: string
+  onLocationSelect: number => void,
+  selected?: string,
+  selectedFlowIndex: ?number,
+  selectedLocationIndex: ?number
 |};
 
 export default class ConciseIssuesList extends React.PureComponent {
-  nodes: { [string]: HTMLElement };
   props: Props;
 
-  constructor(props: Props) {
-    super(props);
-    this.nodes = {};
-  }
-
-  componentDidMount() {
-    if (this.props.selected) {
-      this.ensureSelectedVisible();
+  handleScroll = (element: HTMLElement, bottomOffset: number = 100) => {
+    const scrollableElement = document.querySelector('.layout-page-side');
+    if (element && scrollableElement) {
+      scrollToElement(element, { topOffset: 150, bottomOffset, parent: scrollableElement });
     }
-  }
-
-  componentDidUpdate(prevProps: Props) {
-    if (this.props.selected && prevProps.selected !== this.props.selected) {
-      this.ensureSelectedVisible();
-    }
-  }
-
-  ensureSelectedVisible() {
-    const { selected } = this.props;
-    if (selected) {
-      const scrollableElement = document.querySelector('.layout-page-side');
-      const element = this.nodes[selected];
-      if (element && scrollableElement) {
-        scrollToElement(element, 150, 100, scrollableElement);
-      }
-    }
-  }
-
-  innerRef = (issue: string) => (node: HTMLElement) => {
-    this.nodes[issue] = node;
   };
 
   render() {
@@ -71,11 +49,15 @@ export default class ConciseIssuesList extends React.PureComponent {
         {this.props.issues.map((issue, index) => (
           <ConciseIssue
             key={issue.key}
-            innerRef={this.innerRef(issue.key)}
             issue={issue}
+            onFlowSelect={this.props.onFlowSelect}
+            onLocationSelect={this.props.onLocationSelect}
             onSelect={this.props.onIssueSelect}
             previousIssue={index > 0 ? this.props.issues[index - 1] : null}
+            scroll={this.handleScroll}
             selected={issue.key === this.props.selected}
+            selectedFlowIndex={this.props.selectedFlowIndex}
+            selectedLocationIndex={this.props.selectedLocationIndex}
           />
         ))}
       </div>

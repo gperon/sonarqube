@@ -19,7 +19,6 @@
  */
 package org.sonar.server.issue.index;
 
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
@@ -59,7 +58,6 @@ import org.sonar.api.issue.Issue;
 import org.sonar.api.resources.Scopes;
 import org.sonar.api.utils.DateUtils;
 import org.sonar.api.utils.System2;
-import org.sonar.core.util.NonNullInputFunction;
 import org.sonar.core.util.stream.MoreCollectors;
 import org.sonar.db.component.ComponentDto;
 import org.sonar.db.organization.OrganizationDto;
@@ -144,16 +142,6 @@ public class IssueIndex {
   private static final Duration TWENTY_WEEKS = Duration.standardDays(20L * 7L);
   private static final Duration TWENTY_MONTHS = Duration.standardDays(20L * 30L);
 
-  /**
-   * Convert an Elasticsearch result (a map) to an {@link org.sonar.server.issue.index.IssueDoc}. It's
-   * used for {@link org.sonar.server.es.SearchResult}.
-   */
-  private static final Function<Map<String, Object>, IssueDoc> DOC_CONVERTER = new NonNullInputFunction<Map<String, Object>, IssueDoc>() {
-    @Override
-    protected IssueDoc doApply(Map<String, Object> input) {
-      return new IssueDoc(input);
-    }
-  };
   public static final String AGGREGATION_NAME_FOR_TAGS = "tags__issues";
 
   private final Sorting sorting;
@@ -212,7 +200,8 @@ public class IssueIndex {
     }
 
     configureStickyFacets(query, options, filters, esQuery, requestBuilder);
-    return new SearchResult<>(requestBuilder.get(), DOC_CONVERTER);
+    SearchResponse response = requestBuilder.get();
+    return new SearchResult<>(response, IssueDoc::new);
   }
 
   /**
@@ -482,7 +471,7 @@ public class IssueIndex {
     BoolQueryBuilder esFilter = boolQuery();
     filters.values().stream().filter(Objects::nonNull).forEach(esFilter::must);
     if (esFilter.hasClauses()) {
-      esRequest.setQuery(QueryBuilders.filteredQuery(esQuery, esFilter));
+      esRequest.setQuery(QueryBuilders.boolQuery().must(esQuery).filter(esFilter));
     } else {
       esRequest.setQuery(esQuery);
     }
@@ -595,6 +584,7 @@ public class IssueIndex {
     SearchRequestBuilder requestBuilder = client
       .prepareSearch(INDEX_TYPE_ISSUE)
       .setQuery(boolQuery()
+        .filter(createAuthorizationFilter(true))
         .filter(termQuery(FIELD_ISSUE_ORGANIZATION_UUID, organization.getUuid())))
       .setSize(0);
 
@@ -685,11 +675,11 @@ public class IssueIndex {
           IssueIndexDefinition.FIELD_ISSUE_FILE_PATH, IssueIndexDefinition.FIELD_ISSUE_SEVERITY, IssueIndexDefinition.FIELD_ISSUE_MANUAL_SEVERITY,
           IssueIndexDefinition.FIELD_ISSUE_RESOLUTION, IssueIndexDefinition.FIELD_ISSUE_STATUS, IssueIndexDefinition.FIELD_ISSUE_ASSIGNEE,
           IssueIndexDefinition.FIELD_ISSUE_LINE, IssueIndexDefinition.FIELD_ISSUE_MESSAGE, IssueIndexDefinition.FIELD_ISSUE_CHECKSUM,
-          IssueIndexDefinition.FIELD_ISSUE_FUNC_CREATED_AT},
+          IssueIndexDefinition.FIELD_ISSUE_TYPE, IssueIndexDefinition.FIELD_ISSUE_FUNC_CREATED_AT},
         null)
       .setQuery(boolQuery().must(matchAllQuery()).filter(filter));
     SearchResponse response = requestBuilder.get();
 
-    return EsUtils.scroll(client, response.getScrollId(), DOC_CONVERTER);
+    return EsUtils.scroll(client, response.getScrollId(), IssueDoc::new);
   }
 }

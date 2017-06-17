@@ -30,22 +30,21 @@ import org.sonar.db.DbSession;
 import org.sonar.db.DbTester;
 import org.sonar.db.component.ComponentDbTester;
 import org.sonar.db.component.ComponentDto;
+import org.sonar.db.component.ComponentTesting;
 import org.sonar.db.organization.OrganizationDto;
 import org.sonar.db.property.PropertyDto;
 import org.sonar.db.qualitygate.QualityGateDto;
-import org.sonar.server.component.ComponentFinder;
+import org.sonar.server.component.TestComponentFinder;
 import org.sonar.server.exceptions.ForbiddenException;
 import org.sonar.server.exceptions.NotFoundException;
 import org.sonar.server.qualitygate.QualityGateFinder;
 import org.sonar.server.tester.UserSessionRule;
 import org.sonar.server.ws.TestRequest;
 import org.sonar.server.ws.WsActionTester;
-import org.sonarqube.ws.MediaTypes;
 import org.sonarqube.ws.WsQualityGates;
 import org.sonarqube.ws.WsQualityGates.GetByProjectWsResponse;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.sonar.db.component.ComponentTesting.newProjectDto;
 import static org.sonar.test.JsonAssert.assertJson;
 import static org.sonarqube.ws.client.qualitygate.QualityGatesWsParameters.PARAM_PROJECT_ID;
 import static org.sonarqube.ws.client.qualitygate.QualityGatesWsParameters.PARAM_PROJECT_KEY;
@@ -57,17 +56,18 @@ public class GetByProjectActionTest {
   public ExpectedException expectedException = ExpectedException.none();
   @Rule
   public DbTester db = DbTester.create(System2.INSTANCE);
+
   private ComponentDbTester componentDb = new ComponentDbTester(db);
   private DbClient dbClient = db.getDbClient();
   private DbSession dbSession = db.getSession();
 
   private WsActionTester ws = new WsActionTester(
-    new GetByProjectAction(userSession, dbClient, new ComponentFinder(dbClient), new QualityGateFinder(dbClient)));
+    new GetByProjectAction(userSession, dbClient, TestComponentFinder.from(db), new QualityGateFinder(dbClient)));
 
   @Test
   public void json_example() {
     OrganizationDto organizationDto = db.organizations().insert();
-    ComponentDto project = componentDb.insertComponent(newProjectDto(organizationDto));
+    ComponentDto project = componentDb.insertComponent(ComponentTesting.newPrivateProjectDto(organizationDto));
     QualityGateDto qualityGate = insertQualityGate("My team QG");
     associateProjectToQualityGate(project.getId(), qualityGate.getId());
     logInAsProjectUser(project);
@@ -81,7 +81,7 @@ public class GetByProjectActionTest {
 
   @Test
   public void empty_response() {
-    ComponentDto project = componentDb.insertProject();
+    ComponentDto project = componentDb.insertPrivateProject();
     insertQualityGate("Another QG");
     logInAsProjectUser(project);
 
@@ -92,7 +92,7 @@ public class GetByProjectActionTest {
 
   @Test
   public void default_quality_gate() {
-    ComponentDto project = componentDb.insertComponent(newProjectDto(db.organizations().insert()));
+    ComponentDto project = componentDb.insertComponent(ComponentTesting.newPrivateProjectDto(db.organizations().insert()));
     QualityGateDto dbQualityGate = insertQualityGate("Sonar way");
     setDefaultQualityGate(dbQualityGate.getId());
     logInAsProjectUser(project);
@@ -107,7 +107,7 @@ public class GetByProjectActionTest {
 
   @Test
   public void project_quality_gate_over_default() {
-    ComponentDto project = componentDb.insertComponent(newProjectDto(db.getDefaultOrganization()));
+    ComponentDto project = componentDb.insertComponent(ComponentTesting.newPrivateProjectDto(db.getDefaultOrganization()));
     QualityGateDto defaultDbQualityGate = insertQualityGate("Sonar way");
     QualityGateDto dbQualityGate = insertQualityGate("My team QG");
     setDefaultQualityGate(defaultDbQualityGate.getId());
@@ -123,7 +123,7 @@ public class GetByProjectActionTest {
 
   @Test
   public void get_by_project_key() {
-    ComponentDto project = componentDb.insertComponent(newProjectDto(db.organizations().insert()));
+    ComponentDto project = componentDb.insertComponent(ComponentTesting.newPrivateProjectDto(db.organizations().insert()));
     QualityGateDto dbQualityGate = insertQualityGate("My team QG");
     associateProjectToQualityGate(project.getId(), dbQualityGate.getId());
     logInAsProjectUser(project);
@@ -135,8 +135,8 @@ public class GetByProjectActionTest {
 
   @Test
   public void get_with_project_admin_permission() {
-    ComponentDto project = componentDb.insertProject();
-    userSession.logIn().addProjectUuidPermissions(UserRole.ADMIN, project.uuid());
+    ComponentDto project = componentDb.insertPrivateProject();
+    userSession.logIn().addProjectPermission(UserRole.ADMIN, project);
     QualityGateDto dbQualityGate = insertQualityGate("Sonar way");
     setDefaultQualityGate(dbQualityGate.getId());
 
@@ -147,8 +147,8 @@ public class GetByProjectActionTest {
 
   @Test
   public void get_with_project_user_permission() {
-    ComponentDto project = componentDb.insertProject();
-    userSession.logIn().addProjectUuidPermissions(UserRole.USER, project.uuid());
+    ComponentDto project = componentDb.insertPrivateProject();
+    userSession.logIn().addProjectPermission(UserRole.USER, project);
     QualityGateDto dbQualityGate = insertQualityGate("Sonar way");
     setDefaultQualityGate(dbQualityGate.getId());
 
@@ -159,7 +159,7 @@ public class GetByProjectActionTest {
 
   @Test
   public void fail_when_insufficient_permission() {
-    ComponentDto project = componentDb.insertComponent(newProjectDto(db.getDefaultOrganization()));
+    ComponentDto project = componentDb.insertComponent(ComponentTesting.newPrivateProjectDto(db.getDefaultOrganization()));
     userSession.logIn();
     QualityGateDto dbQualityGate = insertQualityGate("Sonar way");
     setDefaultQualityGate(dbQualityGate.getId());
@@ -234,6 +234,6 @@ public class GetByProjectActionTest {
   }
 
   private void logInAsProjectUser(ComponentDto project) {
-    userSession.logIn().addProjectUuidPermissions(UserRole.USER, project.uuid());
+    userSession.logIn().addProjectPermission(UserRole.USER, project);
   }
 }

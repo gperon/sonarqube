@@ -30,7 +30,7 @@ import org.sonar.db.DbTester;
 import org.sonar.db.component.ComponentDto;
 import org.sonar.db.component.ComponentTesting;
 import org.sonar.db.organization.OrganizationDto;
-import org.sonar.db.qualityprofile.QualityProfileDto;
+import org.sonar.db.qualityprofile.QProfileDto;
 import org.sonar.db.user.UserDto;
 import org.sonar.db.user.UserTesting;
 import org.sonar.server.exceptions.NotFoundException;
@@ -52,8 +52,8 @@ public class ProjectsActionTest {
 
   private OrganizationDto organizationDto;
   private UserDto user;
-  private QualityProfileDto xooP1;
-  private QualityProfileDto xooP2;
+  private QProfileDto xooP1;
+  private QProfileDto xooP2;
   private ComponentDto project1;
   private ComponentDto project2;
   private ComponentDto project3;
@@ -75,8 +75,8 @@ public class ProjectsActionTest {
 
   @Test
   public void should_list_authorized_projects_only() throws Exception {
-    project1 = newProject("ABCD", "Project One");
-    project2 = newProject("BCDE", "Project Two");
+    project1 = newPrivateProject("ABCD", "Project One");
+    project2 = newPrivateProject("BCDE", "Project Two");
     db.components().insertComponents(project1, project2);
 
     // user only sees project1
@@ -86,66 +86,60 @@ public class ProjectsActionTest {
 
     dbSession.commit();
 
-    newRequest().setParam("key", xooP1.getKey()).setParam("selected", "selected").execute().assertJson(this.getClass(), "authorized_selected.json");
+    newRequest().setParam("key", xooP1.getKee()).setParam("selected", "selected").execute().assertJson(this.getClass(), "authorized_selected.json");
   }
 
   @Test
   public void should_paginate() throws Exception {
-    project1 = newProject("ABCD", "Project One");
-    project2 = newProject("BCDE", "Project Two");
-    project3 = newProject("CDEF", "Project Three");
-    project4 = newProject("DEFA", "Project Four");
+    project1 = newPublicProject("ABCD", "Project One");
+    project2 = newPublicProject("BCDE", "Project Two");
+    project3 = newPublicProject("CDEF", "Project Three");
+    project4 = newPublicProject("DEFA", "Project Four");
     dbClient.componentDao().insert(dbSession, project1, project2, project3, project4);
-
-    addBrowsePermissionToAnyone(project1, project2, project3, project4);
 
     associateProjectsWithProfile(dbSession, xooP1, project1, project2, project3, project4);
 
     dbSession.commit();
 
-    newRequest().setParam("key", xooP1.getKey()).setParam("selected", "selected").setParam("pageSize", "2")
+    newRequest().setParam("key", xooP1.getKee()).setParam("selected", "selected").setParam("pageSize", "2")
       .execute().assertJson(this.getClass(), "selected_page1.json");
-    newRequest().setParam("key", xooP1.getKey()).setParam("selected", "selected").setParam("pageSize", "2").setParam("page", "2")
+    newRequest().setParam("key", xooP1.getKee()).setParam("selected", "selected").setParam("pageSize", "2").setParam("page", "2")
       .execute().assertJson(this.getClass(), "selected_page2.json");
-    newRequest().setParam("key", xooP1.getKey()).setParam("selected", "selected").setParam("pageSize", "2").setParam("page", "3")
+    newRequest().setParam("key", xooP1.getKee()).setParam("selected", "selected").setParam("pageSize", "2").setParam("page", "3")
       .execute().assertJson(this.getClass(), "empty.json");
-    newRequest().setParam("key", xooP1.getKey()).setParam("selected", "selected").setParam("pageSize", "2").setParam("page", "4")
+    newRequest().setParam("key", xooP1.getKee()).setParam("selected", "selected").setParam("pageSize", "2").setParam("page", "4")
       .execute().assertJson(this.getClass(), "empty.json");
 
-    newRequest().setParam("key", xooP1.getKey()).setParam("selected", "selected").setParam("pageSize", "3").setParam("page", "1")
+    newRequest().setParam("key", xooP1.getKee()).setParam("selected", "selected").setParam("pageSize", "3").setParam("page", "1")
       .execute().assertJson(this.getClass(), "selected_ps3_page1.json");
-    newRequest().setParam("key", xooP1.getKey()).setParam("selected", "selected").setParam("pageSize", "3").setParam("page", "2")
+    newRequest().setParam("key", xooP1.getKee()).setParam("selected", "selected").setParam("pageSize", "3").setParam("page", "2")
       .execute().assertJson(this.getClass(), "selected_ps3_page2.json");
-    newRequest().setParam("key", xooP1.getKey()).setParam("selected", "selected").setParam("pageSize", "3").setParam("page", "3")
+    newRequest().setParam("key", xooP1.getKee()).setParam("selected", "selected").setParam("pageSize", "3").setParam("page", "3")
       .execute().assertJson(this.getClass(), "empty.json");
   }
 
   @Test
   public void should_show_unselected() throws Exception {
-    project1 = newProject("ABCD", "Project One");
-    project2 = newProject("BCDE", "Project Two");
-    project3 = newProject("CDEF", "Project Three");
-    project4 = newProject("DEFA", "Project Four");
+    project1 = newPublicProject("ABCD", "Project One");
+    project2 = newPublicProject("BCDE", "Project Two");
+    project3 = newPublicProject("CDEF", "Project Three");
+    project4 = newPublicProject("DEFA", "Project Four");
     dbClient.componentDao().insert(dbSession, project1, project2, project3, project4);
-
-    addBrowsePermissionToAnyone(project1, project2, project3, project4);
 
     associateProjectsWithProfile(dbSession, xooP1, project1, project2);
 
     dbSession.commit();
 
-    newRequest().setParam("key", xooP1.getKey()).setParam("selected", "deselected").execute().assertJson(this.getClass(), "deselected.json");
+    newRequest().setParam("key", xooP1.getKee()).setParam("selected", "deselected").execute().assertJson(this.getClass(), "deselected.json");
   }
 
   @Test
   public void should_show_all() throws Exception {
-    project1 = newProject("ABCD", "Project One");
-    project2 = newProject("BCDE", "Project Two");
-    project3 = newProject("CDEF", "Project Three");
-    project4 = newProject("DEFA", "Project Four");
+    project1 = newPublicProject("ABCD", "Project One");
+    project2 = newPublicProject("BCDE", "Project Two");
+    project3 = newPublicProject("CDEF", "Project Three");
+    project4 = newPublicProject("DEFA", "Project Four");
     dbClient.componentDao().insert(dbSession, project1, project2, project3, project4);
-
-    addBrowsePermissionToAnyone(project1, project2, project3, project4);
 
     associateProjectsWithProfile(dbSession, xooP1, project1, project2);
     // project3 is associated with P2, must appear as not associated with xooP1
@@ -153,24 +147,22 @@ public class ProjectsActionTest {
 
     dbSession.commit();
 
-    newRequest().setParam("key", xooP1.getKey()).setParam("selected", "all").execute().assertJson(this.getClass(), "all.json");
+    newRequest().setParam("key", xooP1.getKee()).setParam("selected", "all").execute().assertJson(this.getClass(), "all.json");
   }
 
   @Test
   public void should_filter_on_name() throws Exception {
-    project1 = newProject("ABCD", "Project One");
-    project2 = newProject("BCDE", "Project Two");
-    project3 = newProject("CDEF", "Project Three");
-    project4 = newProject("DEFA", "Project Four");
+    project1 = newPublicProject("ABCD", "Project One");
+    project2 = newPublicProject("BCDE", "Project Two");
+    project3 = newPublicProject("CDEF", "Project Three");
+    project4 = newPublicProject("DEFA", "Project Four");
     dbClient.componentDao().insert(dbSession, project1, project2, project3, project4);
-
-    addBrowsePermissionToAnyone(project1, project2, project3, project4);
 
     associateProjectsWithProfile(dbSession, xooP1, project1, project2);
 
     dbSession.commit();
 
-    newRequest().setParam("key", xooP1.getKey()).setParam("selected", "all").setParam("query", "project t").execute().assertJson(this.getClass(), "all_filtered.json");
+    newRequest().setParam("key", xooP1.getKee()).setParam("selected", "all").setParam("query", "project t").execute().assertJson(this.getClass(), "all_filtered.json");
   }
 
   @Test(expected = NotFoundException.class)
@@ -180,13 +172,11 @@ public class ProjectsActionTest {
 
   @Test
   public void return_deprecated_uuid_field() throws Exception {
-    project1 = newProject("ABCD", "Project One");
-    project2 = newProject("BCDE", "Project Two");
-    project3 = newProject("CDEF", "Project Three");
-    project4 = newProject("DEFA", "Project Four");
+    project1 = newPublicProject("ABCD", "Project One");
+    project2 = newPublicProject("BCDE", "Project Two");
+    project3 = newPublicProject("CDEF", "Project Three");
+    project4 = newPublicProject("DEFA", "Project Four");
     dbClient.componentDao().insert(dbSession, project1, project2, project3, project4);
-
-    addBrowsePermissionToAnyone(project1, project2, project3, project4);
 
     associateProjectsWithProfile(dbSession, xooP1, project1, project2);
     // project3 is associated with P2, must appear as not associated with xooP1
@@ -194,7 +184,7 @@ public class ProjectsActionTest {
 
     dbSession.commit();
 
-    newRequest().setParam("key", xooP1.getKey()).setParam("selected", "all").execute().assertJson(this.getClass(), "return_deprecated_uuid_field.json");
+    newRequest().setParam("key", xooP1.getKee()).setParam("selected", "all").execute().assertJson(this.getClass(), "return_deprecated_uuid_field.json");
   }
 
   private void createProfiles() {
@@ -207,19 +197,17 @@ public class ProjectsActionTest {
     return wsTester.newGetRequest("api/qualityprofiles", "projects");
   }
 
-  private ComponentDto newProject(String uuid, String name) {
-    return ComponentTesting.newProjectDto(organizationDto, uuid).setName(name);
+  private ComponentDto newPublicProject(String uuid, String name) {
+    return ComponentTesting.newPublicProjectDto(organizationDto, uuid).setName(name);
   }
 
-  private void addBrowsePermissionToAnyone(ComponentDto... projects) {
-    for (ComponentDto project : projects) {
-      db.users().insertProjectPermissionOnAnyone(UserRole.USER, project);
-    }
+  private ComponentDto newPrivateProject(String uuid, String name) {
+    return ComponentTesting.newPrivateProjectDto(organizationDto, uuid).setName(name);
   }
 
-  private void associateProjectsWithProfile(DbSession session, QualityProfileDto profile, ComponentDto... projects) {
+  private void associateProjectsWithProfile(DbSession dbSession, QProfileDto profile, ComponentDto... projects) {
     for (ComponentDto project : projects) {
-      dbClient.qualityProfileDao().insertProjectProfileAssociation(project.uuid(), profile.getKey(), session);
+      dbClient.qualityProfileDao().insertProjectProfileAssociation(dbSession, project, profile);
     }
   }
 }

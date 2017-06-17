@@ -32,6 +32,8 @@ import org.sonarqube.ws.client.WsClient;
 import org.sonarqube.ws.client.permission.AddGroupWsRequest;
 import org.sonarqube.ws.client.permission.AddProjectCreatorToTemplateWsRequest;
 import org.sonarqube.ws.client.permission.RemoveGroupWsRequest;
+import org.sonarqube.ws.client.project.UpdateVisibilityRequest;
+import util.ItUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.fail;
@@ -82,7 +84,7 @@ public class ExecuteAnalysisPermissionTest {
         "You're only authorized to execute a local (preview) SonarQube analysis without pushing the results to the SonarQube server. Please contact your SonarQube administrator.");
     }
 
-    removeProjectPermission("anyone", "sample", "user");
+    ItUtils.newAdminWsClient(orchestrator).projects().updateVisibility(UpdateVisibilityRequest.builder().setProject(PROJECT_KEY).setVisibility("private").build());
     try {
       // Execute anonymous analysis
       executeAnonymousAnalysis();
@@ -98,8 +100,8 @@ public class ExecuteAnalysisPermissionTest {
     // Do a first analysis, no error
     executeAnonymousAnalysis();
 
-    // Remove browse permission for groups Anyone on the project
-    removeProjectPermission("anyone", "sample", "user");
+    // make project private
+    ItUtils.newAdminWsClient(orchestrator).projects().updateVisibility(UpdateVisibilityRequest.builder().setProject("sample").setVisibility("private").build());
 
     // still no error
     executeAnonymousAnalysis();

@@ -250,6 +250,10 @@ public class RuleTesting {
     return RuleKey.of("repo_" + randomAlphanumeric(3), "rule_" + randomAlphanumeric(3));
   }
 
+  public static RuleKey randomRuleKeyOfMaximumLength() {
+    return RuleKey.of(randomAlphabetic(255), randomAlphabetic(200));
+  }
+
   public static Consumer<RuleDefinitionDto> setRepositoryKey(String repositoryKey) {
     return rule -> rule.setRepositoryKey(repositoryKey);
   }
@@ -298,8 +302,8 @@ public class RuleTesting {
     return rule -> rule.setSystemTags(copyOf(tags));
   }
 
-  public static Consumer<RuleMetadataDto> setOrganizationUuid(String organizationUuid) {
-    return rule -> rule.setOrganizationUuid(organizationUuid);
+  public static Consumer<RuleMetadataDto> setOrganization(OrganizationDto organization) {
+    return rule -> rule.setOrganizationUuid(organization.getUuid());
   }
 
   public static Consumer<RuleMetadataDto> setTags(String... tags) {

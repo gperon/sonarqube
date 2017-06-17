@@ -1,4 +1,6 @@
-exports[`test should render maximum 10 tags in the searchbox results 1`] = `
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`should render maximum 10 tags in the searchbox results 1`] = `
 <Filter
   facet={
     Object {
@@ -71,15 +73,16 @@ exports[`test should render maximum 10 tags in the searchbox results 1`] = `
         Object {
           "push": [Function],
         }
-      } />
+      }
+    />
   }
   getFacetValueForOption={[Function]}
   halfWidth={false}
   header={
     <FilterHeader
-      name="Tags" />
+      name="projects.facets.tags"
+    />
   }
-  highlightUnder={1}
   isFavorite={true}
   options={
     Array [
@@ -104,10 +107,11 @@ exports[`test should render maximum 10 tags in the searchbox results 1`] = `
       "java",
       "ad",
     ]
-  } />
+  }
+/>
 `;
 
-exports[`test should render the tags facet with the selected tags 1`] = `
+exports[`should render the tags facet with the selected tags 1`] = `
 <Filter
   facet={
     Object {
@@ -136,15 +140,16 @@ exports[`test should render the tags facet with the selected tags 1`] = `
         Object {
           "push": [Function],
         }
-      } />
+      }
+    />
   }
   getFacetValueForOption={[Function]}
   halfWidth={false}
   header={
     <FilterHeader
-      name="Tags" />
+      name="projects.facets.tags"
+    />
   }
-  highlightUnder={1}
   isFavorite={true}
   options={
     Array [
@@ -168,20 +173,25 @@ exports[`test should render the tags facet with the selected tags 1`] = `
       "lang",
       "sonar",
     ]
-  } />
+  }
+/>
 `;
 
-exports[`test should render the tags facet with the selected tags 2`] = `
+exports[`should render the tags facet with the selected tags 2`] = `
 <div
   className="search-navigator-facet-box"
-  data-key="tags">
+  data-key="tags"
+>
   <FilterHeader
-    name="Tags" />
+    name="projects.facets.tags"
+  />
   <div
-    className="search-navigator-facet-list">
+    className="search-navigator-facet-list"
+  >
     <Link
       className="facet search-navigator-facet projects-facet active"
       data-key="lang"
+      onClick={[Function]}
       onlyActiveOnIndex={false}
       style={Object {}}
       to={
@@ -191,20 +201,25 @@ exports[`test should render the tags facet with the selected tags 2`] = `
             "tags": "sonar",
           },
         }
-      }>
+      }
+    >
       <span
-        className="facet-name">
+        className="facet-name"
+      >
         <SearchableFilterOption
-          optionKey="lang" />
+          optionKey="lang"
+        />
       </span>
       <span
-        className="facet-stat">
+        className="facet-stat"
+      >
         4
       </span>
     </Link>
     <Link
       className="facet search-navigator-facet projects-facet active"
       data-key="sonar"
+      onClick={[Function]}
       onlyActiveOnIndex={false}
       style={Object {}}
       to={
@@ -214,20 +229,25 @@ exports[`test should render the tags facet with the selected tags 2`] = `
             "tags": "lang",
           },
         }
-      }>
+      }
+    >
       <span
-        className="facet-name">
+        className="facet-name"
+      >
         <SearchableFilterOption
-          optionKey="sonar" />
+          optionKey="sonar"
+        />
       </span>
       <span
-        className="facet-stat">
+        className="facet-stat"
+      >
         3
       </span>
     </Link>
     <Link
       className="facet search-navigator-facet projects-facet"
       data-key="csharp"
+      onClick={[Function]}
       onlyActiveOnIndex={false}
       style={Object {}}
       to={
@@ -237,14 +257,18 @@ exports[`test should render the tags facet with the selected tags 2`] = `
             "tags": "lang,sonar,csharp",
           },
         }
-      }>
+      }
+    >
       <span
-        className="facet-name">
+        className="facet-name"
+      >
         <SearchableFilterOption
-          optionKey="csharp" />
+          optionKey="csharp"
+        />
       </span>
       <span
-        className="facet-stat">
+        className="facet-stat"
+      >
         1
       </span>
     </Link>
@@ -268,11 +292,12 @@ exports[`test should render the tags facet with the selected tags 2`] = `
       Object {
         "push": [Function],
       }
-    } />
+    }
+  />
 </div>
 `;
 
-exports[`test should render the tags without the ones in the facet 1`] = `
+exports[`should render the tags without the ones in the facet 1`] = `
 <Filter
   facet={
     Object {
@@ -297,15 +322,16 @@ exports[`test should render the tags without the ones in the facet 1`] = `
         Object {
           "push": [Function],
         }
-      } />
+      }
+    />
   }
   getFacetValueForOption={[Function]}
   halfWidth={false}
   header={
     <FilterHeader
-      name="Tags" />
+      name="projects.facets.tags"
+    />
   }
-  highlightUnder={1}
   options={
     Array [
       "lang",
@@ -319,10 +345,11 @@ exports[`test should render the tags without the ones in the facet 1`] = `
       "tags": null,
     }
   }
-  renderOption={[Function]} />
+  renderOption={[Function]}
+/>
 `;
 
-exports[`test should render the tags without the ones in the facet 2`] = `
+exports[`should render the tags without the ones in the facet 2`] = `
 <Filter
   facet={
     Object {
@@ -362,15 +389,16 @@ exports[`test should render the tags without the ones in the facet 2`] = `
         Object {
           "push": [Function],
         }
-      } />
+      }
+    />
   }
   getFacetValueForOption={[Function]}
   halfWidth={false}
   header={
     <FilterHeader
-      name="Tags" />
+      name="projects.facets.tags"
+    />
   }
-  highlightUnder={1}
   options={
     Array [
       "lang",
@@ -384,5 +412,6 @@ exports[`test should render the tags without the ones in the facet 2`] = `
       "tags": null,
     }
   }
-  renderOption={[Function]} />
+  renderOption={[Function]}
+/>
 `;

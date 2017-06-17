@@ -1,14 +1,82 @@
-exports[`test new_open_issues 1`] = `
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`new_maintainability_rating 1`] = `
+<Link
+  className="overview-quality-gate-condition overview-quality-gate-condition-error overview-quality-gate-condition-leak"
+  onlyActiveOnIndex={false}
+  style={Object {}}
+  to={
+    Object {
+      "pathname": "/project/issues",
+      "query": Object {
+        "id": "abcd-key",
+        "resolved": "false",
+        "sinceLeakPeriod": "true",
+        "types": "CODE_SMELL",
+      },
+    }
+  }
+>
+  <div
+    className="overview-quality-gate-condition-container"
+  >
+    <div
+      className="overview-quality-gate-condition-value"
+    >
+      <Measure
+        decimals={null}
+        measure={
+          Object {
+            "leak": "3",
+            "value": "3",
+          }
+        }
+        metric={
+          Object {
+            "key": "new_maintainability_rating",
+            "name": "new_maintainability_rating",
+            "type": "RATING",
+          }
+        }
+      />
+    </div>
+    <div>
+      <div
+        className="overview-quality-gate-condition-metric"
+      >
+        <IssueTypeIcon
+          className="little-spacer-right"
+          query="new_maintainability_rating"
+        />
+        new_maintainability_rating
+      </div>
+      <div
+        className="overview-quality-gate-threshold"
+      >
+        quality_gates.operator.GT.rating
+         
+        A
+      </div>
+    </div>
+  </div>
+</Link>
+`;
+
+exports[`new_open_issues 1`] = `
 <DrilldownLink
-  className="overview-quality-gate-condition overview-quality-gate-condition-error"
+  className="overview-quality-gate-condition overview-quality-gate-condition-error overview-quality-gate-condition-leak"
   component="abcd-key"
   metric="new_open_issues"
-  periodDate={null}>
+  sinceLeakPeriod={true}
+>
   <div
-    className="overview-quality-gate-condition-container">
+    className="overview-quality-gate-condition-container"
+  >
     <div
-      className="overview-quality-gate-condition-value">
+      className="overview-quality-gate-condition-value"
+    >
       <Measure
+        decimals={null}
         measure={
           Object {
             "leak": "10",
@@ -21,18 +89,22 @@ exports[`test new_open_issues 1`] = `
             "name": "new_open_issues",
             "type": "INT",
           }
-        } />
+        }
+      />
     </div>
     <div>
       <div
-        className="overview-quality-gate-condition-metric">
+        className="overview-quality-gate-condition-metric"
+      >
         <IssueTypeIcon
           className="little-spacer-right"
-          query="new_open_issues" />
+          query="new_open_issues"
+        />
         new_open_issues
       </div>
       <div
-        className="overview-quality-gate-threshold">
+        className="overview-quality-gate-threshold"
+      >
         quality_gates.operator.GT
          
         0
@@ -42,9 +114,9 @@ exports[`test new_open_issues 1`] = `
 </DrilldownLink>
 `;
 
-exports[`test new_reliability_rating 1`] = `
+exports[`new_reliability_rating 1`] = `
 <Link
-  className="overview-quality-gate-condition overview-quality-gate-condition-error"
+  className="overview-quality-gate-condition overview-quality-gate-condition-error overview-quality-gate-condition-leak"
   onlyActiveOnIndex={false}
   style={Object {}}
   to={
@@ -58,12 +130,16 @@ exports[`test new_reliability_rating 1`] = `
         "types": "BUG",
       },
     }
-  }>
+  }
+>
   <div
-    className="overview-quality-gate-condition-container">
+    className="overview-quality-gate-condition-container"
+  >
     <div
-      className="overview-quality-gate-condition-value">
+      className="overview-quality-gate-condition-value"
+    >
       <Measure
+        decimals={null}
         measure={
           Object {
             "leak": "3",
@@ -76,18 +152,22 @@ exports[`test new_reliability_rating 1`] = `
             "name": "new_reliability_rating",
             "type": "RATING",
           }
-        } />
+        }
+      />
     </div>
     <div>
       <div
-        className="overview-quality-gate-condition-metric">
+        className="overview-quality-gate-condition-metric"
+      >
         <IssueTypeIcon
           className="little-spacer-right"
-          query="new_reliability_rating" />
+          query="new_reliability_rating"
+        />
         new_reliability_rating
       </div>
       <div
-        className="overview-quality-gate-threshold">
+        className="overview-quality-gate-threshold"
+      >
         quality_gates.operator.GT.rating
          
         A
@@ -97,9 +177,9 @@ exports[`test new_reliability_rating 1`] = `
 </Link>
 `;
 
-exports[`test new_security_rating 1`] = `
+exports[`new_security_rating 1`] = `
 <Link
-  className="overview-quality-gate-condition overview-quality-gate-condition-error"
+  className="overview-quality-gate-condition overview-quality-gate-condition-error overview-quality-gate-condition-leak"
   onlyActiveOnIndex={false}
   style={Object {}}
   to={
@@ -113,12 +193,16 @@ exports[`test new_security_rating 1`] = `
         "types": "VULNERABILITY",
       },
     }
-  }>
+  }
+>
   <div
-    className="overview-quality-gate-condition-container">
+    className="overview-quality-gate-condition-container"
+  >
     <div
-      className="overview-quality-gate-condition-value">
+      className="overview-quality-gate-condition-value"
+    >
       <Measure
+        decimals={null}
         measure={
           Object {
             "leak": "3",
@@ -131,18 +215,22 @@ exports[`test new_security_rating 1`] = `
             "name": "new_security_rating",
             "type": "RATING",
           }
-        } />
+        }
+      />
     </div>
     <div>
       <div
-        className="overview-quality-gate-condition-metric">
+        className="overview-quality-gate-condition-metric"
+      >
         <IssueTypeIcon
           className="little-spacer-right"
-          query="new_security_rating" />
+          query="new_security_rating"
+        />
         new_security_rating
       </div>
       <div
-        className="overview-quality-gate-threshold">
+        className="overview-quality-gate-threshold"
+      >
         quality_gates.operator.GT.rating
          
         A
@@ -152,71 +240,21 @@ exports[`test new_security_rating 1`] = `
 </Link>
 `;
 
-exports[`test new_sqale_rating 1`] = `
-<Link
-  className="overview-quality-gate-condition overview-quality-gate-condition-error"
-  onlyActiveOnIndex={false}
-  style={Object {}}
-  to={
-    Object {
-      "pathname": "/project/issues",
-      "query": Object {
-        "id": "abcd-key",
-        "resolved": "false",
-        "sinceLeakPeriod": "true",
-        "types": "CODE_SMELL",
-      },
-    }
-  }>
-  <div
-    className="overview-quality-gate-condition-container">
-    <div
-      className="overview-quality-gate-condition-value">
-      <Measure
-        measure={
-          Object {
-            "leak": "3",
-            "value": "3",
-          }
-        }
-        metric={
-          Object {
-            "key": "new_sqale_rating",
-            "name": "new_sqale_rating",
-            "type": "RATING",
-          }
-        } />
-    </div>
-    <div>
-      <div
-        className="overview-quality-gate-condition-metric">
-        <IssueTypeIcon
-          className="little-spacer-right"
-          query="new_sqale_rating" />
-        new_sqale_rating
-      </div>
-      <div
-        className="overview-quality-gate-threshold">
-        quality_gates.operator.GT.rating
-         
-        A
-      </div>
-    </div>
-  </div>
-</Link>
-`;
-
-exports[`test open_issues 1`] = `
+exports[`open_issues 1`] = `
 <DrilldownLink
   className="overview-quality-gate-condition overview-quality-gate-condition-error"
   component="abcd-key"
   metric="open_issues"
-  periodDate={null}>
+  sinceLeakPeriod={false}
+>
   <div
-    className="overview-quality-gate-condition-container">
+    className="overview-quality-gate-condition-container"
+  >
     <div
-      className="overview-quality-gate-condition-value">
+      className="overview-quality-gate-condition-value"
+    >
       <Measure
+        decimals={null}
         measure={
           Object {
             "leak": "10",
@@ -229,18 +267,22 @@ exports[`test open_issues 1`] = `
             "name": "Open open_issues",
             "type": "INT",
           }
-        } />
+        }
+      />
     </div>
     <div>
       <div
-        className="overview-quality-gate-condition-metric">
+        className="overview-quality-gate-condition-metric"
+      >
         <IssueTypeIcon
           className="little-spacer-right"
-          query="open_issues" />
+          query="open_issues"
+        />
         Open open_issues
       </div>
       <div
-        className="overview-quality-gate-threshold">
+        className="overview-quality-gate-threshold"
+      >
         quality_gates.operator.GT
          
         0
@@ -250,7 +292,7 @@ exports[`test open_issues 1`] = `
 </DrilldownLink>
 `;
 
-exports[`test reliability_rating 1`] = `
+exports[`reliability_rating 1`] = `
 <Link
   className="overview-quality-gate-condition overview-quality-gate-condition-error"
   onlyActiveOnIndex={false}
@@ -265,12 +307,16 @@ exports[`test reliability_rating 1`] = `
         "types": "BUG",
       },
     }
-  }>
+  }
+>
   <div
-    className="overview-quality-gate-condition-container">
+    className="overview-quality-gate-condition-container"
+  >
     <div
-      className="overview-quality-gate-condition-value">
+      className="overview-quality-gate-condition-value"
+    >
       <Measure
+        decimals={null}
         measure={
           Object {
             "leak": "3",
@@ -283,18 +329,22 @@ exports[`test reliability_rating 1`] = `
             "name": "reliability_rating",
             "type": "RATING",
           }
-        } />
+        }
+      />
     </div>
     <div>
       <div
-        className="overview-quality-gate-condition-metric">
+        className="overview-quality-gate-condition-metric"
+      >
         <IssueTypeIcon
           className="little-spacer-right"
-          query="reliability_rating" />
+          query="reliability_rating"
+        />
         reliability_rating
       </div>
       <div
-        className="overview-quality-gate-threshold">
+        className="overview-quality-gate-threshold"
+      >
         quality_gates.operator.GT.rating
          
         A
@@ -304,7 +354,7 @@ exports[`test reliability_rating 1`] = `
 </Link>
 `;
 
-exports[`test security_rating 1`] = `
+exports[`security_rating 1`] = `
 <Link
   className="overview-quality-gate-condition overview-quality-gate-condition-error"
   onlyActiveOnIndex={false}
@@ -319,12 +369,16 @@ exports[`test security_rating 1`] = `
         "types": "VULNERABILITY",
       },
     }
-  }>
+  }
+>
   <div
-    className="overview-quality-gate-condition-container">
+    className="overview-quality-gate-condition-container"
+  >
     <div
-      className="overview-quality-gate-condition-value">
+      className="overview-quality-gate-condition-value"
+    >
       <Measure
+        decimals={null}
         measure={
           Object {
             "leak": "3",
@@ -337,18 +391,22 @@ exports[`test security_rating 1`] = `
             "name": "security_rating",
             "type": "RATING",
           }
-        } />
+        }
+      />
     </div>
     <div>
       <div
-        className="overview-quality-gate-condition-metric">
+        className="overview-quality-gate-condition-metric"
+      >
         <IssueTypeIcon
           className="little-spacer-right"
-          query="security_rating" />
+          query="security_rating"
+        />
         security_rating
       </div>
       <div
-        className="overview-quality-gate-threshold">
+        className="overview-quality-gate-threshold"
+      >
         quality_gates.operator.GT.rating
          
         A
@@ -358,7 +416,7 @@ exports[`test security_rating 1`] = `
 </Link>
 `;
 
-exports[`test sqale_rating 1`] = `
+exports[`sqale_rating 1`] = `
 <Link
   className="overview-quality-gate-condition overview-quality-gate-condition-error"
   onlyActiveOnIndex={false}
@@ -372,12 +430,16 @@ exports[`test sqale_rating 1`] = `
         "types": "CODE_SMELL",
       },
     }
-  }>
+  }
+>
   <div
-    className="overview-quality-gate-condition-container">
+    className="overview-quality-gate-condition-container"
+  >
     <div
-      className="overview-quality-gate-condition-value">
+      className="overview-quality-gate-condition-value"
+    >
       <Measure
+        decimals={null}
         measure={
           Object {
             "leak": "3",
@@ -390,18 +452,22 @@ exports[`test sqale_rating 1`] = `
             "name": "sqale_rating",
             "type": "RATING",
           }
-        } />
+        }
+      />
     </div>
     <div>
       <div
-        className="overview-quality-gate-condition-metric">
+        className="overview-quality-gate-condition-metric"
+      >
         <IssueTypeIcon
           className="little-spacer-right"
-          query="sqale_rating" />
+          query="sqale_rating"
+        />
         sqale_rating
       </div>
       <div
-        className="overview-quality-gate-threshold">
+        className="overview-quality-gate-threshold"
+      >
         quality_gates.operator.GT.rating
          
         A

@@ -31,7 +31,7 @@ import org.sonar.db.DbClient;
 import org.sonar.db.DbSession;
 import org.sonar.db.DbTester;
 import org.sonar.db.component.ComponentDto;
-import org.sonar.server.component.ComponentFinder;
+import org.sonar.server.component.TestComponentFinder;
 import org.sonar.server.es.ProjectIndexer;
 import org.sonar.server.exceptions.BadRequestException;
 import org.sonar.server.exceptions.ForbiddenException;
@@ -57,17 +57,18 @@ public class SetActionTest {
   public UserSessionRule userSession = UserSessionRule.standalone().logIn().setRoot();
   @Rule
   public DbTester db = DbTester.create();
+
   private DbClient dbClient = db.getDbClient();
   private DbSession dbSession = db.getSession();
   private ComponentDto project;
 
   private ProjectIndexer indexer = mock(ProjectIndexer.class);
 
-  private WsActionTester ws = new WsActionTester(new SetAction(dbClient, new ComponentFinder(dbClient), userSession, singletonList(indexer)));
+  private WsActionTester ws = new WsActionTester(new SetAction(dbClient, TestComponentFinder.from(db), userSession, singletonList(indexer)));
 
   @Before
   public void setUp() {
-    project = db.components().insertProject();
+    project = db.components().insertPrivateProject();
   }
 
   @Test
@@ -81,7 +82,7 @@ public class SetActionTest {
 
   @Test
   public void reset_tags() {
-    project = db.components().insertProject(p -> p.setTagsString("platform,scanner"));
+    project = db.components().insertPrivateProject(p -> p.setTagsString("platform,scanner"));
 
     call(project.key(), "");
 
@@ -90,7 +91,7 @@ public class SetActionTest {
 
   @Test
   public void override_existing_tags() {
-    project = db.components().insertProject(p -> p.setTagsString("marketing,languages"));
+    project = db.components().insertPrivateProject(p -> p.setTagsString("marketing,languages"));
 
     call(project.key(), "finance,offshore,platform");
 
@@ -99,7 +100,7 @@ public class SetActionTest {
 
   @Test
   public void set_tags_as_project_admin() {
-    userSession.logIn().addProjectUuidPermissions(UserRole.ADMIN, project.uuid());
+    userSession.logIn().addProjectPermission(UserRole.ADMIN, project);
 
     call(project.key(), "platform, lambda");
 
@@ -123,7 +124,7 @@ public class SetActionTest {
 
   @Test
   public void fail_if_not_project_admin() {
-    userSession.logIn().addProjectUuidPermissions(UserRole.USER, project.key());
+    userSession.logIn().addProjectPermission(UserRole.USER, project);
 
     expectedException.expect(ForbiddenException.class);
 

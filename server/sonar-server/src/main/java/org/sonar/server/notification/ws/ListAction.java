@@ -21,12 +21,10 @@ package org.sonar.server.notification.ws;
 
 import com.google.common.base.Splitter;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
@@ -43,6 +41,7 @@ import org.sonar.db.component.ComponentDto;
 import org.sonar.db.organization.OrganizationDto;
 import org.sonar.db.property.PropertyDto;
 import org.sonar.db.property.PropertyQuery;
+import org.sonar.db.user.UserDto;
 import org.sonar.server.notification.NotificationCenter;
 import org.sonar.server.user.UserSession;
 import org.sonarqube.ws.Notifications.ListResponse;
@@ -56,8 +55,10 @@ import static org.sonar.core.util.Protobuf.setNullable;
 import static org.sonar.core.util.stream.MoreCollectors.toOneElement;
 import static org.sonar.server.notification.NotificationDispatcherMetadata.GLOBAL_NOTIFICATION;
 import static org.sonar.server.notification.NotificationDispatcherMetadata.PER_PROJECT_NOTIFICATION;
+import static org.sonar.server.ws.WsUtils.checkFound;
 import static org.sonar.server.ws.WsUtils.writeProtobuf;
 import static org.sonarqube.ws.client.notification.NotificationsWsParameters.ACTION_LIST;
+import static org.sonarqube.ws.client.notification.NotificationsWsParameters.PARAM_LOGIN;
 
 public class ListAction implements NotificationsWsAction {
   private static final Splitter PROPERTY_KEY_SPLITTER = Splitter.on(".");
@@ -78,42 +79,53 @@ public class ListAction implements NotificationsWsAction {
 
   @Override
   public void define(WebService.NewController context) {
-    context.createAction(ACTION_LIST)
+    WebService.NewAction action = context.createAction(ACTION_LIST)
       .setDescription("List notifications of the authenticated user.<br>" +
-        "Requires authentication.")
+        "Requires one of the following permissions:" +
+        "<ul>" +
+        "  <li>Authentication if no login is provided</li>" +
+        "  <li>System administration if a login is provided</li>" +
+        "</ul>")
       .setSince("6.3")
       .setResponseExample(getClass().getResource("list-example.json"))
       .setHandler(this);
+
+    action.createParam(PARAM_LOGIN)
+      .setDescription("User login")
+      .setSince("6.4");
   }
 
   @Override
   public void handle(Request request, Response response) throws Exception {
-    ListResponse listResponse = Stream.of(request)
-      .peek(checkPermissions())
-      .map(search())
-      .collect(toOneElement());
+    ListResponse listResponse = search(request);
 
     writeProtobuf(listResponse, request, response);
   }
 
-  private Function<Request, ListResponse> search() {
-    return request -> {
-      try (DbSession dbSession = dbClient.openSession(false)) {
-        return Stream
-          .of(ListResponse.newBuilder())
-          .map(r -> r.addAllChannels(channels))
-          .map(r -> r.addAllGlobalTypes(globalDispatchers))
-          .map(r -> r.addAllPerProjectTypes(perProjectDispatchers))
-          .map(addNotifications(dbSession))
-          .map(ListResponse.Builder::build)
-          .collect(toOneElement());
-      }
-    };
+  private ListResponse search(Request request) {
+    try (DbSession dbSession = dbClient.openSession(false)) {
+      checkPermissions(request);
+      UserDto user = getUser(dbSession, request);
+
+      return Stream
+        .of(ListResponse.newBuilder())
+        .map(r -> r.addAllChannels(channels))
+        .map(r -> r.addAllGlobalTypes(globalDispatchers))
+        .map(r -> r.addAllPerProjectTypes(perProjectDispatchers))
+        .map(addNotifications(dbSession, user))
+        .map(ListResponse.Builder::build)
+        .collect(toOneElement());
+    }
   }
 
-  private UnaryOperator<ListResponse.Builder> addNotifications(DbSession dbSession) {
+  private UserDto getUser(DbSession dbSession, Request request) {
+    String login = request.param(PARAM_LOGIN) == null ? userSession.getLogin() : request.param(PARAM_LOGIN);
+    return checkFound(dbClient.userDao().selectByLogin(dbSession, login), "User '%s' not found", login);
+  }
+
+  private UnaryOperator<ListResponse.Builder> addNotifications(DbSession dbSession, UserDto user) {
     return response -> {
-      List<PropertyDto> properties = dbClient.propertiesDao().selectByQuery(PropertyQuery.builder().setUserId(userSession.getUserId()).build(), dbSession);
+      List<PropertyDto> properties = dbClient.propertiesDao().selectByQuery(PropertyQuery.builder().setUserId(user.getId()).build(), dbSession);
       Map<Long, ComponentDto> componentsById = searchProjects(dbSession, properties);
       Map<String, OrganizationDto> organizationsByUuid = getOrganizations(dbSession, componentsById.values());
 
@@ -150,14 +162,14 @@ public class ListAction implements NotificationsWsAction {
   }
 
   private Map<Long, ComponentDto> searchProjects(DbSession dbSession, List<PropertyDto> properties) {
-    Set<String> authorizedComponentUuids = new HashSet<>(dbClient.authorizationDao().selectAuthorizedRootProjectsUuids(dbSession, userSession.getUserId(), UserRole.USER));
     Set<Long> componentIds = properties.stream()
       .map(PropertyDto::getResourceId)
       .filter(Objects::nonNull)
       .collect(MoreCollectors.toSet(properties.size()));
+    Set<Long> authorizedProjectIds = dbClient.authorizationDao().keepAuthorizedProjectIds(dbSession, componentIds, userSession.getUserId(), UserRole.USER);
     return dbClient.componentDao().selectByIds(dbSession, componentIds)
       .stream()
-      .filter(c -> authorizedComponentUuids.contains(c.uuid()))
+      .filter(c -> authorizedProjectIds.contains(c.getId()))
       .collect(MoreCollectors.uniqueIndex(ComponentDto::getId));
   }
 
@@ -196,7 +208,11 @@ public class ListAction implements NotificationsWsAction {
       .setProjectName(project.name());
   }
 
-  private Consumer<Request> checkPermissions() {
-    return request -> userSession.checkLoggedIn();
+  private void checkPermissions(Request request) {
+    if (request.param(PARAM_LOGIN) == null) {
+      userSession.checkLoggedIn();
+    } else {
+      userSession.checkIsSystemAdministrator();
+    }
   }
 }

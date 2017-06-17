@@ -20,11 +20,12 @@
 package org.sonar.server.user;
 
 import java.util.Collection;
+import java.util.List;
 import javax.annotation.CheckForNull;
 import org.sonar.db.component.ComponentDto;
 import org.sonar.db.organization.OrganizationDto;
-import org.sonar.db.user.GroupDto;
 import org.sonar.db.permission.OrganizationPermission;
+import org.sonar.db.user.GroupDto;
 
 public interface UserSession {
 
@@ -111,8 +112,20 @@ public interface UserSession {
    * Using {@link #hasComponentPermission(String, ComponentDto)} is recommended
    * because it does not have to load project if the referenced component
    * is not a project.
+   *
+   * @deprecated use {@link #hasComponentPermission(String, ComponentDto)} instead
    */
+  @Deprecated
   boolean hasComponentUuidPermission(String permission, String componentUuid);
+
+  /**
+   * Return the subset of specified components which the user has granted permission.
+   * An empty list is returned if input is empty or if no components are allowed to be
+   * accessed.
+   * If the input is ordered, then the returned components are in the same order.
+   * The duplicated components are returned duplicated too.
+   */
+  List<ComponentDto> keepAuthorizedComponents(String permission, Collection<ComponentDto> components);
 
   /**
    * Ensures that {@link #hasComponentPermission(String, ComponentDto)} is {@code true},
@@ -123,7 +136,10 @@ public interface UserSession {
   /**
    * Ensures that {@link #hasComponentUuidPermission(String, String)} is {@code true},
    * otherwise throws a {@link org.sonar.server.exceptions.ForbiddenException}.
+   *
+   * @deprecated use {@link #checkComponentPermission(String, ComponentDto)} instead
    */
+  @Deprecated
   UserSession checkComponentUuidPermission(String permission, String componentUuid);
 
   /**

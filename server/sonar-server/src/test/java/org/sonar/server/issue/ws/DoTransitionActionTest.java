@@ -24,6 +24,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.mockito.ArgumentCaptor;
 import org.sonar.api.config.MapSettings;
 import org.sonar.api.server.ws.Request;
 import org.sonar.api.server.ws.Response;
@@ -35,6 +36,7 @@ import org.sonar.db.component.ComponentDto;
 import org.sonar.db.issue.IssueDbTester;
 import org.sonar.db.issue.IssueDto;
 import org.sonar.db.rule.RuleDbTester;
+import org.sonar.db.rule.RuleDefinitionDto;
 import org.sonar.db.rule.RuleDto;
 import org.sonar.server.es.EsTester;
 import org.sonar.server.exceptions.ForbiddenException;
@@ -103,23 +105,29 @@ public class DoTransitionActionTest {
   private IssueIndexer issueIndexer = new IssueIndexer(esTester.client(), new IssueIteratorFactory(dbClient));
   private IssueUpdater issueUpdater = new IssueUpdater(dbClient,
     new ServerIssueStorage(system2, new DefaultRuleFinder(dbClient, defaultOrganizationProvider), dbClient, issueIndexer), mock(NotificationManager.class));
+  private ComponentDto project;
+  private ComponentDto file;
+  private ArgumentCaptor<SearchResponseData> preloadedSearchResponseDataCaptor = ArgumentCaptor.forClass(SearchResponseData.class);
 
   private WsAction underTest = new DoTransitionAction(dbClient, userSession, new IssueFinder(dbClient, userSession), issueUpdater, transitionService, responseWriter);
   private WsActionTester tester = new WsActionTester(underTest);
 
   @Before
   public void setUp() throws Exception {
+    project = componentDbTester.insertPrivateProject();
+    file = componentDbTester.insertComponent(newFileDto(project));
     workflow.start();
   }
 
   @Test
   public void do_transition() throws Exception {
     IssueDto issueDto = issueDbTester.insertIssue(newIssue().setStatus(STATUS_OPEN).setResolution(null));
-    userSession.logIn("john").addProjectUuidPermissions(USER, issueDto.getProjectUuid());
+    userSession.logIn("john").addProjectPermission(USER, project, file);
 
     call(issueDto.getKey(), "confirm");
 
-    verify(responseWriter).write(eq(issueDto.getKey()), any(Request.class), any(Response.class));
+    verify(responseWriter).write(eq(issueDto.getKey()), preloadedSearchResponseDataCaptor.capture(), any(Request.class), any(Response.class));
+    verifyContentOfPreloadedSearchResponseData(issueDto);
     IssueDto issueReloaded = dbClient.issueDao().selectByKey(dbTester.getSession(), issueDto.getKey()).get();
     assertThat(issueReloaded.getStatus()).isEqualTo(STATUS_CONFIRMED);
   }
@@ -143,7 +151,7 @@ public class DoTransitionActionTest {
   @Test
   public void fail_if_no_transition_param() throws Exception {
     IssueDto issueDto = issueDbTester.insertIssue(newIssue().setStatus(STATUS_OPEN).setResolution(null));
-    userSession.logIn("john").addProjectUuidPermissions(USER, issueDto.getProjectUuid());
+    userSession.logIn("john").addProjectPermission(USER, project, file);
 
     expectedException.expect(IllegalArgumentException.class);
     call(issueDto.getKey(), null);
@@ -152,7 +160,7 @@ public class DoTransitionActionTest {
   @Test
   public void fail_if_not_enough_permission_to_access_issue() throws Exception {
     IssueDto issueDto = issueDbTester.insertIssue(newIssue().setStatus(STATUS_OPEN).setResolution(null));
-    userSession.logIn("john").addProjectUuidPermissions(CODEVIEWER, issueDto.getProjectUuid());
+    userSession.logIn("john").addProjectPermission(CODEVIEWER, project, file);
 
     expectedException.expect(ForbiddenException.class);
     call(issueDto.getKey(), "confirm");
@@ -161,7 +169,7 @@ public class DoTransitionActionTest {
   @Test
   public void fail_if_not_enough_permission_to_apply_transition() throws Exception {
     IssueDto issueDto = issueDbTester.insertIssue(newIssue().setStatus(STATUS_OPEN).setResolution(null));
-    userSession.logIn("john").addProjectUuidPermissions(USER, issueDto.getProjectUuid());
+    userSession.logIn("john").addProjectPermission(USER, project, file);
 
     // False-positive transition is requiring issue admin permission
     expectedException.expect(ForbiddenException.class);
@@ -187,9 +195,20 @@ public class DoTransitionActionTest {
 
   private IssueDto newIssue() {
     RuleDto rule = ruleDbTester.insertRule(newRuleDto());
-    ComponentDto project = componentDbTester.insertProject();
-    ComponentDto file = componentDbTester.insertComponent(newFileDto(project));
     return newDto(rule, file, project);
+  }
+
+  private void verifyContentOfPreloadedSearchResponseData(IssueDto issue) {
+    SearchResponseData preloadedSearchResponseData = preloadedSearchResponseDataCaptor.getValue();
+    assertThat(preloadedSearchResponseData.getIssues())
+        .extracting(IssueDto::getKey)
+        .containsOnly(issue.getKey());
+    assertThat(preloadedSearchResponseData.getRules())
+        .extracting(RuleDefinitionDto::getKey)
+        .containsOnly(issue.getRuleKey());
+    assertThat(preloadedSearchResponseData.getComponents())
+        .extracting(ComponentDto::uuid)
+        .containsOnly(issue.getComponentUuid(), issue.getProjectUuid());
   }
 
 }

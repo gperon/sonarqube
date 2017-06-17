@@ -25,11 +25,12 @@ import org.sonar.server.organization.DefaultOrganizationEnforcer;
 import org.sonar.server.platform.ServerLifecycleNotifier;
 import org.sonar.server.platform.web.RegisterServletFilters;
 import org.sonar.server.qualitygate.RegisterQualityGates;
-import org.sonar.server.qualityprofile.CachingRuleActivator;
-import org.sonar.server.qualityprofile.CachingRuleActivatorContextFactory;
-import org.sonar.server.qualityprofile.DefinedQProfileLoader;
+import org.sonar.server.qualityprofile.BuiltInQProfileInsertImpl;
+import org.sonar.server.qualityprofile.BuiltInQProfileLoader;
+import org.sonar.server.qualityprofile.BuiltInQProfileUpdateImpl;
 import org.sonar.server.qualityprofile.RegisterQualityProfiles;
 import org.sonar.server.rule.RegisterRules;
+import org.sonar.server.rule.WebServerRuleFinder;
 import org.sonar.server.startup.DeleteOldAnalysisReportsFromFs;
 import org.sonar.server.startup.DisplayLogOnDeprecatedProjects;
 import org.sonar.server.startup.GeneratePluginIndex;
@@ -55,10 +56,10 @@ public class PlatformLevelStartup extends PlatformLevel {
       RegisterMetrics.class,
       RegisterQualityGates.class,
       RegisterRules.class);
-    add(DefinedQProfileLoader.class);
+    add(BuiltInQProfileLoader.class);
     addIfStartupLeader(
-      CachingRuleActivatorContextFactory.class,
-      CachingRuleActivator.class,
+      BuiltInQProfileInsertImpl.class,
+      BuiltInQProfileUpdateImpl.class,
       RegisterQualityProfiles.class,
       RegisterPermissionTemplates.class,
       RenameDeprecatedPropertyKeys.class,
@@ -79,6 +80,7 @@ public class PlatformLevelStartup extends PlatformLevel {
         getOptional(IndexerStartupTask.class).ifPresent(IndexerStartupTask::execute);
         get(ServerLifecycleNotifier.class).notifyStart();
         get(ProcessCommandWrapper.class).notifyOperational();
+        get(WebServerRuleFinder.class).stopCaching();
       }
     });
 

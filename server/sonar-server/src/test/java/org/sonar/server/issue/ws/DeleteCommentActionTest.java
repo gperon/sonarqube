@@ -23,6 +23,7 @@ import javax.annotation.Nullable;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.mockito.ArgumentCaptor;
 import org.sonar.api.server.ws.Request;
 import org.sonar.api.server.ws.Response;
 import org.sonar.api.server.ws.WebService;
@@ -53,18 +54,15 @@ public class DeleteCommentActionTest {
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
-
   @Rule
   public DbTester dbTester = DbTester.create();
-
   @Rule
   public UserSessionRule userSession = UserSessionRule.standalone();
 
   private DbClient dbClient = dbTester.getDbClient();
-
   private IssueDbTester issueDbTester = new IssueDbTester(dbTester);
-
   private OperationResponseWriter responseWriter = mock(OperationResponseWriter.class);
+  private ArgumentCaptor<SearchResponseData> preloadedSearchResponseDataCaptor = ArgumentCaptor.forClass(SearchResponseData.class);
 
   private WsActionTester tester = new WsActionTester(
     new DeleteCommentAction(userSession, dbClient, new IssueFinder(dbClient, userSession), responseWriter));
@@ -73,31 +71,33 @@ public class DeleteCommentActionTest {
   public void delete_comment() throws Exception {
     IssueDto issueDto = issueDbTester.insertIssue();
     IssueChangeDto commentDto = issueDbTester.insertComment(issueDto, "john", "please fix it");
-    userSession.logIn("john").addProjectUuidPermissions(USER, issueDto.getProjectUuid());
+    loginAndAddProjectPermission("john", issueDto, USER);
 
     call(commentDto.getKey());
 
-    verify(responseWriter).write(eq(issueDto.getKey()), any(Request.class), any(Response.class));
+    verify(responseWriter).write(eq(issueDto.getKey()), preloadedSearchResponseDataCaptor.capture(), any(Request.class), any(Response.class));
     assertThat(dbClient.issueChangeDao().selectCommentByKey(dbTester.getSession(), commentDto.getKey())).isNotPresent();
+    verifyContentOfPreloadedSearchResponseData(issueDto);
   }
 
   @Test
   public void delete_comment_using_deprecated_key_parameter() throws Exception {
     IssueDto issueDto = issueDbTester.insertIssue();
     IssueChangeDto commentDto = issueDbTester.insertComment(issueDto, "john", "please fix it");
-    userSession.logIn("john").addProjectUuidPermissions(USER, issueDto.getProjectUuid());
+    loginAndAddProjectPermission("john", issueDto, USER);
 
     tester.newRequest().setParam("key", commentDto.getKey()).setParam("text", "please have a look").execute();
 
-    verify(responseWriter).write(eq(issueDto.getKey()), any(Request.class), any(Response.class));
+    verify(responseWriter).write(eq(issueDto.getKey()), preloadedSearchResponseDataCaptor.capture(), any(Request.class), any(Response.class));
     assertThat(dbClient.issueChangeDao().selectCommentByKey(dbTester.getSession(), commentDto.getKey())).isNotPresent();
+    verifyContentOfPreloadedSearchResponseData(issueDto);
   }
 
   @Test
   public void fail_when_comment_does_not_belong_to_current_user() throws Exception {
     IssueDto issueDto = issueDbTester.insertIssue();
     IssueChangeDto commentDto = issueDbTester.insertComment(issueDto, "john", "please fix it");
-    userSession.logIn("another").addProjectUuidPermissions(USER, issueDto.getProjectUuid());
+    loginAndAddProjectPermission("another", issueDto, USER);
 
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("You can only delete your own comments");
@@ -108,7 +108,7 @@ public class DeleteCommentActionTest {
   public void fail_when_comment_has_not_user() throws Exception {
     IssueDto issueDto = issueDbTester.insertIssue();
     IssueChangeDto commentDto = issueDbTester.insertComment(issueDto, null, "please fix it");
-    userSession.logIn("john").addProjectUuidPermissions(USER, issueDto.getProjectUuid());
+    loginAndAddProjectPermission("john", issueDto, USER);
 
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("You can only delete your own comments");
@@ -141,7 +141,7 @@ public class DeleteCommentActionTest {
   public void fail_when_not_enough_permission() throws Exception {
     IssueDto issueDto = issueDbTester.insertIssue();
     IssueChangeDto commentDto = issueDbTester.insertComment(issueDto, "john", "please fix it");
-    userSession.logIn("john").addProjectUuidPermissions(CODEVIEWER, issueDto.getProjectUuid());
+    loginAndAddProjectPermission("john", issueDto, CODEVIEWER);
 
     expectedException.expect(ForbiddenException.class);
     call(commentDto.getKey());
@@ -157,10 +157,23 @@ public class DeleteCommentActionTest {
     assertThat(action.responseExample()).isNotNull();
   }
 
+  private void verifyContentOfPreloadedSearchResponseData(IssueDto issue) {
+    SearchResponseData preloadedSearchResponseData = preloadedSearchResponseDataCaptor.getValue();
+    assertThat(preloadedSearchResponseData.getIssues())
+      .extracting(IssueDto::getKey)
+      .containsOnly(issue.getKey());
+    assertThat(preloadedSearchResponseData.getRules()).isNullOrEmpty();
+    assertThat(preloadedSearchResponseData.getComponents()).isNullOrEmpty();
+  }
+
   private TestResponse call(@Nullable String commentKey) {
     TestRequest request = tester.newRequest();
     setNullable(commentKey, comment -> request.setParam("comment", comment));
     return request.execute();
+  }
+
+  private void loginAndAddProjectPermission(String login, IssueDto issueDto, String permission) {
+    userSession.logIn(login).addProjectPermission(permission, dbClient.componentDao().selectByUuid(dbTester.getSession(), issueDto.getProjectUuid()).get());
   }
 
 }

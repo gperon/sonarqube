@@ -19,7 +19,6 @@
  */
 package org.sonar.server.issue.ws;
 
-import com.google.common.io.Resources;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
@@ -36,6 +35,7 @@ import org.sonar.api.issue.DefaultTransitions;
 import org.sonar.api.rule.RuleKey;
 import org.sonar.api.rule.Severity;
 import org.sonar.api.rules.RuleType;
+import org.sonar.api.server.ws.Change;
 import org.sonar.api.server.ws.Request;
 import org.sonar.api.server.ws.Response;
 import org.sonar.api.server.ws.WebService;
@@ -70,7 +70,6 @@ import static org.sonar.api.rule.Severity.BLOCKER;
 import static org.sonar.api.rules.RuleType.BUG;
 import static org.sonar.core.util.Uuids.UUID_EXAMPLE_01;
 import static org.sonar.core.util.Uuids.UUID_EXAMPLE_02;
-import static org.sonar.core.util.stream.MoreCollectors.toList;
 import static org.sonar.core.util.stream.MoreCollectors.uniqueIndex;
 import static org.sonar.server.es.SearchOptions.MAX_LIMIT;
 import static org.sonar.server.issue.AbstractChangeTagsAction.TAGS_PARAMETER;
@@ -85,7 +84,6 @@ import static org.sonar.server.issue.TransitionAction.DO_TRANSITION_KEY;
 import static org.sonar.server.issue.TransitionAction.TRANSITION_PARAMETER;
 import static org.sonar.server.ws.WsUtils.writeProtobuf;
 import static org.sonarqube.ws.client.issue.IssuesWsParameters.ACTION_BULK_CHANGE;
-import static org.sonarqube.ws.client.issue.IssuesWsParameters.PARAM_ACTIONS;
 import static org.sonarqube.ws.client.issue.IssuesWsParameters.PARAM_ADD_TAGS;
 import static org.sonarqube.ws.client.issue.IssuesWsParameters.PARAM_ASSIGN;
 import static org.sonarqube.ws.client.issue.IssuesWsParameters.PARAM_COMMENT;
@@ -121,21 +119,18 @@ public class BulkChangeAction implements IssuesWsAction {
   public void define(WebService.NewController context) {
     WebService.NewAction action = context.createAction(ACTION_BULK_CHANGE)
       .setDescription("Bulk change on issues.<br/>" +
-        "Requires authentication.<br/>" +
-        "Since 6.3, 'actions' parameter is useless.")
+        "Requires authentication.")
       .setSince("3.7")
+      .setChangelog(
+        new Change("6.3", "'actions' parameter is ignored"))
       .setHandler(this)
-      .setResponseExample(Resources.getResource(this.getClass(), "bulk_change-example.json"))
+      .setResponseExample(getClass().getResource("bulk_change-example.json"))
       .setPost(true);
 
     action.createParam(PARAM_ISSUES)
       .setDescription("Comma-separated list of issue keys")
       .setRequired(true)
       .setExampleValue(UUID_EXAMPLE_01 + "," + UUID_EXAMPLE_02);
-    action.createParam(PARAM_ACTIONS)
-      .setDescription("No more needed since version 6.3")
-      .setDeprecatedSince("6.3")
-      .setExampleValue("assign,set_severity");
     action.createParam(PARAM_ASSIGN)
       .setDescription("To assign the list of issues to a specific user (login), or un-assign all the issues")
       .setExampleValue("john.smith")
@@ -302,7 +297,7 @@ public class BulkChangeAction implements IssuesWsAction {
       List<IssueDto> allIssues = dbClient.issueDao().selectByKeys(dbSession, issueKeys);
 
       List<ComponentDto> allProjects = getComponents(dbSession, allIssues.stream().map(IssueDto::getProjectUuid).collect(MoreCollectors.toSet()));
-      this.projectsByUuid = getAuthorizedProjects(dbSession, allProjects).stream().collect(uniqueIndex(ComponentDto::uuid, identity()));
+      this.projectsByUuid = getAuthorizedProjects(allProjects).stream().collect(uniqueIndex(ComponentDto::uuid, identity()));
       this.issues = getAuthorizedIssues(allIssues);
       this.componentsByUuid = getComponents(dbSession,
         issues.stream().map(DefaultIssue::componentUuid).collect(MoreCollectors.toSet())).stream()
@@ -321,14 +316,8 @@ public class BulkChangeAction implements IssuesWsAction {
       return dbClient.componentDao().selectByUuids(dbSession, componentUuids);
     }
 
-    private List<ComponentDto> getAuthorizedProjects(DbSession dbSession, List<ComponentDto> projectDtos) {
-      Map<String, Long> projectIdsByUuids = projectDtos.stream().collect(uniqueIndex(ComponentDto::uuid, ComponentDto::getId));
-      Set<Long> authorizedProjectIds = dbClient.authorizationDao().keepAuthorizedProjectIds(dbSession,
-        projectDtos.stream().map(ComponentDto::getId).collect(toList()),
-        userSession.getUserId(), UserRole.USER);
-      return projectDtos.stream()
-        .filter(project -> authorizedProjectIds.contains(projectIdsByUuids.get(project.projectUuid())))
-        .collect(MoreCollectors.toList());
+    private List<ComponentDto> getAuthorizedProjects(List<ComponentDto> projectDtos) {
+      return userSession.keepAuthorizedComponents(UserRole.USER, projectDtos);
     }
 
     private List<DefaultIssue> getAuthorizedIssues(List<IssueDto> allIssues) {

@@ -22,15 +22,21 @@ import { connect } from 'react-redux';
 import { Link } from 'react-router';
 import QualifierIcon from '../../../../components/shared/QualifierIcon';
 import { getOrganizationByKey, areThereCustomOrganizations } from '../../../../store/rootReducer';
+import OrganizationHelmet from '../../../../components/common/OrganizationHelmet';
 import OrganizationLink from '../../../../components/ui/OrganizationLink';
+import PrivateBadge from '../../../../components/common/PrivateBadge';
+import { collapsePath, limitComponentName } from '../../../../helpers/path';
 
 class ComponentNavBreadcrumbs extends React.PureComponent {
   static propTypes = {
-    breadcrumbs: React.PropTypes.array
+    breadcrumbs: React.PropTypes.array,
+    component: React.PropTypes.shape({
+      visibility: React.PropTypes.string
+    }).isRequired
   };
 
   render() {
-    const { breadcrumbs, organization, shouldOrganizationBeDisplayed } = this.props;
+    const { breadcrumbs, component, organization, shouldOrganizationBeDisplayed } = this.props;
 
     if (!breadcrumbs) {
       return null;
@@ -41,6 +47,8 @@ class ComponentNavBreadcrumbs extends React.PureComponent {
     const lastItem = breadcrumbs[breadcrumbs.length - 1];
 
     const items = breadcrumbs.map((item, index) => {
+      const isPath = item.qualifier === 'DIR';
+      const itemName = isPath ? collapsePath(item.name, 15) : limitComponentName(item.name);
       return (
         <span key={item.key}>
           {!displayOrganization &&
@@ -49,11 +57,12 @@ class ComponentNavBreadcrumbs extends React.PureComponent {
               <QualifierIcon qualifier={lastItem.qualifier} />
             </span>}
           <Link
+            title={item.name}
             to={{ pathname: '/dashboard', query: { id: item.key } }}
             className="link-base-color">
             {index === breadcrumbs.length - 1
-              ? <strong>{item.name}</strong>
-              : <span>{item.name}</span>}
+              ? <strong>{itemName}</strong>
+              : <span>{itemName}</span>}
           </Link>
           {index < breadcrumbs.length - 1 && <span className="slash-separator" />}
         </span>
@@ -62,6 +71,10 @@ class ComponentNavBreadcrumbs extends React.PureComponent {
 
     return (
       <h2 className="navbar-context-title">
+        <OrganizationHelmet
+          title={component.name}
+          organization={displayOrganization ? organization : null}
+        />
         {displayOrganization &&
           <span>
             <span className="navbar-context-title-qualifier little-spacer-right">
@@ -73,6 +86,7 @@ class ComponentNavBreadcrumbs extends React.PureComponent {
             <span className="slash-separator" />
           </span>}
         {items}
+        {component.visibility === 'private' && <PrivateBadge className="spacer-left" />}
       </h2>
     );
   }

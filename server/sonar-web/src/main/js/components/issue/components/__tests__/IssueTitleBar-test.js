@@ -22,12 +22,21 @@ import React from 'react';
 import IssueTitleBar from '../IssueTitleBar';
 
 const issue = {
-  line: 26,
+  line: 25,
+  textRange: {
+    startLine: 25,
+    endLine: 26,
+    startOffset: 0,
+    endOffset: 15
+  },
   creationDate: '2017-03-01T09:36:01+0100',
   organization: 'myorg',
+  project: 'myproject',
   key: 'AVsae-CQS-9G3txfbFN2',
   rule: 'javascript:S1067',
-  message: 'Reduce the number of conditional operators (4) used in the expression'
+  message: 'Reduce the number of conditional operators (4) used in the expression',
+  flows: [],
+  secondaryLocations: []
 };
 
 it('should render the titlebar correctly', () => {
@@ -48,4 +57,14 @@ it('should render the titlebar with the filter', () => {
     />
   );
   expect(element).toMatchSnapshot();
+});
+
+it('should count all code locations', () => {
+  const issueWithLocations = {
+    ...issue,
+    flows: [[{}, {}, {}], [{}, {}]],
+    secondaryLocations: [{}, {}]
+  };
+  const element = shallow(<IssueTitleBar issue={issueWithLocations} />);
+  expect(element.find('LocationIndex').children().text()).toBe('7');
 });

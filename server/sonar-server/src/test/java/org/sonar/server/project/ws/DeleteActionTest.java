@@ -32,7 +32,7 @@ import org.sonar.db.DbTester;
 import org.sonar.db.component.ComponentDbTester;
 import org.sonar.db.component.ComponentDto;
 import org.sonar.server.component.ComponentCleanerService;
-import org.sonar.server.component.ComponentFinder;
+import org.sonar.server.component.TestComponentFinder;
 import org.sonar.server.exceptions.ForbiddenException;
 import org.sonar.server.exceptions.UnauthorizedException;
 import org.sonar.server.tester.UserSessionRule;
@@ -55,10 +55,8 @@ public class DeleteActionTest {
 
   @Rule
   public DbTester db = DbTester.create(system2);
-
   @Rule
   public UserSessionRule userSessionRule = UserSessionRule.standalone();
-
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
@@ -70,16 +68,16 @@ public class DeleteActionTest {
   @Before
   public void setUp() {
     ws = new WsTester(new ProjectsWs(
-        new DeleteAction(
-            componentCleanerService,
-            new ComponentFinder(dbClient),
-            dbClient,
-            userSessionRule)));
+      new DeleteAction(
+        componentCleanerService,
+          TestComponentFinder.from(db),
+        dbClient,
+        userSessionRule)));
   }
 
   @Test
   public void organization_administrator_deletes_project_by_id() throws Exception {
-    ComponentDto project = componentDbTester.insertProject();
+    ComponentDto project = componentDbTester.insertPrivateProject();
     userSessionRule.logIn().addPermission(ADMINISTER, project.getOrganizationUuid());
 
     WsTester.TestRequest request = newRequest().setParam(PARAM_PROJECT_ID, project.uuid());
@@ -90,7 +88,7 @@ public class DeleteActionTest {
 
   @Test
   public void organization_administrator_deletes_project_by_key() throws Exception {
-    ComponentDto project = componentDbTester.insertProject();
+    ComponentDto project = componentDbTester.insertPrivateProject();
     userSessionRule.logIn().addPermission(ADMINISTER, project.getOrganizationUuid());
 
     call(newRequest().setParam(PARAM_PROJECT, project.key()));
@@ -106,8 +104,8 @@ public class DeleteActionTest {
 
   @Test
   public void project_administrator_deletes_the_project_by_uuid() throws Exception {
-    ComponentDto project = componentDbTester.insertProject();
-    userSessionRule.logIn().addProjectUuidPermissions(UserRole.ADMIN, project.uuid());
+    ComponentDto project = componentDbTester.insertPrivateProject();
+    userSessionRule.logIn().addProjectPermission(UserRole.ADMIN, project);
 
     call(newRequest().setParam(PARAM_PROJECT_ID, project.uuid()));
 
@@ -116,8 +114,8 @@ public class DeleteActionTest {
 
   @Test
   public void project_administrator_deletes_the_project_by_key() throws Exception {
-    ComponentDto project = componentDbTester.insertProject();
-    userSessionRule.logIn().addProjectUuidPermissions(UserRole.ADMIN, project.uuid());
+    ComponentDto project = componentDbTester.insertPrivateProject();
+    userSessionRule.logIn().addProjectPermission(UserRole.ADMIN, project);
 
     call(newRequest().setParam(PARAM_PROJECT, project.key()));
 
@@ -126,9 +124,12 @@ public class DeleteActionTest {
 
   @Test
   public void return_403_if_not_project_admin_nor_org_admin() throws Exception {
-    ComponentDto project = componentDbTester.insertProject();
+    ComponentDto project = componentDbTester.insertPrivateProject();
 
-    userSessionRule.logIn().addProjectUuidPermissions(project.uuid(), UserRole.CODEVIEWER, UserRole.ISSUE_ADMIN, UserRole.USER);
+    userSessionRule.logIn()
+      .addProjectPermission(UserRole.CODEVIEWER, project)
+      .addProjectPermission(UserRole.ISSUE_ADMIN, project)
+      .addProjectPermission(UserRole.USER, project);
     expectedException.expect(ForbiddenException.class);
 
     call(newRequest().setParam(PARAM_PROJECT_ID, project.uuid()));
@@ -136,7 +137,7 @@ public class DeleteActionTest {
 
   @Test
   public void return_401_if_not_logged_in() throws Exception {
-    ComponentDto project = componentDbTester.insertProject();
+    ComponentDto project = componentDbTester.insertPrivateProject();
 
     userSessionRule.anonymous();
     expectedException.expect(UnauthorizedException.class);

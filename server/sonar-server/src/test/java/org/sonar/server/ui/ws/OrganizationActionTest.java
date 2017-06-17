@@ -23,6 +23,7 @@ import javax.annotation.Nullable;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.sonar.api.server.ws.Change;
 import org.sonar.api.server.ws.WebService;
 import org.sonar.api.utils.System2;
 import org.sonar.api.web.page.Page;
@@ -31,6 +32,8 @@ import org.sonar.core.platform.PluginRepository;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbTester;
 import org.sonar.db.organization.OrganizationDto;
+import org.sonar.server.organization.BillingValidations;
+import org.sonar.server.organization.BillingValidationsProxy;
 import org.sonar.server.organization.DefaultOrganizationProvider;
 import org.sonar.server.organization.TestDefaultOrganizationProvider;
 import org.sonar.server.tester.UserSessionRule;
@@ -40,6 +43,8 @@ import org.sonar.server.ws.TestResponse;
 import org.sonar.server.ws.WsActionTester;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
+import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -59,8 +64,9 @@ public class OrganizationActionTest {
   private DbClient dbClient = dbTester.getDbClient();
   private DefaultOrganizationProvider defaultOrganizationProvider = TestDefaultOrganizationProvider.from(dbTester);
   private PageRepository pageRepository = mock(PageRepository.class);
+  private BillingValidationsProxy billingValidations = mock(BillingValidationsProxy.class);
 
-  private WsActionTester ws = new WsActionTester(new OrganizationAction(dbClient, defaultOrganizationProvider, userSession, pageRepository));
+  private WsActionTester ws = new WsActionTester(new OrganizationAction(dbClient, defaultOrganizationProvider, userSession, pageRepository, billingValidations));
 
   @Test
   public void verify_definition() {
@@ -69,6 +75,8 @@ public class OrganizationActionTest {
     assertThat(def.isInternal()).isTrue();
     assertThat(def.description()).isEqualTo("Get information concerning organization navigation for the current user");
     assertThat(def.since()).isEqualTo("6.3");
+    assertThat(def.changelog()).extracting(Change::getVersion, Change::getDescription).containsExactlyInAnyOrder(
+      tuple("6.4", "The field 'projectVisibility' is added"));
 
     assertThat(def.params()).hasSize(1);
     WebService.Param organization = def.param("organization");
@@ -89,8 +97,7 @@ public class OrganizationActionTest {
   public void json_example() {
     initWithPages(
       Page.builder("my-plugin/org-page").setName("Organization page").setScope(ORGANIZATION).build(),
-      Page.builder("my-plugin/org-admin-page").setName("Organization admin page").setScope(ORGANIZATION).setAdmin(true).build()
-    );
+      Page.builder("my-plugin/org-admin-page").setName("Organization admin page").setScope(ORGANIZATION).setAdmin(true).build());
     OrganizationDto organization = dbTester.organizations().insert(dto -> dto.setGuarded(true));
     userSession.logIn()
       .addPermission(ADMINISTER, organization)
@@ -106,8 +113,7 @@ public class OrganizationActionTest {
   public void filter_out_admin_pages_when_user_is_not_admin() {
     initWithPages(
       Page.builder("my-plugin/org-page").setName("Organization page").setScope(ORGANIZATION).build(),
-      Page.builder("my-plugin/org-admin-page").setName("Organization admin page").setScope(ORGANIZATION).setAdmin(true).build()
-    );
+      Page.builder("my-plugin/org-admin-page").setName("Organization admin page").setScope(ORGANIZATION).setAdmin(true).build());
     OrganizationDto organization = dbTester.organizations().insert(dto -> dto.setGuarded(true));
     userSession.logIn()
       .addPermission(PROVISION_PROJECTS, organization);
@@ -204,6 +210,39 @@ public class OrganizationActionTest {
     verifyResponse(executeRequest(org2), false, true, false);
   }
 
+  @Test
+  public void returns_project_visibility_private() {
+    OrganizationDto organization = dbTester.organizations().insert();
+    dbTester.organizations().setNewProjectPrivate(organization, true);
+    userSession.logIn().addPermission(PROVISION_PROJECTS, organization);
+    assertJson(executeRequest(organization).getInput()).isSimilarTo("{\"organization\": {\"projectVisibility\": \"private\"}}");
+  }
+
+  @Test
+  public void returns_project_visibility_public() {
+    OrganizationDto organization = dbTester.organizations().insert();
+    dbTester.organizations().setNewProjectPrivate(organization, false);
+    userSession.logIn().addPermission(PROVISION_PROJECTS, organization);
+    assertJson(executeRequest(organization).getInput()).isSimilarTo("{\"organization\": {\"projectVisibility\": \"public\"}}");
+  }
+
+  @Test
+  public void returns_non_admin_and_canUpdateProjectsVisibilityToPrivate_false_when_user_logged_in_but_not_admin_and_extension_returns_true() {
+    OrganizationDto defaultOrganization = dbTester.getDefaultOrganization();
+
+    userSession.logIn();
+    when(billingValidations.canUpdateProjectVisibilityToPrivate(any(BillingValidations.Organization.class))).thenReturn(true);
+    verifyCanUpdateProjectsVisibilityToPrivateResponse(executeRequest(dbTester.getDefaultOrganization()), false);
+
+    userSession.logIn().addPermission(ADMINISTER, defaultOrganization);
+    when(billingValidations.canUpdateProjectVisibilityToPrivate(any(BillingValidations.Organization.class))).thenReturn(false);
+    verifyCanUpdateProjectsVisibilityToPrivateResponse(executeRequest(dbTester.getDefaultOrganization()), false);
+
+    userSession.logIn().addPermission(ADMINISTER, defaultOrganization);
+    when(billingValidations.canUpdateProjectVisibilityToPrivate(any(BillingValidations.Organization.class))).thenReturn(true);
+    verifyCanUpdateProjectsVisibilityToPrivateResponse(executeRequest(dbTester.getDefaultOrganization()), true);
+  }
+
   private void initWithPages(Page... pages) {
     PluginRepository pluginRepository = mock(PluginRepository.class);
     when(pluginRepository.hasPlugin(anyString())).thenReturn(true);
@@ -213,7 +252,7 @@ public class OrganizationActionTest {
       }
     }});
     pageRepository.start();
-    ws = new WsActionTester(new OrganizationAction(dbClient, defaultOrganizationProvider, userSession, pageRepository));
+    ws = new WsActionTester(new OrganizationAction(dbClient, defaultOrganizationProvider, userSession, pageRepository, billingValidations));
   }
 
   private TestResponse executeRequest(@Nullable OrganizationDto organization) {
@@ -232,6 +271,15 @@ public class OrganizationActionTest {
         "    \"canProvisionProjects\": " + canProvisionProjects + "," +
         "    \"canDelete\": " + canDelete +
         "    \"pages\": []" +
+        "  }" +
+        "}");
+  }
+
+  private static void verifyCanUpdateProjectsVisibilityToPrivateResponse(TestResponse response, boolean canUpdateProjectsVisibilityToPrivate) {
+    assertJson(response.getInput())
+      .isSimilarTo("{" +
+        "  \"organization\": {" +
+        "    \"canUpdateProjectsVisibilityToPrivate\": " + canUpdateProjectsVisibilityToPrivate + "," +
         "  }" +
         "}");
   }

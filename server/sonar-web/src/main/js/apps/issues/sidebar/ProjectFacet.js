@@ -28,7 +28,7 @@ import FacetFooter from './components/FacetFooter';
 import type { ReferencedComponent, Component } from '../utils';
 import Organization from '../../../components/shared/Organization';
 import QualifierIcon from '../../../components/shared/QualifierIcon';
-import { searchComponents, getTree } from '../../../api/components';
+import { searchProjects, getTree } from '../../../api/components';
 import { translate } from '../../../helpers/l10n';
 
 type Props = {|
@@ -63,6 +63,10 @@ export default class ProjectFacet extends React.PureComponent {
     this.props.onToggle(this.property);
   };
 
+  handleClear = () => {
+    this.props.onChange({ [this.property]: [] });
+  };
+
   handleSearch = (query: string) => {
     const { component } = this.props;
 
@@ -74,7 +78,10 @@ export default class ProjectFacet extends React.PureComponent {
             value: component.refId
           }))
         )
-      : searchComponents({ ps: 50, q: query, qualifiers: 'TRK' }).then(response =>
+      : searchProjects({
+          ps: 50,
+          filter: query ? `query = "${query}"` : ''
+        }).then(response =>
           response.components.map(component => ({
             label: component.name,
             organization: component.organization,
@@ -116,7 +123,7 @@ export default class ProjectFacet extends React.PureComponent {
     );
   };
 
-  render() {
+  renderList() {
     const { stats } = this.props;
 
     if (!stats) {
@@ -126,36 +133,50 @@ export default class ProjectFacet extends React.PureComponent {
     const projects = sortBy(Object.keys(stats), key => -stats[key]);
 
     return (
+      <FacetItemsList>
+        {projects.map(project => (
+          <FacetItem
+            active={this.props.projects.includes(project)}
+            facetMode={this.props.facetMode}
+            key={project}
+            name={this.renderName(project)}
+            onClick={this.handleItemClick}
+            stat={this.getStat(project)}
+            value={project}
+          />
+        ))}
+      </FacetItemsList>
+    );
+  }
+
+  renderFooter() {
+    if (!this.props.stats) {
+      return null;
+    }
+
+    return (
+      <FacetFooter
+        minimumQueryLength={3}
+        onSearch={this.handleSearch}
+        onSelect={this.handleSelect}
+        renderOption={this.renderOption}
+      />
+    );
+  }
+
+  render() {
+    return (
       <FacetBox property={this.property}>
         <FacetHeader
-          hasValue={this.props.projects.length > 0}
           name={translate('issues.facet', this.property)}
+          onClear={this.handleClear}
           onClick={this.handleHeaderClick}
           open={this.props.open}
+          values={this.props.projects.length}
         />
 
-        {this.props.open &&
-          <FacetItemsList>
-            {projects.map(project => (
-              <FacetItem
-                active={this.props.projects.includes(project)}
-                facetMode={this.props.facetMode}
-                key={project}
-                name={this.renderName(project)}
-                onClick={this.handleItemClick}
-                stat={this.getStat(project)}
-                value={project}
-              />
-            ))}
-          </FacetItemsList>}
-
-        {this.props.open &&
-          <FacetFooter
-            minimumQueryLength={3}
-            onSearch={this.handleSearch}
-            onSelect={this.handleSelect}
-            renderOption={this.renderOption}
-          />}
+        {this.props.open && this.renderList()}
+        {this.props.open && this.renderFooter()}
       </FacetBox>
     );
   }

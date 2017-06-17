@@ -4,6 +4,7 @@
                  kee="org1_key"
                  name="org1_name"
                  guarded="[false]"
+                 new_project_private="[false]"
                  created_at="1000"
                  updated_at="2000"/>
 
@@ -11,9 +12,11 @@
             uuid="ABCD"
             uuid_path="NOT_USED"
             root_uuid="ABCD"
+            project_uuid="ABCD"
             id="1"
             kee="ROOT_KEY"
-            name="project"/>
+            name="project"
+            private="[false]"/>
 
   <!-- 2008-11-11 -->
   <!-- Version 0.9 -->

@@ -27,6 +27,7 @@ import org.sonar.api.resources.Scopes;
 import org.sonar.api.utils.System2;
 import org.sonar.db.DbTester;
 import org.sonar.db.component.ComponentDto;
+import org.sonar.db.organization.OrganizationDto;
 import org.sonar.db.user.UserDto;
 import org.sonar.server.es.ProjectIndexer;
 import org.sonar.server.exceptions.BadRequestException;
@@ -60,17 +61,18 @@ public class ComponentUpdaterTest {
   private PermissionTemplateService permissionTemplateService = mock(PermissionTemplateService.class);
 
   private ComponentUpdater underTest = new ComponentUpdater(db.getDbClient(), i18n, system2,
-      permissionTemplateService,
-      new FavoriteUpdater(db.getDbClient()),
-      projectIndexer);
+    permissionTemplateService,
+    new FavoriteUpdater(db.getDbClient()),
+    projectIndexer);
 
   @Test
   public void should_persist_and_index_when_creating_project() throws Exception {
     NewComponent project = NewComponent.newComponentBuilder()
-        .setKey(DEFAULT_PROJECT_KEY)
-        .setName(DEFAULT_PROJECT_NAME)
-        .setOrganizationUuid(db.getDefaultOrganization().getUuid())
-        .build();
+      .setKey(DEFAULT_PROJECT_KEY)
+      .setName(DEFAULT_PROJECT_NAME)
+      .setOrganizationUuid(db.getDefaultOrganization().getUuid())
+      .setPrivate(true)
+      .build();
     ComponentDto returned = underTest.create(db.getSession(), project, null);
 
     ComponentDto loaded = db.getDbClient().componentDao().selectOrFailByUuid(db.getSession(), returned.uuid());
@@ -85,6 +87,7 @@ public class ComponentUpdaterTest {
     assertThat(loaded.projectUuid()).isEqualTo(loaded.uuid());
     assertThat(loaded.moduleUuid()).isNull();
     assertThat(loaded.moduleUuidPath()).isEqualTo("." + loaded.uuid() + ".");
+    assertThat(loaded.isPrivate()).isEqualTo(project.isPrivate());
     assertThat(loaded.getCreatedAt()).isNotNull();
     assertThat(db.getDbClient().componentDao().selectOrFailByKey(db.getSession(), DEFAULT_PROJECT_KEY)).isNotNull();
 
@@ -92,15 +95,43 @@ public class ComponentUpdaterTest {
   }
 
   @Test
+  public void should_persist_private_flag_true_when_creating_project() throws Exception {
+    OrganizationDto organization = db.organizations().insert();
+    NewComponent project = NewComponent.newComponentBuilder()
+      .setKey(DEFAULT_PROJECT_KEY)
+      .setName(DEFAULT_PROJECT_NAME)
+      .setOrganizationUuid(organization.getUuid())
+      .setPrivate(true)
+      .build();
+    ComponentDto returned = underTest.create(db.getSession(), project, null);
+    ComponentDto loaded = db.getDbClient().componentDao().selectOrFailByUuid(db.getSession(), returned.uuid());
+    assertThat(loaded.isPrivate()).isEqualTo(project.isPrivate());
+  }
+
+  @Test
+  public void should_persist_private_flag_false_when_creating_project() throws Exception {
+    OrganizationDto organization = db.organizations().insert();
+    NewComponent project = NewComponent.newComponentBuilder()
+      .setKey(DEFAULT_PROJECT_KEY)
+      .setName(DEFAULT_PROJECT_NAME)
+      .setOrganizationUuid(organization.getUuid())
+      .setPrivate(false)
+      .build();
+    ComponentDto returned = underTest.create(db.getSession(), project, null);
+    ComponentDto loaded = db.getDbClient().componentDao().selectOrFailByUuid(db.getSession(), returned.uuid());
+    assertThat(loaded.isPrivate()).isEqualTo(project.isPrivate());
+  }
+
+  @Test
   public void create_project_with_branch() throws Exception {
     ComponentDto project = underTest.create(db.getSession(),
-        NewComponent.newComponentBuilder()
-            .setKey(DEFAULT_PROJECT_KEY)
-            .setName(DEFAULT_PROJECT_NAME)
-            .setBranch("origin/master")
-            .setOrganizationUuid(db.getDefaultOrganization().getUuid())
-            .build(),
-        null);
+      NewComponent.newComponentBuilder()
+        .setKey(DEFAULT_PROJECT_KEY)
+        .setName(DEFAULT_PROJECT_NAME)
+        .setBranch("origin/master")
+        .setOrganizationUuid(db.getDefaultOrganization().getUuid())
+        .build(),
+      null);
 
     assertThat(project.getKey()).isEqualTo("project-key:origin/master");
   }
@@ -109,10 +140,10 @@ public class ComponentUpdaterTest {
   public void should_apply_default_permission_template() throws Exception {
     int userId = 42;
     NewComponent project = NewComponent.newComponentBuilder()
-        .setKey(DEFAULT_PROJECT_KEY)
-        .setName(DEFAULT_PROJECT_NAME)
-        .setOrganizationUuid(db.getDefaultOrganization().getUuid())
-        .build();
+      .setKey(DEFAULT_PROJECT_KEY)
+      .setName(DEFAULT_PROJECT_NAME)
+      .setOrganizationUuid(db.getDefaultOrganization().getUuid())
+      .build();
     ComponentDto dto = underTest.create(db.getSession(), project, userId);
 
     verify(permissionTemplateService).applyDefault(db.getSession(), dto.getOrganizationUuid(), dto, userId);
@@ -122,16 +153,16 @@ public class ComponentUpdaterTest {
   public void should_add_project_to_user_favorites_if_project_creator_is_defined_in_permission_template() throws Exception {
     UserDto userDto = db.users().insertUser();
     NewComponent project = NewComponent.newComponentBuilder()
-        .setKey(DEFAULT_PROJECT_KEY)
-        .setName(DEFAULT_PROJECT_NAME)
-        .setOrganizationUuid(db.getDefaultOrganization().getUuid())
-        .build();
+      .setKey(DEFAULT_PROJECT_KEY)
+      .setName(DEFAULT_PROJECT_NAME)
+      .setOrganizationUuid(db.getDefaultOrganization().getUuid())
+      .build();
     when(permissionTemplateService.hasDefaultTemplateWithPermissionOnProjectCreator(eq(db.getSession()), eq(project.getOrganizationUuid()), any(ComponentDto.class)))
-        .thenReturn(true);
+      .thenReturn(true);
 
     ComponentDto dto = underTest.create(db.getSession(),
-        project,
-        userDto.getId());
+      project,
+      userDto.getId());
 
     assertThat(db.favorites().hasFavorite(dto, userDto.getId())).isTrue();
   }
@@ -139,12 +170,12 @@ public class ComponentUpdaterTest {
   @Test
   public void does_not_add_project_to_favorite_when_anonymously_created() throws Exception {
     ComponentDto project = underTest.create(db.getSession(),
-        NewComponent.newComponentBuilder()
-            .setKey(DEFAULT_PROJECT_KEY)
-            .setName(DEFAULT_PROJECT_NAME)
-            .setOrganizationUuid(db.getDefaultOrganization().getUuid())
-            .build(),
-        null);
+      NewComponent.newComponentBuilder()
+        .setKey(DEFAULT_PROJECT_KEY)
+        .setName(DEFAULT_PROJECT_NAME)
+        .setOrganizationUuid(db.getDefaultOrganization().getUuid())
+        .build(),
+      null);
 
     assertThat(db.favorites().hasNoFavorite(project)).isTrue();
   }
@@ -152,46 +183,46 @@ public class ComponentUpdaterTest {
   @Test
   public void does_not_add_project_to_favorite_when_project_has_no_permission_on_template() throws Exception {
     ComponentDto project = underTest.create(db.getSession(),
-        NewComponent.newComponentBuilder()
-            .setKey(DEFAULT_PROJECT_KEY)
-            .setName(DEFAULT_PROJECT_NAME)
-            .setOrganizationUuid(db.getDefaultOrganization().getUuid())
-            .build(),
-        null);
+      NewComponent.newComponentBuilder()
+        .setKey(DEFAULT_PROJECT_KEY)
+        .setName(DEFAULT_PROJECT_NAME)
+        .setOrganizationUuid(db.getDefaultOrganization().getUuid())
+        .build(),
+      null);
 
     assertThat(db.favorites().hasNoFavorite(project)).isTrue();
   }
 
   @Test
   public void fail_when_project_key_already_exists() throws Exception {
-    ComponentDto existing = db.components().insertProject();
+    ComponentDto existing = db.components().insertPrivateProject();
 
     expectedException.expect(BadRequestException.class);
     expectedException.expectMessage("Could not create Project, key already exists: " + existing.key());
 
     underTest.create(db.getSession(),
-        NewComponent.newComponentBuilder()
-            .setKey(existing.key())
-            .setName(DEFAULT_PROJECT_NAME)
-            .setOrganizationUuid(existing.getOrganizationUuid())
-            .build(),
-        null);
+      NewComponent.newComponentBuilder()
+        .setKey(existing.key())
+        .setName(DEFAULT_PROJECT_NAME)
+        .setOrganizationUuid(existing.getOrganizationUuid())
+        .build(),
+      null);
   }
 
   @Test
   public void fail_when_project_key_already_exists_on_other_organization() throws Exception {
-    ComponentDto existing = db.components().insertProject(db.organizations().insert());
+    ComponentDto existing = db.components().insertPrivateProject(db.organizations().insert());
 
     expectedException.expect(BadRequestException.class);
     expectedException.expectMessage("Could not create Project, key already exists: " + existing.key());
 
     underTest.create(db.getSession(),
-        NewComponent.newComponentBuilder()
-            .setKey(existing.key())
-            .setName(DEFAULT_PROJECT_NAME)
-            .setOrganizationUuid(existing.getOrganizationUuid())
-            .build(),
-        null);
+      NewComponent.newComponentBuilder()
+        .setKey(existing.key())
+        .setName(DEFAULT_PROJECT_NAME)
+        .setOrganizationUuid(existing.getOrganizationUuid())
+        .build(),
+      null);
   }
 
   @Test
@@ -200,12 +231,26 @@ public class ComponentUpdaterTest {
     expectedException.expectMessage("Malformed key for Project: 1234");
 
     underTest.create(db.getSession(),
-        NewComponent.newComponentBuilder()
-            .setKey("1234")
-            .setName(DEFAULT_PROJECT_NAME)
-            .setOrganizationUuid(db.getDefaultOrganization().getUuid())
-            .build(),
-        null);
+      NewComponent.newComponentBuilder()
+        .setKey("1234")
+        .setName(DEFAULT_PROJECT_NAME)
+        .setOrganizationUuid(db.getDefaultOrganization().getUuid())
+        .build(),
+      null);
+  }
+
+  @Test
+  public void properly_fail_when_key_contains_percent_character() {
+    expectedException.expect(BadRequestException.class);
+    expectedException.expectMessage("Malformed key for Project: project%Key");
+
+    underTest.create(db.getSession(),
+      NewComponent.newComponentBuilder()
+        .setKey("project%Key")
+        .setName(DEFAULT_PROJECT_NAME)
+        .setOrganizationUuid(db.getDefaultOrganization().getUuid())
+        .build(),
+      null);
   }
 
   @Test
@@ -214,23 +259,23 @@ public class ComponentUpdaterTest {
     expectedException.expectMessage("Malformed branch for Project: origin?branch. Allowed characters are alphanumeric, '-', '_', '.' and '/', with at least one non-digit.");
 
     underTest.create(db.getSession(),
-        NewComponent.newComponentBuilder()
-            .setKey(DEFAULT_PROJECT_KEY)
-            .setName(DEFAULT_PROJECT_NAME)
-            .setBranch("origin?branch")
-            .setOrganizationUuid(db.getDefaultOrganization().getUuid())
-            .build(),
-        null);
+      NewComponent.newComponentBuilder()
+        .setKey(DEFAULT_PROJECT_KEY)
+        .setName(DEFAULT_PROJECT_NAME)
+        .setBranch("origin?branch")
+        .setOrganizationUuid(db.getDefaultOrganization().getUuid())
+        .build(),
+      null);
   }
 
   @Test
   public void persist_and_index_when_creating_view() {
     NewComponent view = NewComponent.newComponentBuilder()
-        .setKey("view-key")
-        .setName("view-name")
-        .setQualifier(VIEW)
-        .setOrganizationUuid(db.getDefaultOrganization().getUuid())
-        .build();
+      .setKey("view-key")
+      .setName("view-name")
+      .setQualifier(VIEW)
+      .setOrganizationUuid(db.getDefaultOrganization().getUuid())
+      .build();
 
     ComponentDto returned = underTest.create(db.getSession(), view, null);
 

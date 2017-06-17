@@ -34,7 +34,7 @@ import org.sonar.db.component.ComponentDto;
 import org.sonar.db.component.ComponentTesting;
 import org.sonar.db.measure.custom.CustomMeasureDto;
 import org.sonar.db.metric.MetricDto;
-import org.sonar.server.component.ComponentFinder;
+import org.sonar.server.component.TestComponentFinder;
 import org.sonar.server.es.EsTester;
 import org.sonar.server.exceptions.ForbiddenException;
 import org.sonar.server.tester.UserSessionRule;
@@ -61,7 +61,8 @@ public class MetricsActionTest {
   public UserSessionRule userSession = UserSessionRule.standalone();
   @Rule
   public DbTester db = DbTester.create(System2.INSTANCE);
-  DbClient dbClient = db.getDbClient();
+
+  final DbClient dbClient = db.getDbClient();
   final DbSession dbSession = db.getSession();
 
   WsTester ws;
@@ -74,9 +75,9 @@ public class MetricsActionTest {
       .setName("Login")
       .setEmail("login@login.com")
       .setActive(true));
-    ws = new WsTester(new CustomMeasuresWs(new MetricsAction(dbClient, userSession, new ComponentFinder(dbClient))));
+    ws = new WsTester(new CustomMeasuresWs(new MetricsAction(dbClient, userSession, TestComponentFinder.from(db))));
     defaultProject = insertDefaultProject();
-    userSession.logIn().addProjectUuidPermissions(UserRole.ADMIN, defaultProject.uuid());
+    userSession.logIn().addProjectPermission(UserRole.ADMIN, defaultProject);
   }
 
   @Test
@@ -145,7 +146,7 @@ public class MetricsActionTest {
   @Test
   public void list_metrics_as_a_project_admin() throws Exception {
     insertCustomMetric("metric-key-1");
-    userSession.logIn("login").addProjectUuidPermissions(UserRole.ADMIN, defaultProject.uuid());
+    userSession.logIn("login").addProjectPermission(UserRole.ADMIN, defaultProject);
 
     String response = newRequest().outputAsString();
 
@@ -227,7 +228,7 @@ public class MetricsActionTest {
   }
 
   private ComponentDto insertProject(String projectUuid, String projectKey) {
-    ComponentDto project = ComponentTesting.newProjectDto(db.getDefaultOrganization(), projectUuid)
+    ComponentDto project = ComponentTesting.newPrivateProjectDto(db.getDefaultOrganization(), projectUuid)
       .setKey(projectKey);
     dbClient.componentDao().insert(dbSession, project);
     dbSession.commit();

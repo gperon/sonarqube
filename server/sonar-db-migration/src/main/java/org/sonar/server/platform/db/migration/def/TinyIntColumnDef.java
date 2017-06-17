@@ -23,7 +23,6 @@ import javax.annotation.CheckForNull;
 import javax.annotation.concurrent.Immutable;
 import org.sonar.db.dialect.Dialect;
 import org.sonar.db.dialect.H2;
-import org.sonar.db.dialect.MariaDb;
 import org.sonar.db.dialect.MsSql;
 import org.sonar.db.dialect.MySql;
 import org.sonar.db.dialect.Oracle;
@@ -32,55 +31,56 @@ import org.sonar.db.dialect.PostgreSql;
 import static org.sonar.server.platform.db.migration.def.Validations.validateColumnName;
 
 /**
- * Integer that supports at least range [0..128]. Full range depends on database
- * vendor.
+ * Integer that supports at least range [0..128]. Full range depends on database vendor.
  */
 @Immutable
 public class TinyIntColumnDef extends AbstractColumnDef {
 
-    private TinyIntColumnDef(Builder builder) {
-        super(builder.columnName, builder.isNullable, null);
+  private TinyIntColumnDef(Builder builder) {
+    super(builder.columnName, builder.isNullable, null);
+  }
+
+  public static Builder newTinyIntColumnDefBuilder() {
+    return new Builder();
+  }
+
+  @Override
+  public String generateSqlType(Dialect dialect) {
+    switch (dialect.getId()) {
+      case PostgreSql.ID:
+        return "SMALLINT";
+      case Oracle.ID:
+        return "NUMBER(3)";
+      case MySql.ID:
+        // do not use TINYINT(1) as it's considered as booleans by connector/J.
+        return "TINYINT(2)";
+      case MsSql.ID:
+      case H2.ID:
+        return "TINYINT";
+      default:
+        throw new UnsupportedOperationException(String.format("Unknown dialect '%s'", dialect.getId()));
+    }
+  }
+
+  public static class Builder {
+    @CheckForNull
+    private String columnName;
+    private boolean isNullable = true;
+
+    public Builder setColumnName(String columnName) {
+      this.columnName = validateColumnName(columnName);
+      return this;
     }
 
-    @Override
-    public String generateSqlType(Dialect dialect) {
-        switch (dialect.getId()) {
-            case PostgreSql.ID:
-                return "SMALLINT";
-            case Oracle.ID:
-                return "NUMBER(3)";
-            case MySql.ID:
-            case MariaDb.ID:
-                // do not use TINYINT(1) as it's considered as booleans by connector/J.
-                return "TINYINT(2)";
-            case MsSql.ID:
-            case H2.ID:
-                return "TINYINT";
-            default:
-                throw new UnsupportedOperationException(String.format("Unknown dialect '%s'", dialect.getId()));
-        }
+    public Builder setIsNullable(boolean isNullable) {
+      this.isNullable = isNullable;
+      return this;
     }
 
-    public static class Builder {
-
-        @CheckForNull
-        private String columnName;
-        private boolean isNullable = true;
-
-        public Builder setColumnName(String columnName) {
-            this.columnName = validateColumnName(columnName);
-            return this;
-        }
-
-        public Builder setIsNullable(boolean isNullable) {
-            this.isNullable = isNullable;
-            return this;
-        }
-
-        public TinyIntColumnDef build() {
-            validateColumnName(columnName);
-            return new TinyIntColumnDef(this);
-        }
+    public TinyIntColumnDef build() {
+      validateColumnName(columnName);
+      return new TinyIntColumnDef(this);
     }
+  }
 
 }

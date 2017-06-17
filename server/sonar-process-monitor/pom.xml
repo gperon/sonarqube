@@ -6,7 +6,7 @@
   <parent>
     <groupId>org.sonarsource.sonarqube</groupId>
     <artifactId>server</artifactId>
-    <version>6.4-SNAPSHOT</version>
+    <version>6.5-SNAPSHOT</version>
     <relativePath>../</relativePath>
   </parent>
 
@@ -39,6 +39,13 @@
     <dependency>
       <groupId>com.hazelcast</groupId>
       <artifactId>hazelcast</artifactId>
+    </dependency>
+    <!--
+    Required by our usage of Guava for clustering : CeWorkerFactoryImpl.getClusteredWorkerUUIDs()
+    -->
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
     </dependency>
 
     <dependency>

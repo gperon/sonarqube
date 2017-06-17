@@ -26,15 +26,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nullable;
-import org.apache.commons.lang.RandomStringUtils;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.sonar.core.util.stream.MoreCollectors;
 import org.sonar.db.CoreDbTester;
-import org.sonar.server.platform.db.migration.version.v63.DefaultOrganizationUuidImpl;
+import org.sonar.server.platform.db.migration.version.v63.DefaultOrganizationUuidProviderImpl;
 
 import static java.lang.String.format;
+import static org.apache.commons.lang.RandomStringUtils.randomAlphabetic;
 import static org.apache.commons.lang.math.RandomUtils.nextLong;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -62,7 +62,7 @@ public class PopulateOrganizationMembersTableTest {
   @Rule
   public CoreDbTester db = CoreDbTester.createForSchema(PopulateOrganizationMembersTableTest.class, "initial.sql");
 
-  private PopulateOrganizationMembersTable underTest = new PopulateOrganizationMembersTable(db.database(), new DefaultOrganizationUuidImpl());
+  private PopulateOrganizationMembersTable underTest = new PopulateOrganizationMembersTable(db.database(), new DefaultOrganizationUuidProviderImpl());
 
   @Test
   public void fails_with_ISE_when_no_default_organization_is_set() throws SQLException {
@@ -279,7 +279,7 @@ public class PopulateOrganizationMembersTableTest {
   }
 
   private int insertNewGroup(String organizationUuid) {
-    String groupName = RandomStringUtils.random(10);
+    String groupName = randomAlphabetic(10);
     db.executeInsert("GROUPS", "NAME", groupName, "ORGANIZATION_UUID", organizationUuid);
     return ((Long) db.selectFirst(format("select ID from groups where name='%s' and organization_uuid='%s'", groupName, organizationUuid)).get("ID")).intValue();
   }

@@ -19,21 +19,24 @@
  */
 package org.sonar.db.ce;
 
-import com.google.common.base.Optional;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import javax.annotation.Nullable;
 import org.apache.ibatis.session.RowBounds;
 import org.sonar.api.utils.System2;
 import org.sonar.db.Dao;
 import org.sonar.db.DbSession;
+import org.sonar.db.Pagination;
 
 import static java.util.Collections.emptyList;
+import static org.sonar.db.DatabaseUtils.executeLargeUpdates;
 import static org.sonar.db.ce.CeQueueDto.Status.IN_PROGRESS;
 import static org.sonar.db.ce.CeQueueDto.Status.PENDING;
 
 public class CeQueueDao implements Dao {
 
-  private static final RowBounds ONE_ROW_LIMIT = new RowBounds(0, 1);
+  private static final Pagination ONE_RESULT_PAGINATION = Pagination.forPage(1).andSize(1);
 
   private final System2 system2;
 
@@ -76,13 +79,29 @@ public class CeQueueDao implements Dao {
   }
 
   public Optional<CeQueueDto> selectByUuid(DbSession session, String uuid) {
-    return Optional.fromNullable(mapper(session).selectByUuid(uuid));
+    return Optional.ofNullable(mapper(session).selectByUuid(uuid));
+  }
+
+  public List<CeQueueDto> selectPendingByMinimumExecutionCount(DbSession dbSession, int minExecutionCount) {
+    return mapper(dbSession).selectPendingByMinimumExecutionCount(minExecutionCount);
+  }
+
+  public void resetTasksWithUnknownWorkerUUIDs(DbSession dbSession, Set<String> knownWorkerUUIDs) {
+    if (knownWorkerUUIDs.isEmpty()) {
+      mapper(dbSession).resetAllInProgressTasks(system2.now());
+    } else {
+      // executeLargeUpdates won't call the SQL command if knownWorkerUUIDs is empty
+      executeLargeUpdates(knownWorkerUUIDs,
+        uuids -> mapper(dbSession).resetTasksWithUnknownWorkerUUIDs(uuids, system2.now())
+      );
+    }
   }
 
   public CeQueueDto insert(DbSession session, CeQueueDto dto) {
     if (dto.getCreatedAt() == 0L || dto.getUpdatedAt() == 0L) {
-      dto.setCreatedAt(system2.now());
-      dto.setUpdatedAt(system2.now());
+      long now = system2.now();
+      dto.setCreatedAt(now);
+      dto.setUpdatedAt(now);
     }
 
     mapper(session).insert(dto);
@@ -100,6 +119,14 @@ public class CeQueueDao implements Dao {
     mapper(session).resetAllToPendingStatus(system2.now());
   }
 
+  /**
+   * Update all tasks for the specified worker uuid which are not PENDING to:
+   * STATUS='PENDING', STARTED_AT=NULL, UPDATED_AT={now}.
+   */
+  public int resetToPendingForWorker(DbSession session, String workerUuid) {
+    return mapper(session).resetToPendingForWorker(workerUuid, system2.now());
+  }
+
   public int countByStatus(DbSession dbSession, CeQueueDto.Status status) {
     return mapper(dbSession).countByStatusAndComponentUuid(status, null);
   }
@@ -108,23 +135,26 @@ public class CeQueueDao implements Dao {
     return mapper(dbSession).countByStatusAndComponentUuid(status, componentUuid);
   }
 
-  public Optional<CeQueueDto> peek(DbSession session) {
-    List<String> taskUuids = mapper(session).selectEligibleForPeek(ONE_ROW_LIMIT);
-    if (taskUuids.isEmpty()) {
-      return Optional.absent();
+  public Optional<CeQueueDto> peek(DbSession session, String workerUuid, int maxExecutionCount) {
+    List<EligibleTaskDto> eligibles = mapper(session).selectEligibleForPeek(maxExecutionCount, ONE_RESULT_PAGINATION);
+    if (eligibles.isEmpty()) {
+      return Optional.empty();
     }
 
-    String taskUuid = taskUuids.get(0);
-    return tryToPeek(session, taskUuid);
+    EligibleTaskDto eligible = eligibles.get(0);
+    return tryToPeek(session, eligible, workerUuid);
   }
 
-  private Optional<CeQueueDto> tryToPeek(DbSession session, String taskUuid) {
-    int touchedRows = mapper(session).updateIfStatus(taskUuid, IN_PROGRESS, system2.now(), system2.now(), PENDING);
+  private Optional<CeQueueDto> tryToPeek(DbSession session, EligibleTaskDto eligible, String workerUuid) {
+    long now = system2.now();
+    int touchedRows = mapper(session).updateIf(eligible.getUuid(),
+      new UpdateIf.NewProperties(IN_PROGRESS, workerUuid, eligible.getExecutionCount() + 1, now, now),
+      new UpdateIf.OldProperties(PENDING, eligible.getExecutionCount()));
     if (touchedRows != 1) {
-      return Optional.absent();
+      return Optional.empty();
     }
 
-    CeQueueDto result = mapper(session).selectByUuid(taskUuid);
+    CeQueueDto result = mapper(session).selectByUuid(eligible.getUuid());
     session.commit();
     return Optional.of(result);
   }

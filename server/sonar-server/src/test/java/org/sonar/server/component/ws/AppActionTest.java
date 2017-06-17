@@ -36,7 +36,7 @@ import org.sonar.db.component.SnapshotTesting;
 import org.sonar.db.measure.MeasureDto;
 import org.sonar.db.measure.MeasureTesting;
 import org.sonar.db.metric.MetricDto;
-import org.sonar.server.component.ComponentFinder;
+import org.sonar.server.component.TestComponentFinder;
 import org.sonar.server.startup.RegisterMetrics;
 import org.sonar.server.tester.UserSessionRule;
 import org.sonar.server.ws.TestRequest;
@@ -66,11 +66,10 @@ public class AppActionTest {
 
   @Rule
   public UserSessionRule userSessionRule = UserSessionRule.standalone();
-
   @Rule
   public DbTester dbTester = DbTester.create(System2.INSTANCE);
 
-  private AppAction underTest = new AppAction(dbTester.getDbClient(), userSessionRule, new ComponentFinder(dbTester.getDbClient()));
+  private AppAction underTest = new AppAction(dbTester.getDbClient(), userSessionRule, TestComponentFinder.from(dbTester));
   private WsActionTester wsTester = new WsActionTester(underTest);
 
   @Before
@@ -80,17 +79,17 @@ public class AppActionTest {
 
   @Test
   public void file_without_measures() throws Exception {
-    insertComponentsAndAnalysis();
+    ComponentDto[] components = insertComponentsAndAnalysis();
     dbTester.commit();
 
-    userSessionRule.logIn("john").addComponentUuidPermission(UserRole.USER, PROJECT_UUID, FILE_UUID);
+    userSessionRule.logIn("john").addProjectPermission(UserRole.USER, components);
     TestRequest request = wsTester.newRequest().setParam("uuid", FILE_UUID);
     jsonAssert(request, "app.json");
   }
 
   @Test
   public void file_with_measures() throws Exception {
-    insertComponentsAndAnalysis();
+    ComponentDto[] components = insertComponentsAndAnalysis();
     insertFileMeasure(metricsByKey.get(LINES_KEY).getId(), 200d, null);
     insertFileMeasure(metricsByKey.get(DUPLICATED_LINES_DENSITY_KEY).getId(), 7.4, null);
     insertFileMeasure(metricsByKey.get(SQALE_RATING_KEY).getId(), null, "C");
@@ -101,18 +100,19 @@ public class AppActionTest {
 
     userSessionRule
       .logIn("john")
-      .addComponentUuidPermission(UserRole.USER, PROJECT_UUID, FILE_UUID);
+      .addProjectPermission(UserRole.USER, components);
     TestRequest request = wsTester.newRequest().setParam("uuid", FILE_UUID);
     jsonAssert(request, "app_with_measures.json");
   }
 
   @Test
   public void file_with_coverage() throws Exception {
-    insertComponentsAndAnalysis();
+    ComponentDto[] components = insertComponentsAndAnalysis();
     insertFileMeasure(metricsByKey.get(COVERAGE_KEY).getId(), 95.4, null);
     dbTester.commit();
 
-    userSessionRule.logIn("john").addComponentUuidPermission(UserRole.USER, PROJECT_UUID, FILE_UUID);
+    userSessionRule.logIn("john")
+      .addProjectPermission(UserRole.USER, components);
     TestRequest request = wsTester.newRequest().setParam("uuid", FILE_UUID);
     jsonAssert(request, "app_with_ut_measure.json");
   }
@@ -137,8 +137,8 @@ public class AppActionTest {
     dbTester.commit();
   }
 
-  private void insertComponentsAndAnalysis() {
-    ComponentDto project = ComponentTesting.newProjectDto(dbTester.getDefaultOrganization(), PROJECT_UUID)
+  private ComponentDto[] insertComponentsAndAnalysis() {
+    ComponentDto project = ComponentTesting.newPrivateProjectDto(dbTester.getDefaultOrganization(), PROJECT_UUID)
       .setLongName("SonarQube")
       .setKey(PROJECT_KEY);
     ComponentDto module = ComponentTesting.newModuleDto(MODULE_UUID, project)
@@ -152,6 +152,7 @@ public class AppActionTest {
     dbTester.getDbClient().componentDao().insert(dbTester.getSession(), project, module, file);
     SnapshotDto analysis = SnapshotTesting.newAnalysis(project).setUuid(ANALYSIS_UUID);
     dbTester.getDbClient().snapshotDao().insert(dbTester.getSession(), analysis);
+    return new ComponentDto[] {project, module, file};
   }
 
   private void insertFileMeasure(int metricId, @Nullable Double value, @Nullable String data) {

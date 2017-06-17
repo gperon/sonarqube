@@ -20,8 +20,6 @@
 package org.sonar.db.permission;
 
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nullable;
 import org.sonar.db.Dao;
@@ -39,8 +37,6 @@ import static org.sonar.db.DatabaseUtils.executeLargeInputsIntoSet;
  */
 public class AuthorizationDao implements Dao {
 
-  private static final String USER_ID_PARAM = "userId";
-
   /**
   * Loads all the permissions granted to logged-in user for the specified organization
   */
@@ -56,16 +52,22 @@ public class AuthorizationDao implements Dao {
   }
 
   /**
-   * Loads all the permissions granted to logged-in user for the specified project.
+   * Loads all the permissions granted to logged-in user for the specified project <strong>stored in *_ROLES
+   * tables</strong>.
    * An empty Set is returned if user has no permissions on the project.
+   *
+   * <strong>This method does not support public components</strong>
    */
   public Set<String> selectProjectPermissions(DbSession dbSession, String projectUuid, long userId) {
     return mapper(dbSession).selectProjectPermissions(projectUuid, userId);
   }
 
   /**
-   * Loads all the permissions granted to anonymous for the specified project.
+   * Loads all the permissions granted to anonymous for the specified project <strong>stored in *_ROLES
+   * tables</strong>.
    * An empty Set is returned if anonymous user has no permissions on the project.
+   *
+   * <strong>This method does not support public components</strong>
    */
   public Set<String> selectProjectPermissionsOfAnonymous(DbSession dbSession, String projectUuid) {
     return mapper(dbSession).selectProjectPermissionsOfAnonymous(projectUuid);
@@ -122,39 +124,43 @@ public class AuthorizationDao implements Dao {
     return mapper(dbSession).selectOrganizationUuidsOfUserWithGlobalPermission(userId, permission);
   }
 
-  public Set<Long> keepAuthorizedProjectIds(DbSession dbSession, Collection<Long> componentIds, @Nullable Integer userId, String role) {
+  /**
+   * @deprecated replaced by {@link #keepAuthorizedProjectUuids(DbSession, Collection, Integer, String)}
+   */
+  @Deprecated
+  public Set<Long> keepAuthorizedProjectIds(DbSession dbSession, Collection<Long> componentIds, @Nullable Integer userId, String permission) {
     return executeLargeInputsIntoSet(
       componentIds,
       partition -> {
         if (userId == null) {
-          return mapper(dbSession).keepAuthorizedProjectIdsForAnonymous(role, componentIds);
+          return mapper(dbSession).keepAuthorizedProjectIdsForAnonymous(permission, partition);
         }
-        return mapper(dbSession).keepAuthorizedProjectIdsForUser(userId, role, componentIds);
-      });
+        return mapper(dbSession).keepAuthorizedProjectIdsForUser(userId, permission, partition);
+      },
+      partitionSize -> partitionSize / 2);
   }
 
-  /**
-   * @deprecated it loads too many results and there's no functional need.
-   */
-  @Deprecated
-  public Collection<String> selectAuthorizedRootProjectsUuids(DbSession dbSession, @Nullable Integer userId, String role) {
-    String sql;
-    Map<String, Object> params = new HashMap<>(2);
-    sql = "selectAuthorizedRootProjectsUuids";
-    params.put(USER_ID_PARAM, userId);
-    params.put("role", role);
-
-    return dbSession.selectList(sql, params);
+  public Set<String> keepAuthorizedProjectUuids(DbSession dbSession, Collection<String> projectUuids, @Nullable Integer userId, String permission) {
+    return executeLargeInputsIntoSet(
+      projectUuids,
+      partition -> {
+        if (userId == null) {
+          return mapper(dbSession).keepAuthorizedProjectUuidsForAnonymous(permission, partition);
+        }
+        return mapper(dbSession).keepAuthorizedProjectUuidsForUser(userId, permission, partition);
+      },
+      partitionSize -> partitionSize / 2);
   }
 
   /**
    * Keep only authorized user that have the given permission on a given project.
-   * Please Note that if the permission is 'Anyone' is NOT taking into account by thie method.
+   * Please Note that if the permission is 'Anyone' is NOT taking into account by this method.
    */
   public Collection<Integer> keepAuthorizedUsersForRoleAndProject(DbSession dbSession, Collection<Integer> userIds, String role, long projectId) {
     return executeLargeInputs(
       userIds,
-      partitionOfIds -> mapper(dbSession).keepAuthorizedUsersForRoleAndProject(role, projectId, partitionOfIds));
+      partitionOfIds -> mapper(dbSession).keepAuthorizedUsersForRoleAndProject(role, projectId, partitionOfIds),
+      partitionSize -> partitionSize / 3);
   }
 
   private static AuthorizationMapper mapper(DbSession dbSession) {

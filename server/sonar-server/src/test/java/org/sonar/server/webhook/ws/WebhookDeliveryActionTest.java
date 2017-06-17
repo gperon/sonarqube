@@ -29,8 +29,10 @@ import org.sonar.api.web.UserRole;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbTester;
 import org.sonar.db.component.ComponentDto;
+import org.sonar.db.component.ComponentTesting;
 import org.sonar.db.webhook.WebhookDeliveryDto;
 import org.sonar.server.component.ComponentFinder;
+import org.sonar.server.component.TestComponentFinder;
 import org.sonar.server.exceptions.ForbiddenException;
 import org.sonar.server.exceptions.NotFoundException;
 import org.sonar.server.exceptions.UnauthorizedException;
@@ -40,7 +42,6 @@ import org.sonarqube.ws.MediaTypes;
 import org.sonarqube.ws.Webhooks;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.sonar.db.component.ComponentTesting.newProjectDto;
 import static org.sonar.db.webhook.WebhookDbTesting.newWebhookDeliveryDto;
 import static org.sonar.test.JsonAssert.assertJson;
 
@@ -61,10 +62,10 @@ public class WebhookDeliveryActionTest {
 
   @Before
   public void setUp() {
-    ComponentFinder componentFinder = new ComponentFinder(dbClient);
+    ComponentFinder componentFinder = TestComponentFinder.from(db);
     WebhookDeliveryAction underTest = new WebhookDeliveryAction(dbClient, userSession, componentFinder);
     ws = new WsActionTester(underTest);
-    project = db.components().insertComponent(newProjectDto(db.organizations().insert()).setKey("my-project"));
+    project = db.components().insertComponent(ComponentTesting.newPrivateProjectDto(db.organizations().insert()).setKey("my-project"));
   }
 
   @Test
@@ -112,7 +113,7 @@ public class WebhookDeliveryActionTest {
       .setPayload("{\"status\"=\"SUCCESS\"}");
     dbClient.webhookDeliveryDao().insert(db.getSession(), dto);
     db.commit();
-    userSession.logIn().addProjectUuidPermissions(UserRole.ADMIN, project.uuid());
+    userSession.logIn().addProjectPermission(UserRole.ADMIN, project);
 
     String json = ws.newRequest()
       .setParam("deliveryId", dto.getUuid())
@@ -132,7 +133,7 @@ public class WebhookDeliveryActionTest {
       .setErrorStacktrace("IOException -> can not connect");
     dbClient.webhookDeliveryDao().insert(db.getSession(), dto);
     db.commit();
-    userSession.logIn().addProjectUuidPermissions(UserRole.ADMIN, project.uuid());
+    userSession.logIn().addProjectPermission(UserRole.ADMIN, project);
 
     Webhooks.DeliveryWsResponse response = ws.newRequest()
       .setParam("deliveryId", dto.getUuid())
@@ -150,7 +151,7 @@ public class WebhookDeliveryActionTest {
       .setComponentUuid(project.uuid());
     dbClient.webhookDeliveryDao().insert(db.getSession(), dto);
     db.commit();
-    userSession.logIn().addProjectUuidPermissions(UserRole.USER, project.uuid());
+    userSession.logIn().addProjectPermission(UserRole.USER, project);
 
     expectedException.expect(ForbiddenException.class);
     expectedException.expectMessage("Insufficient privileges");

@@ -19,11 +19,13 @@
             uuid="uuid_1"
             uuid_path="NOT_USED"
             root_uuid="uuid_root_1"
+            project_uuid="uuid_root_1"
             kee="bar-old"
             enabled="[true]"
             scope="FIL"
             qualifier="CLA"
-            language="java"/>
+            language="java"
+            private="[false]"/>
 
   <snapshots id="3"
              uuid="u3"
@@ -44,11 +46,13 @@
             uuid="uuid_2"
             uuid_path="NOT_USED"
             root_uuid="uuid_root_2"
+            project_uuid="uuid_root_2"
             kee="bar-last"
             enabled="[true]"
             scope="FIL"
             qualifier="CLA"
-            language="java"/>
+            language="java"
+            private="[false]"/>
 
   <snapshots id="5"
              uuid="u5"
@@ -69,11 +73,13 @@
             uuid="uuid_3"
             uuid_path="NOT_USED"
             root_uuid="uuid_root_3"
+            project_uuid="uuid_root_3"
             kee="foo-old"
             enabled="[true]"
             scope="FIL"
             qualifier="CLA"
-            language="java"/>
+            language="java"
+            private="[false]"/>
 
   <snapshots id="7"
              uuid="u7"
@@ -94,11 +100,13 @@
             uuid="uuid_4"
             uuid_path="NOT_USED"
             root_uuid="uuid_root_4"
+            project_uuid="uuid_root_4"
             kee="foo-last"
             enabled="[true]"
             scope="FIL"
             qualifier="CLA"
-            language="java"/>
+            language="java"
+            private="[false]"/>
 
   <snapshots id="9"
              uuid="u9"
@@ -119,11 +127,13 @@
             uuid="uuid_5"
             uuid_path="NOT_USED"
             root_uuid="uuid_root_5"
+            project_uuid="uuid_root_5"
             kee="foo"
             enabled="[true]"
             scope="FIL"
             qualifier="CLA"
-            language="java"/>
+            language="java"
+            private="[false]"/>
 
   <snapshots id="11"
              uuid="u11"
@@ -137,11 +147,13 @@
             uuid="uuid_6"
             uuid_path="NOT_USED"
             root_uuid="uuid_root_1"
+            project_uuid="uuid_root_1"
             kee="baz"
             enabled="[true]"
             scope="FIL"
             qualifier="CLA"
-            language="grvy"/>
+            language="grvy"
+            private="[false]"/>
 
   <!-- Old snapshot of another project -->
   <!-- bar-old -->

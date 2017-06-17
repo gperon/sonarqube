@@ -19,7 +19,7 @@
  */
 /* @flow */
 import moment from 'moment';
-import { request } from './request';
+import { getJSON } from './request';
 
 let messages = {};
 
@@ -44,33 +44,12 @@ export function hasMessage(...keys: string[]) {
   return messages[messageKey] != null;
 }
 
-function getCurrentLocale() {
-  return window.navigator.languages ? window.navigator.languages[0] : window.navigator.language;
+export function configureMoment(language?: string) {
+  moment.locale(language || getPreferredLanguage());
 }
 
-function makeRequest(params) {
-  const url = '/api/l10n/index';
-
-  return request(url).setData(params).submit().then(response => {
-    switch (response.status) {
-      case 200:
-        return response.json();
-      case 304:
-        return JSON.parse(localStorage.getItem('l10n.bundle') || '{}');
-      case 401:
-        window.location =
-          window.baseUrl +
-          '/sessions/new?return_to=' +
-          encodeURIComponent(
-            window.location.pathname + window.location.search + window.location.hash
-          );
-        // return unresolved promise to stop the promise chain
-        // anyway the page will be reloaded
-        return new Promise(() => {});
-      default:
-        throw new Error('Unexpected status code: ' + response.status);
-    }
-  });
+function getPreferredLanguage() {
+  return window.navigator.languages ? window.navigator.languages[0] : window.navigator.language;
 }
 
 function checkCachedBundle() {
@@ -88,35 +67,49 @@ function checkCachedBundle() {
   }
 }
 
+function getL10nBundle(params) {
+  const url = '/api/l10n/index';
+  return getJSON(url, params);
+}
+
 export function requestMessages() {
-  const currentLocale = getCurrentLocale();
+  const browserLocale = getPreferredLanguage();
   const cachedLocale = localStorage.getItem('l10n.locale');
-
-  if (cachedLocale !== currentLocale) {
-    localStorage.removeItem('l10n.timestamp');
-  }
-
-  const bundleTimestamp = localStorage.getItem('l10n.timestamp');
   const params = {};
-  if (currentLocale) {
-    params.locale = currentLocale;
-  }
-  if (bundleTimestamp !== null && checkCachedBundle()) {
-    params.ts = bundleTimestamp;
+
+  if (browserLocale) {
+    params.locale = browserLocale;
   }
 
-  return makeRequest(params).then(bundle => {
-    try {
-      const currentTimestamp = moment().format('YYYY-MM-DDTHH:mm:ssZZ');
-      localStorage.setItem('l10n.timestamp', currentTimestamp);
-      localStorage.setItem('l10n.locale', currentLocale);
-      localStorage.setItem('l10n.bundle', JSON.stringify(bundle));
-    } catch (e) {
-      // do nothing
+  if (browserLocale.startsWith(cachedLocale)) {
+    const bundleTimestamp = localStorage.getItem('l10n.timestamp');
+    if (bundleTimestamp !== null && checkCachedBundle()) {
+      params.ts = bundleTimestamp;
     }
+  }
 
-    messages = bundle;
-  });
+  return getL10nBundle(params).then(
+    ({ effectiveLocale, messages }) => {
+      try {
+        const currentTimestamp = moment().format('YYYY-MM-DDTHH:mm:ssZZ');
+        localStorage.setItem('l10n.timestamp', currentTimestamp);
+        localStorage.setItem('l10n.locale', effectiveLocale);
+        localStorage.setItem('l10n.bundle', JSON.stringify(messages));
+      } catch (e) {
+        // do nothing
+      }
+      configureMoment(effectiveLocale);
+      resetBundle(messages);
+    },
+    ({ response }) => {
+      if (response && response.status === 304) {
+        configureMoment(cachedLocale || browserLocale);
+        resetBundle(JSON.parse(localStorage.getItem('l10n.bundle') || '{}'));
+      } else {
+        throw new Error('Unexpected status code: ' + response.status);
+      }
+    }
+  );
 }
 
 export function resetBundle(bundle: Object) {

@@ -28,13 +28,8 @@ import LineDuplications from './LineDuplications';
 import LineDuplicationBlock from './LineDuplicationBlock';
 import LineIssuesIndicator from './LineIssuesIndicator';
 import LineCode from './LineCode';
-import { TooltipsContainer } from '../../mixins/tooltips-mixin';
 import type { SourceLine } from '../types';
-import type {
-  LinearIssueLocation,
-  IndexedIssueLocation,
-  IndexedIssueLocationMessage
-} from '../helpers/indexing';
+import type { LinearIssueLocation } from '../helpers/indexing';
 import type { Issue } from '../../issue/types';
 
 type Props = {|
@@ -47,11 +42,13 @@ type Props = {|
   duplicationsCount: number,
   filtered: boolean | null,
   highlighted: boolean,
-  highlightedSymbols: Array<string>,
+  highlightedLocationMessage?: { index: number, text: string },
+  highlightedSymbols?: Array<string>,
   issueLocations: Array<LinearIssueLocation>,
   issues: Array<Issue>,
+  last: boolean,
   line: SourceLine,
-  loadDuplications: (SourceLine, HTMLElement) => void,
+  loadDuplications: SourceLine => void,
   onClick: (SourceLine, HTMLElement) => void,
   onCoverageClick: (SourceLine, HTMLElement) => void,
   onDuplicationClick: (number, number) => void,
@@ -60,16 +57,20 @@ type Props = {|
   onIssueUnselect: () => void,
   onIssuesOpen: SourceLine => void,
   onIssuesClose: SourceLine => void,
+  onLocationSelect?: number => void,
   onSCMClick: (SourceLine, HTMLElement) => void,
-  onLocationSelect: (flowIndex: number, locationIndex: number) => void,
   onSymbolClick: Array<string> => void,
   openIssues: boolean,
   previousLine?: SourceLine,
-  selectedIssue: string | null,
-  secondaryIssueLocations: Array<IndexedIssueLocation>,
-  // $FlowFixMe
-  secondaryIssueLocationMessages: Array<IndexedIssueLocationMessage>,
-  selectedIssueLocation: IndexedIssueLocation | null
+  scroll?: HTMLElement => void,
+  secondaryIssueLocations: Array<{
+    from: number,
+    to: number,
+    line: number,
+    index: number,
+    startLine: number
+  }>,
+  selectedIssue: string | null
 |};
 
 export default class Line extends React.PureComponent {
@@ -94,66 +95,65 @@ export default class Line extends React.PureComponent {
     const className = classNames('source-line', {
       'source-line-highlighted': this.props.highlighted,
       'source-line-shadowed': filtered === false,
-      'source-line-filtered': filtered === true
+      'source-line-filtered': filtered === true,
+      'source-line-last': this.props.last
     });
 
     return (
-      <TooltipsContainer>
-        <tr className={className} data-line-number={line.line}>
-          <LineNumber line={line} onClick={this.props.onClick} />
+      <tr className={className} data-line-number={line.line}>
+        <LineNumber line={line} onClick={this.props.onClick} />
 
-          <LineSCM
-            line={line}
-            onClick={this.props.onSCMClick}
-            previousLine={this.props.previousLine}
+        <LineSCM
+          line={line}
+          onClick={this.props.onSCMClick}
+          previousLine={this.props.previousLine}
+        />
+
+        {this.props.displayCoverage &&
+          <LineCoverage line={line} onClick={this.props.onCoverageClick} />}
+
+        {this.props.displayDuplications &&
+          <LineDuplications line={line} onClick={this.props.loadDuplications} />}
+
+        {times(duplicationsCount).map(index => (
+          <LineDuplicationBlock
+            duplicated={duplications.includes(index)}
+            index={index}
+            key={index}
+            line={this.props.line}
+            onClick={this.props.onDuplicationClick}
           />
+        ))}
 
-          {this.props.displayCoverage &&
-            <LineCoverage line={line} onClick={this.props.onCoverageClick} />}
-
-          {this.props.displayDuplications &&
-            <LineDuplications line={line} onClick={this.props.loadDuplications} />}
-
-          {times(duplicationsCount).map(index => (
-            <LineDuplicationBlock
-              duplicated={duplications.includes(index)}
-              index={index}
-              key={index}
-              line={this.props.line}
-              onClick={this.props.onDuplicationClick}
-            />
-          ))}
-
-          {this.props.displayIssues &&
-            !this.props.displayAllIssues &&
-            <LineIssuesIndicator
-              issues={this.props.issues}
-              line={line}
-              onClick={this.handleIssuesIndicatorClick}
-            />}
-
-          {this.props.displayFiltered &&
-            <td className="source-meta source-line-filtered-container" data-line-number={line.line}>
-              <div className="source-line-bar" />
-            </td>}
-
-          <LineCode
-            highlightedSymbols={this.props.highlightedSymbols}
+        {this.props.displayIssues &&
+          !this.props.displayAllIssues &&
+          <LineIssuesIndicator
             issues={this.props.issues}
-            issueLocations={this.props.issueLocations}
             line={line}
-            onIssueChange={this.props.onIssueChange}
-            onIssueSelect={this.props.onIssueSelect}
-            onLocationSelect={this.props.onLocationSelect}
-            onSymbolClick={this.props.onSymbolClick}
-            secondaryIssueLocationMessages={this.props.secondaryIssueLocationMessages}
-            secondaryIssueLocations={this.props.secondaryIssueLocations}
-            selectedIssue={this.props.selectedIssue}
-            selectedIssueLocation={this.props.selectedIssueLocation}
-            showIssues={this.props.openIssues || this.props.displayAllIssues}
-          />
-        </tr>
-      </TooltipsContainer>
+            onClick={this.handleIssuesIndicatorClick}
+          />}
+
+        {this.props.displayFiltered &&
+          <td className="source-meta source-line-filtered-container" data-line-number={line.line}>
+            <div className="source-line-bar" />
+          </td>}
+
+        <LineCode
+          highlightedLocationMessage={this.props.highlightedLocationMessage}
+          highlightedSymbols={this.props.highlightedSymbols}
+          issues={this.props.issues}
+          issueLocations={this.props.issueLocations}
+          line={line}
+          onIssueChange={this.props.onIssueChange}
+          onIssueSelect={this.props.onIssueSelect}
+          onLocationSelect={this.props.onLocationSelect}
+          onSymbolClick={this.props.onSymbolClick}
+          scroll={this.props.scroll}
+          secondaryIssueLocations={this.props.secondaryIssueLocations}
+          selectedIssue={this.props.selectedIssue}
+          showIssues={this.props.openIssues || this.props.displayAllIssues}
+        />
+      </tr>
     );
   }
 }

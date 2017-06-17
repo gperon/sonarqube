@@ -87,6 +87,20 @@ message SearchProjectsWsResponse {
   optional sonarqube.ws.commons.Facets facets = 3;
 }
 
+// WS api/components/provisioned
+message ProvisionedWsResponse {
+  optional sonarqube.ws.commons.Paging paging = 1;
+  repeated Component projects = 2;
+
+  message Component {
+    optional string uuid = 1;
+    optional string key = 2;
+    optional string name = 3;
+    optional string creationDate = 4;
+    optional string visibility = 5;
+  }
+}
+
 message Component {
   optional string organization = 12;
   optional string id = 1;
@@ -102,6 +116,8 @@ message Component {
   optional bool isFavorite = 11;
   optional string analysisDate = 13;
   optional Tags tags = 14;
+  optional string visibility = 15;
+  optional string leakPeriodDate = 16;
 
   message Tags {
     repeated string tags = 1;

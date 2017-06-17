@@ -55,8 +55,7 @@ import org.sonar.server.organization.OrganizationCreationImpl;
 import org.sonar.server.organization.OrganizationValidation;
 import org.sonar.server.organization.OrganizationValidationImpl;
 import org.sonar.server.organization.TestOrganizationFlags;
-import org.sonar.server.qualityprofile.DefinedQProfileCreation;
-import org.sonar.server.qualityprofile.DefinedQProfileRepository;
+import org.sonar.server.qualityprofile.BuiltInQProfileRepository;
 import org.sonar.server.qualityprofile.index.ActiveRuleIndexer;
 import org.sonar.server.tester.UserSessionRule;
 import org.sonar.server.user.index.UserIndex;
@@ -102,7 +101,7 @@ public class CreateActionTest {
   private UserIndexer userIndexer = new UserIndexer(dbClient, es.client());
   private UserIndex userIndex = new UserIndex(es.client());
   private OrganizationCreation organizationCreation = new OrganizationCreationImpl(dbClient, system2, uuidFactory, organizationValidation, settings, userIndexer,
-    mock(DefinedQProfileRepository.class), mock(DefinedQProfileCreation.class), new DefaultGroupCreatorImpl(dbClient), mock(ActiveRuleIndexer.class));
+    mock(BuiltInQProfileRepository.class), new DefaultGroupCreatorImpl(dbClient));
   private TestOrganizationFlags organizationFlags = TestOrganizationFlags.standalone().setEnabled(true);
 
   private UserDto user;
@@ -524,7 +523,7 @@ public class CreateActionTest {
   }
 
   @Test
-  public void request_creates_default_template_for_owner_group_and_anyone() {
+  public void request_creates_default_template_for_owner_group() {
     mockForSuccessfulInsert(SOME_UUID, SOME_DATE);
     UserDto user = dbTester.users().insertUser();
     userSession.logIn(user).setSystemAdministrator();
@@ -544,7 +543,6 @@ public class CreateActionTest {
       .extracting(PermissionTemplateGroupDto::getGroupId, PermissionTemplateGroupDto::getPermission)
       .containsOnly(
         tuple(ownersGroup.getId(), UserRole.ADMIN), tuple(ownersGroup.getId(), UserRole.ISSUE_ADMIN), tuple(ownersGroup.getId(), GlobalPermissions.SCAN_EXECUTION),
-        tuple(0, UserRole.USER), tuple(0, UserRole.CODEVIEWER),
         tuple(defaultGroup.getId(), UserRole.USER), tuple(defaultGroup.getId(), UserRole.CODEVIEWER));
   }
 
@@ -653,7 +651,7 @@ public class CreateActionTest {
       .setName(key + "_name")
       .setCreatedAt((long) key.hashCode())
       .setUpdatedAt((long) key.hashCode());
-    dbClient.organizationDao().insert(dbTester.getSession(), dto);
+    dbClient.organizationDao().insert(dbTester.getSession(), dto, false);
     dbTester.commit();
     return dto;
   }

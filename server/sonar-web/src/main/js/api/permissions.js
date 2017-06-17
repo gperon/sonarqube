@@ -131,22 +131,26 @@ export function bulkApplyTemplate(data: Object) {
 }
 
 export function grantTemplatePermissionToUser(
-  templateId: string,
-  login: string,
-  permission: string
+  data: {
+    templateId: string,
+    login: string,
+    permission: string,
+    organization?: string
+  }
 ) {
   const url = '/api/permissions/add_user_to_template';
-  const data = { templateId, login, permission };
   return post(url, data);
 }
 
 export function revokeTemplatePermissionFromUser(
-  templateId: string,
-  login: string,
-  permission: string
+  data: {
+    templateId: string,
+    login: string,
+    permission: string,
+    organization?: string
+  }
 ) {
   const url = '/api/permissions/remove_user_from_template';
-  const data = { templateId, login, permission };
   return post(url, data);
 }
 
@@ -288,4 +292,10 @@ export function getPermissionTemplateGroups(
     Object.assign(data, { organization });
   }
   return getJSON(url, data).then(r => r.groups);
+}
+
+export function changeProjectVisibility(project: string, visibility: string): Promise<void> {
+  const url = '/api/projects/update_visibility';
+  const data = { project, visibility };
+  return post(url, data);
 }

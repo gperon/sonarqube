@@ -29,7 +29,8 @@ import org.sonar.db.component.ComponentDto;
 import org.sonar.server.exceptions.NotFoundException;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.sonar.db.component.ComponentTesting.newProjectDto;
+import static org.sonar.db.component.ComponentTesting.newFileDto;
+import static org.sonar.db.component.ComponentTesting.newPrivateProjectDto;
 import static org.sonar.server.component.ComponentFinder.ParamNames.ID_AND_KEY;
 
 
@@ -37,12 +38,11 @@ public class ComponentFinderTest {
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
-
   @Rule
   public DbTester db = DbTester.create(System2.INSTANCE);
 
   private final DbSession dbSession = db.getSession();
-  private ComponentFinder underTest = new ComponentFinder(db.getDbClient());
+  private ComponentFinder underTest = TestComponentFinder.from(db);
 
   @Test
   public void fail_when_the_uuid_and_key_are_null() {
@@ -92,10 +92,32 @@ public class ComponentFinderTest {
     underTest.getByUuidOrKey(dbSession, null, "project-key", ID_AND_KEY);
   }
 
+  @Test
+  public void fail_when_component_uuid_is_removed() {
+    ComponentDto project = db.components().insertComponent(newPrivateProjectDto(db.getDefaultOrganization()));
+    db.components().insertComponent(newFileDto(project, null, "file-uuid").setEnabled(false));
+
+    expectedException.expect(NotFoundException.class);
+    expectedException.expectMessage("Component id 'file-uuid' not found");
+
+    underTest.getByUuid(dbSession, "file-uuid");
+  }
+
+  @Test
+  public void fail_when_component_key_is_removed() {
+    ComponentDto project = db.components().insertComponent(newPrivateProjectDto(db.getDefaultOrganization()));
+    db.components().insertComponent(newFileDto(project).setKey("file-key").setEnabled(false));
+
+
+    expectedException.expect(NotFoundException.class);
+    expectedException.expectMessage("Component key 'file-key' not found");
+
+    underTest.getByKey(dbSession, "file-key");
+  }
 
   @Test
   public void get_component_by_uuid() {
-    db.components().insertComponent(newProjectDto(db.organizations().insert(), "project-uuid"));
+    db.components().insertComponent(newPrivateProjectDto(db.organizations().insert(), "project-uuid"));
 
     ComponentDto component = underTest.getByUuidOrKey(dbSession, "project-uuid", null, ID_AND_KEY);
 
@@ -104,7 +126,7 @@ public class ComponentFinderTest {
 
   @Test
   public void get_component_by_key() {
-    db.components().insertComponent(newProjectDto(db.getDefaultOrganization()).setKey("project-key"));
+    db.components().insertComponent(newPrivateProjectDto(db.getDefaultOrganization()).setKey("project-key"));
 
     ComponentDto component = underTest.getByUuidOrKey(dbSession, null, "project-key", ID_AND_KEY);
 

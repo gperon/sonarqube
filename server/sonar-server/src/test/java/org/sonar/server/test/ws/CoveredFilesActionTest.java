@@ -28,6 +28,8 @@ import org.junit.rules.ExpectedException;
 import org.sonar.api.web.UserRole;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbSession;
+import org.sonar.db.component.ComponentDto;
+import org.sonar.db.component.ComponentTesting;
 import org.sonar.db.organization.OrganizationDto;
 import org.sonar.db.organization.OrganizationTesting;
 import org.sonar.server.exceptions.NotFoundException;
@@ -45,23 +47,22 @@ import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.sonar.db.component.ComponentTesting.newFileDto;
-import static org.sonar.db.component.ComponentTesting.newProjectDto;
 import static org.sonar.server.test.ws.CoveredFilesAction.TEST_ID;
 import static org.sonar.test.JsonAssert.assertJson;
 
 public class CoveredFilesActionTest {
 
-  public static final String FILE_1_ID = "FILE1";
-  public static final String FILE_2_ID = "FILE2";
+  private static final String FILE_1_ID = "FILE1";
+  private static final String FILE_2_ID = "FILE2";
 
   @Rule
   public UserSessionRule userSessionRule = UserSessionRule.standalone();
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
-  WsActionTester ws;
-  DbClient dbClient;
-  TestIndex testIndex;
+  private WsActionTester ws;
+  private DbClient dbClient;
+  private TestIndex testIndex;
 
   @Before
   public void setUp() {
@@ -73,7 +74,9 @@ public class CoveredFilesActionTest {
 
   @Test
   public void covered_files() {
-    userSessionRule.addComponentUuidPermission(UserRole.CODEVIEWER, "SonarQube", "test-file-uuid");
+    ComponentDto project = ComponentTesting.newPrivateProjectDto(OrganizationTesting.newOrganizationDto(), "SonarQube");
+    ComponentDto file = ComponentTesting.newFileDto(project, null, "test-file-uuid");
+    userSessionRule.addProjectPermission(UserRole.CODEVIEWER, project, file);
 
     when(testIndex.getNullableByTestUuid(anyString())).thenReturn(Optional.of(new TestDoc().setFileUuid("test-file-uuid")));
     when(testIndex.coveredFiles("test-uuid")).thenReturn(Arrays.asList(
@@ -82,8 +85,8 @@ public class CoveredFilesActionTest {
     OrganizationDto organizationDto = OrganizationTesting.newOrganizationDto();
     when(dbClient.componentDao().selectByUuids(any(DbSession.class), anyList())).thenReturn(
       Arrays.asList(
-        newFileDto(newProjectDto(organizationDto), null, FILE_1_ID).setKey("org.foo.Bar.java").setLongName("src/main/java/org/foo/Bar.java"),
-        newFileDto(newProjectDto(organizationDto), null, FILE_2_ID).setKey("org.foo.File.java").setLongName("src/main/java/org/foo/File.java")));
+        newFileDto(ComponentTesting.newPrivateProjectDto(organizationDto), null, FILE_1_ID).setKey("org.foo.Bar.java").setLongName("src/main/java/org/foo/Bar.java"),
+        newFileDto(ComponentTesting.newPrivateProjectDto(organizationDto), null, FILE_2_ID).setKey("org.foo.File.java").setLongName("src/main/java/org/foo/File.java")));
 
     TestRequest request = ws.newRequest().setParam(TEST_ID, "test-uuid");
 
@@ -92,7 +95,9 @@ public class CoveredFilesActionTest {
 
   @Test
   public void fail_when_test_uuid_is_unknown() {
-    userSessionRule.addComponentUuidPermission(UserRole.CODEVIEWER, "SonarQube", "test-file-uuid");
+    ComponentDto project = ComponentTesting.newPrivateProjectDto(OrganizationTesting.newOrganizationDto(), "SonarQube");
+    ComponentDto file = ComponentTesting.newFileDto(project);
+    userSessionRule.addProjectPermission(UserRole.CODEVIEWER, project, file);
 
     when(testIndex.getNullableByTestUuid(anyString())).thenReturn(Optional.<TestDoc>absent());
     when(testIndex.coveredFiles("test-uuid")).thenReturn(Arrays.asList(
@@ -101,8 +106,8 @@ public class CoveredFilesActionTest {
     OrganizationDto organizationDto = OrganizationTesting.newOrganizationDto();
     when(dbClient.componentDao().selectByUuids(any(DbSession.class), anyList())).thenReturn(
       Arrays.asList(
-        newFileDto(newProjectDto(organizationDto), null, FILE_1_ID).setKey("org.foo.Bar.java").setLongName("src/main/java/org/foo/Bar.java"),
-        newFileDto(newProjectDto(organizationDto), null, FILE_2_ID).setKey("org.foo.File.java").setLongName("src/main/java/org/foo/File.java")));
+        newFileDto(ComponentTesting.newPrivateProjectDto(organizationDto), null, FILE_1_ID).setKey("org.foo.Bar.java").setLongName("src/main/java/org/foo/Bar.java"),
+        newFileDto(ComponentTesting.newPrivateProjectDto(organizationDto), null, FILE_2_ID).setKey("org.foo.File.java").setLongName("src/main/java/org/foo/File.java")));
 
     expectedException.expect(NotFoundException.class);
     expectedException.expectMessage("Test with id 'test-uuid' is not found");

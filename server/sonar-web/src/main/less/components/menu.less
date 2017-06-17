@@ -76,14 +76,39 @@
       background-color: @barBackgroundColor;
     }
   }
+
+  .menu-footer > a > span {
+    border-bottom: 1px solid @darkGrey;
+    color: @secondFontColor;
+  }
+
+  .menu-footer-note {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .menu-footer.active .menu-footer-note {
+    opacity: 1;
+  }
 }
 
 .menu-search {
+  position: relative;
   padding: 4px 16px 0;
 
   .search-box-input { font-size: @smallFontSize; }
 
   .search-box-submit { vertical-align: baseline; }
+}
+
+.menu-search-full-width {
+  display: flex;
+  align-items: center;
+
+  .search-box-input {
+    flex-grow: 1;
+    width: auto;
+  }
 }
 
 .menu-search ~ .menu {

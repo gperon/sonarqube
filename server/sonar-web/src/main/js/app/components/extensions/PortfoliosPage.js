@@ -23,9 +23,11 @@ import GlobalPageExtension from './GlobalPageExtension';
 
 export default function PortfoliosPage(props: Object) {
   return (
-    <GlobalPageExtension
-      location={props.location}
-      params={{ pluginKey: 'governance', extensionKey: 'portfolios' }}
-    />
+    <div>
+      <GlobalPageExtension
+        location={props.location}
+        params={{ pluginKey: 'governance', extensionKey: 'portfolios' }}
+      />
+    </div>
   );
 }

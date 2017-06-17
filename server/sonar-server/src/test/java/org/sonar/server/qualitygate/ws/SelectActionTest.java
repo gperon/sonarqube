@@ -31,6 +31,7 @@ import org.sonar.db.DbTester;
 import org.sonar.db.component.ComponentDto;
 import org.sonar.db.qualitygate.QualityGateDto;
 import org.sonar.server.component.ComponentFinder;
+import org.sonar.server.component.TestComponentFinder;
 import org.sonar.server.exceptions.ForbiddenException;
 import org.sonar.server.exceptions.NotFoundException;
 import org.sonar.server.tester.UserSessionRule;
@@ -44,10 +45,8 @@ public class SelectActionTest {
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
-
   @Rule
   public UserSessionRule userSession = UserSessionRule.standalone();
-
   @Rule
   public DbTester db = DbTester.create(System2.INSTANCE);
 
@@ -60,10 +59,10 @@ public class SelectActionTest {
 
   @Before
   public void setUp() {
-    ComponentFinder componentFinder = new ComponentFinder(dbClient);
+    ComponentFinder componentFinder = TestComponentFinder.from(db);
     underTest = new SelectAction(dbClient, userSession, componentFinder);
     ws = new WsActionTester(underTest);
-    project = db.components().insertProject();
+    project = db.components().insertPrivateProject();
     gate = insertQualityGate();
   }
 
@@ -99,7 +98,7 @@ public class SelectActionTest {
 
   @Test
   public void project_admin() throws Exception {
-    userSession.logIn().addProjectUuidPermissions(UserRole.ADMIN, project.uuid());
+    userSession.logIn().addProjectPermission(UserRole.ADMIN, project);
     String gateId = String.valueOf(gate.getId());
 
     callByKey(gateId, project.getKey());
@@ -153,7 +152,7 @@ public class SelectActionTest {
   public void fail_when_not_project_admin() throws Exception {
     String gateId = String.valueOf(gate.getId());
 
-    userSession.logIn().addProjectUuidPermissions(UserRole.ISSUE_ADMIN, project.uuid());
+    userSession.logIn().addProjectPermission(UserRole.ISSUE_ADMIN, project);
 
     expectedException.expect(ForbiddenException.class);
     callByKey(gateId, project.getKey());

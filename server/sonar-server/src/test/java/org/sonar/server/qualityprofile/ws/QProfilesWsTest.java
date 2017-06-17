@@ -69,7 +69,7 @@ public class QProfilesWsTest {
       new DeleteAction(languages, null, null, userSessionRule, wsSupport),
       new ExportersAction(),
       new InheritanceAction(null, null, null, languages),
-      new RenameAction(dbClient, userSessionRule))).controller(QProfilesWs.API_ENDPOINT);
+      new RenameAction(dbClient, userSessionRule, wsSupport))).controller(QProfilesWs.API_ENDPOINT);
   }
 
   private ProfileImporter[] createImporters(Languages languages) {
@@ -95,18 +95,6 @@ public class QProfilesWsTest {
     assertThat(controller.path()).isEqualTo(QProfilesWs.API_ENDPOINT);
     assertThat(controller.description()).isNotEmpty();
     assertThat(controller.actions()).isNotEmpty();
-  }
-
-  @Test
-  public void define_search() {
-    WebService.Action search = controller.action("search");
-    assertThat(search).isNotNull();
-    assertThat(search.isPost()).isFalse();
-    assertThat(search.params()).hasSize(5);
-    assertThat(search.param("language").possibleValues()).containsOnly(xoo1Key, xoo2Key);
-    assertThat(search.param("language").deprecatedSince()).isEqualTo("6.4");
-    assertThat(search.param("profileName").deprecatedSince()).isEqualTo("6.4");
-    assertThat(search.param("organization").since()).isEqualTo("6.4");
   }
 
   @Test

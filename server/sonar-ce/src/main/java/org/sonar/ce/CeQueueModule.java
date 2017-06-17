@@ -19,12 +19,11 @@
  */
 package org.sonar.ce;
 
+import org.sonar.ce.monitoring.CEQueueStatusImpl;
+import org.sonar.ce.monitoring.CeTasksMBeanImpl;
+import org.sonar.ce.queue.CeQueueInitializer;
+import org.sonar.ce.queue.InternalCeQueueImpl;
 import org.sonar.core.platform.Module;
-import org.sonar.server.computation.monitoring.CEQueueStatusImpl;
-import org.sonar.server.computation.monitoring.CeTasksMBeanImpl;
-import org.sonar.server.computation.queue.CeQueueCleaner;
-import org.sonar.server.computation.queue.CeQueueInitializer;
-import org.sonar.server.computation.queue.InternalCeQueueImpl;
 
 public class CeQueueModule extends Module {
   @Override
@@ -36,9 +35,6 @@ public class CeQueueModule extends Module {
       // queue monitoring
       CEQueueStatusImpl.class,
       CeTasksMBeanImpl.class,
-
-      // queue cleaning
-      CeQueueCleaner.class,
       
       // init queue state and queue processing
       CeQueueInitializer.class);

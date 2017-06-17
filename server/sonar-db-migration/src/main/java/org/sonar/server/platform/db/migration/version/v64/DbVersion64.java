@@ -56,6 +56,22 @@ public class DbVersion64 implements DbVersion {
       .add(1625, "Populate column ORGANIZATIONS.DEFAULT_GROUP_ID", PopulateColumnDefaultGroupIdOfOrganizations.class)
       .add(1626, "Clean orphan rows in table GROUPS_USERS", CleanOrphanRowsInGroupsUsers.class)
       .add(1627, "Delete permission templates linked to removed users", DeletePermissionTemplatesLinkedToRemovedUsers.class)
-    ;
+      .add(1628, "Add columns CE_QUEUE.WORKER_UUID and EXECUTION_COUNT", AddCeQueueWorkerUuidAndExecutionCount.class)
+      .add(1629, "Make CE_QUEUE.EXECUTION_COUNT not nullable", MakeCeQueueExecutionCountNotNullable.class)
+      .add(1630, "Add columns CE_ACTIVITY.WORKER_UUID and EXECUTION_COUNT", AddCeActivityWorkerUuidAndExecutionCount.class)
+      .add(1631, "Make columns CE_ACTIVITY.EXECUTION_COUNT not nullable", MakeCeActivityExecutionCountNotNullable.class)
+      .add(1632, "Make PROJECTS.PROJECT_UUID not nullable", MakeProjectUuidNotNullable.class)
+      .add(1633, "Purge rows with null PROJECTS.PROJECT_UUID", PurgeComponentsWithoutProjectUuid.class)
+      .add(1634, "Make PROJECTS.PROJECT_UUID not nullable", MakeProjectUuidNotNullable.class)
+      .add(1635, "Add column PROJECTS.PRIVATE", AddColumnProjectsPrivate.class)
+      .add(1636, "Populate column PROJECTS.PRIVATE", PopulateColumnProjectsPrivate.class)
+      .add(1637, "Make column PROJECTS.PRIVATE not nullable", MakeColumnProjectsPrivateNotNullable.class)
+      .add(1638, "Add column ORGANIZATIONS.NEW_PROJECT_PRIVATE", AddColumnNewProjectPrivate.class)
+      .add(1639, "Set ORGANIZATIONS.NEW_PROJECT_PRIVATE to false", SetNewProjectPrivateToFalse.class)
+      .add(1640, "Make column ORGANIZATIONS.NEW_PROJECT_PRIVATE not nullable", MakeColumnNewProjectPrivateNotNullable.class)
+      .add(1641, "Make components private based on permissions", MakeComponentsPrivateBasedOnPermissions.class)
+      .add(1642, "Support private project in default permission template", SupportPrivateProjectInDefaultPermissionTemplate.class)
+      .add(1643, "Drop user and codeviewer perms to AnyOne in permission templates", SupportProjectVisibilityInTemplates.class)
+      .add(1644, "Add index on active_rule_parameters.active_rule_id", AddIndexOnActiveRuleParameters.class);
   }
 }

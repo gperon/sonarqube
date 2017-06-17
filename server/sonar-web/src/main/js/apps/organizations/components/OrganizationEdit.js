@@ -19,6 +19,7 @@
  */
 // @flow
 import React from 'react';
+import Helmet from 'react-helmet';
 import { connect } from 'react-redux';
 import { debounce } from 'lodash';
 import { translate } from '../../../helpers/l10n';
@@ -94,10 +95,13 @@ class OrganizationEdit extends React.PureComponent {
   };
 
   render() {
+    const title = translate('organization.edit');
     return (
       <div className="page page-limited">
+        <Helmet title={title} />
+
         <header className="page-header">
-          <h1 className="page-title">{translate('organization.edit')}</h1>
+          <h1 className="page-title">{title}</h1>
         </header>
 
         <form onSubmit={this.handleSubmit}>

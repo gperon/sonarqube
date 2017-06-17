@@ -36,6 +36,7 @@ import org.sonar.db.DbClient;
 import org.sonar.db.DbTester;
 import org.sonar.db.component.ComponentDbTester;
 import org.sonar.db.component.ComponentDto;
+import org.sonar.db.component.ComponentTesting;
 import org.sonar.db.property.PropertyDbTester;
 import org.sonar.server.tester.UserSessionRule;
 import org.sonar.server.ws.TestRequest;
@@ -50,7 +51,6 @@ import static org.sonar.api.web.UserRole.ADMIN;
 import static org.sonar.api.web.UserRole.CODEVIEWER;
 import static org.sonar.api.web.UserRole.USER;
 import static org.sonar.db.component.ComponentTesting.newModuleDto;
-import static org.sonar.db.component.ComponentTesting.newProjectDto;
 import static org.sonar.db.property.PropertyTesting.newComponentPropertyDto;
 import static org.sonar.db.property.PropertyTesting.newGlobalPropertyDto;
 import static org.sonar.test.JsonAssert.assertJson;
@@ -76,7 +76,7 @@ public class IndexActionTest {
 
   @Before
   public void setUp() throws Exception {
-    project = componentDb.insertComponent(newProjectDto(db.getDefaultOrganization()));
+    project = componentDb.insertComponent(ComponentTesting.newPrivateProjectDto(db.getDefaultOrganization()));
   }
 
   @Test
@@ -391,7 +391,7 @@ public class IndexActionTest {
 
   @Test
   public void does_not_fail_when_user_has_not_project_browse_permission() throws Exception {
-    userSession.logIn("project-admin").addProjectUuidPermissions(CODEVIEWER, project.uuid());
+    userSession.logIn("project-admin").addProjectPermission(CODEVIEWER, project);
     definitions.addComponent(PropertyDefinition.builder("foo").build());
     propertyDb.insertProperties(newComponentPropertyDto(project).setKey("foo").setValue("one"));
 
@@ -468,7 +468,7 @@ public class IndexActionTest {
   }
 
   private void logInAsProjectUser() {
-    userSession.logIn().addProjectUuidPermissions(USER, project.uuid());
+    userSession.logIn().addProjectPermission(USER, project);
   }
 
   private void logInAsSystemAdministrator() {
@@ -477,8 +477,8 @@ public class IndexActionTest {
 
   private void logInAsProjectAdmin() {
     userSession.logIn()
-      .addProjectUuidPermissions(ADMIN, project.uuid())
-      .addProjectUuidPermissions(USER, project.uuid());
+      .addProjectPermission(ADMIN, project)
+      .addProjectPermission(USER, project);
   }
 
   protected static URL resource(String s) {

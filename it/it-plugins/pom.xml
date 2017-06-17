@@ -6,7 +6,7 @@
   <parent>
     <groupId>org.sonarsource.sonarqube</groupId>
     <artifactId>it</artifactId>
-    <version>6.4-SNAPSHOT</version>
+    <version>6.5-SNAPSHOT</version>
   </parent>
   <artifactId>it-plugins</artifactId>
   <name>SonarQube Integration Tests :: Plugins</name>
@@ -34,6 +34,7 @@
     <module>base-auth-plugin</module>
     <module>batch-plugin</module>
     <module>extension-lifecycle-plugin</module>
+    <module>fake-billing-plugin</module>
     <module>global-property-change-plugin</module>
     <module>issue-filter-plugin</module>
     <module>l10n-fr-pack</module>

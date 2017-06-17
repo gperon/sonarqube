@@ -22,7 +22,6 @@ import React from 'react';
 import Helmet from 'react-helmet';
 import ProfileNotFound from './ProfileNotFound';
 import ProfileHeader from '../details/ProfileHeader';
-import { translate } from '../../../helpers/l10n';
 import type { Profile } from '../propTypes';
 
 type Props = {
@@ -32,9 +31,10 @@ type Props = {
     pathname: string,
     query: { key?: string, language: string, name: string }
   },
+  onRequestFail: Object => void,
   organization: ?string,
   profiles: Array<Profile>,
-  router: { replace: () => void },
+  router: { replace: ({}) => void },
   updateProfiles: () => Promise<*>
 };
 
@@ -79,20 +79,19 @@ export default class ProfileContainer extends React.PureComponent {
     }
 
     const child = React.cloneElement(this.props.children, {
+      onRequestFail: this.props.onRequestFail,
       organization,
       profile,
       profiles,
       ...other
     });
 
-    const title = translate('quality_profiles.page') + ' - ' + profile.name;
-
     return (
       <div>
-        <Helmet title={title} titleTemplate="SonarQube - %s" />
-
+        <Helmet title={profile.name} />
         <ProfileHeader
           canAdmin={this.props.canAdmin}
+          onRequestFail={this.props.onRequestFail}
           organization={organization}
           profile={profile}
           updateProfiles={this.props.updateProfiles}

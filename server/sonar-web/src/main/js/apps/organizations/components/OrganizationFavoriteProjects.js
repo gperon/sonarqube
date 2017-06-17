@@ -19,17 +19,15 @@
  */
 // @flow
 import React from 'react';
-import { connect } from 'react-redux';
-import Helmet from 'react-helmet';
 import FavoriteProjectsContainer from '../../projects/components/FavoriteProjectsContainer';
-import { getOrganizationByKey } from '../../../store/rootReducer';
-import { updateOrganization } from '../actions';
-import { translate } from '../../../helpers/l10n';
 
-class OrganizationFavoriteProjects extends React.PureComponent {
+export default class OrganizationFavoriteProjects extends React.PureComponent {
   props: {
     children?: React.Element<*>,
+    currentUser: { isLoggedIn: boolean },
     location: Object,
+    optionBarOpen: boolean,
+    optionBarToggle: (open: boolean) => void,
     organization: {
       key: string
     }
@@ -52,20 +50,14 @@ class OrganizationFavoriteProjects extends React.PureComponent {
   render() {
     return (
       <div id="projects-page">
-        <Helmet title={translate('projects.page')} titleTemplate="%s - SonarQube" />
         <FavoriteProjectsContainer
+          currentUser={this.props.currentUser}
           location={this.props.location}
+          optionBarOpen={this.props.optionBarOpen}
+          optionBarToggle={this.props.optionBarToggle}
           organization={this.props.organization}
         />
       </div>
     );
   }
 }
-
-const mapStateToProps = (state, ownProps) => ({
-  organization: getOrganizationByKey(state, ownProps.params.organizationKey)
-});
-
-const mapDispatchToProps = { updateOrganization };
-
-export default connect(mapStateToProps, mapDispatchToProps)(OrganizationFavoriteProjects);

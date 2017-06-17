@@ -22,7 +22,7 @@ import ComponentNavFavorite from './ComponentNavFavorite';
 import ComponentNavBreadcrumbs from './ComponentNavBreadcrumbs';
 import ComponentNavMeta from './ComponentNavMeta';
 import ComponentNavMenu from './ComponentNavMenu';
-import RecentHistory from './RecentHistory';
+import RecentHistory from '../../RecentHistory';
 import { TooltipsContainer } from '../../../../components/mixins/tooltips-mixin';
 import { getTasksForComponent } from '../../../../api/ce';
 import { STATUSES } from '../../../../apps/background-tasks/constants';
@@ -84,7 +84,7 @@ export default class ComponentNav extends React.PureComponent {
                 {...this.props}
                 {...this.state}
                 version={this.props.component.version}
-                snapshotDate={this.props.component.snapshotDate}
+                analysisDate={this.props.component.analysisDate}
               />
             </TooltipsContainer>
 

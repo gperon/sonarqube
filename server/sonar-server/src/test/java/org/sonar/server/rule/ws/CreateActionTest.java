@@ -36,12 +36,12 @@ import org.sonar.server.exceptions.ForbiddenException;
 import org.sonar.server.exceptions.UnauthorizedException;
 import org.sonar.server.organization.DefaultOrganizationProvider;
 import org.sonar.server.organization.TestDefaultOrganizationProvider;
-import org.sonar.server.organization.TestOrganizationFlags;
 import org.sonar.server.rule.RuleCreator;
 import org.sonar.server.rule.index.RuleIndexDefinition;
 import org.sonar.server.rule.index.RuleIndexer;
 import org.sonar.server.tester.UserSessionRule;
 import org.sonar.server.text.MacroInterpreter;
+import org.sonar.server.ws.TestRequest;
 import org.sonar.server.ws.TestResponse;
 import org.sonar.server.ws.WsActionTester;
 
@@ -72,19 +72,17 @@ public class CreateActionTest {
   @Rule
   public EsTester es = new EsTester(new RuleIndexDefinition(new MapSettings()));
 
-  private TestOrganizationFlags organizationFlags = TestOrganizationFlags.standalone();
   private DefaultOrganizationProvider defaultOrganizationProvider = TestDefaultOrganizationProvider.from(db);
 
   private WsActionTester ws = new WsActionTester(new CreateAction(db.getDbClient(),
     new RuleCreator(system2, new RuleIndexer(es.client(), db.getDbClient()), db.getDbClient(), newFullTypeValidations(),
       TestDefaultOrganizationProvider.from(db)),
-    new RuleMapper(new Languages(), createMacroInterpreter()), organizationFlags,
+    new RuleMapper(new Languages(), createMacroInterpreter()),
     new RuleWsSupport(db.getDbClient(), userSession, defaultOrganizationProvider)));
 
   @Test
   public void create_custom_rule() {
     logInAsQProfileAdministrator();
-    organizationFlags.setEnabled(false);
     // Template rule
     RuleDto templateRule = newTemplateRule(RuleKey.of("java", "S001"), db.getDefaultOrganization());
     db.rules().insert(templateRule.getDefinition());
@@ -129,7 +127,6 @@ public class CreateActionTest {
   @Test
   public void create_custom_rule_with_prevent_reactivation_param_to_true() {
     logInAsQProfileAdministrator();
-    organizationFlags.setEnabled(false);
     RuleDefinitionDto templateRule = newTemplateRule(RuleKey.of("java", "S001")).getDefinition();
     db.rules().insert(templateRule);
     // insert a removed rule
@@ -166,20 +163,41 @@ public class CreateActionTest {
   }
 
   @Test
-  public void fail_to_create_rule_when_organizations_are_enabled() throws Exception {
+  public void create_custom_rule_of_non_existing_template_should_fail() {
     logInAsQProfileAdministrator();
-    organizationFlags.setEnabled(true);
 
-    expectedException.expect(IllegalStateException.class);
-    expectedException.expectMessage("Organization support is enabled");
-
-    ws.newRequest()
+    TestRequest request = ws.newRequest()
       .setParam("custom_key", "MY_CUSTOM")
-      .setParam("template_key", "java:S001")
+      .setParam("template_key", "non:existing")
       .setParam("name", "My custom rule")
       .setParam("markdown_description", "Description")
       .setParam("severity", "MAJOR")
-      .execute();
+      .setParam("prevent_reactivation", "true");
+
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("The template key doesn't exist: non:existing");
+
+    request.execute();
+  }
+
+  @Test
+  public void create_custom_rule_of_removed_template_should_fail() {
+    logInAsQProfileAdministrator();
+
+    RuleDefinitionDto templateRule = db.rules().insert(r -> r.setIsTemplate(true).setStatus(RuleStatus.REMOVED));
+
+    TestRequest request = ws.newRequest()
+      .setParam("custom_key", "MY_CUSTOM")
+      .setParam("template_key", templateRule.getKey().toString())
+      .setParam("name", "My custom rule")
+      .setParam("markdown_description", "Description")
+      .setParam("severity", "MAJOR")
+      .setParam("prevent_reactivation", "true");
+
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("The template key doesn't exist: " + templateRule.getKey());
+
+    request.execute();
   }
 
   @Test

@@ -17,24 +17,35 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
+//@flow
 import React from 'react';
-import Helmet from 'react-helmet';
-import { translate } from '../../../helpers/l10n';
+
+type State = {
+  optionBarOpen: boolean
+};
 
 export default class App extends React.PureComponent {
+  state: State = { optionBarOpen: false };
+
   componentDidMount() {
-    document.querySelector('html').classList.add('dashboard-page');
+    const elem = document.querySelector('html');
+    elem && elem.classList.add('dashboard-page');
   }
 
   componentWillUnmount() {
-    document.querySelector('html').classList.remove('dashboard-page');
+    const elem = document.querySelector('html');
+    elem && elem.classList.remove('dashboard-page');
   }
+
+  handleOptionBarToggle = (open: boolean) => this.setState({ optionBarOpen: open });
 
   render() {
     return (
       <div id="projects-page">
-        <Helmet title={translate('projects.page')} titleTemplate="%s - SonarQube" />
-        {this.props.children}
+        {React.cloneElement(this.props.children, {
+          optionBarOpen: this.state.optionBarOpen,
+          optionBarToggle: this.handleOptionBarToggle
+        })}
       </div>
     );
   }

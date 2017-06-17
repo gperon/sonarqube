@@ -30,7 +30,7 @@ type Props = {
 const IssuesCounter = (props: Props) => (
   <span>
     <strong>
-      {props.current != null && <span>{props.current + 1} / </span>}
+      {props.current != null && <span>{formatMeasure(props.current + 1, 'INT')} / </span>}
       {formatMeasure(props.total, 'INT')}
     </strong>
     {' '}

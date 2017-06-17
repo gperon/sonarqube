@@ -31,6 +31,7 @@ import org.sonar.api.server.ServerSide;
 import org.sonar.api.utils.log.Loggers;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbSession;
+import org.sonar.db.dialect.Oracle;
 import org.sonar.db.version.SqTables;
 import org.sonar.server.component.index.ComponentIndexDefinition;
 import org.sonar.server.es.BulkIndexer;
@@ -46,9 +47,10 @@ import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
 public class BackendCleanup {
 
   private static final String[] ANALYSIS_TABLES = {
-    "authors", "duplications_index", "events", "issues", "issue_changes", "manual_measures",
+    "ce_activity", "ce_queue", "ce_task_input", "ce_scanner_context",
+    "duplications_index", "events", "issues", "issue_changes", "manual_measures",
     "notifications", "project_links", "project_measures", "projects",
-    "snapshots", "file_sources"
+    "snapshots", "file_sources", "webhook_deliveries"
   };
   private static final String[] RESOURCE_RELATED_TABLES = {
     "group_roles", "user_roles", "properties"
@@ -56,6 +58,7 @@ public class BackendCleanup {
   private static final Map<String, TableCleaner> TABLE_CLEANERS = ImmutableMap.of(
     "organizations", BackendCleanup::truncateOrganizations,
     "users", BackendCleanup::truncateUsers,
+    "groups", BackendCleanup::truncateGroups,
     "internal_properties", BackendCleanup::truncateInternalProperties,
     "schema_migrations", BackendCleanup::truncateSchemaMigrations);
 
@@ -123,11 +126,11 @@ public class BackendCleanup {
     clearIndex(ComponentIndexDefinition.INDEX_TYPE_COMPONENT.getIndex());
   }
 
-  private static void truncateAnalysisTables(Connection connection) throws SQLException {
+  private void truncateAnalysisTables(Connection connection) throws SQLException {
     try (Statement statement = connection.createStatement()) {
       // Clear inspection tables
       for (String table : ANALYSIS_TABLES) {
-        statement.execute("TRUNCATE TABLE " + table.toLowerCase());
+        statement.execute(createTruncateSql(table.toLowerCase(Locale.ENGLISH)));
         // commit is useless on some databases
         connection.commit();
       }
@@ -137,6 +140,18 @@ public class BackendCleanup {
         connection.commit();
       }
     }
+  }
+
+  private String createTruncateSql(String table) {
+    if (dbClient.getDatabase().getDialect().getId().equals(Oracle.ID)) {
+      // truncate operation is needs to lock the table on Oracle. Unfortunately
+      // it fails sometimes in our QA environment because table is locked.
+      // We never found the root cause (no locks found when displaying them just after
+      // receiving the error).
+      // Workaround is to use "delete" operation. It does not require lock on table.
+      return "DELETE FROM " + table;
+    }
+    return "TRUNCATE TABLE " + table;
   }
 
   private static void deleteManualRules(Connection connection) throws SQLException {
@@ -190,6 +205,18 @@ public class BackendCleanup {
     // "admin" is not flagged as root by default
     try (PreparedStatement preparedStatement = connection.prepareStatement("update users set is_root=?")) {
       preparedStatement.setBoolean(1, false);
+      preparedStatement.execute();
+      // commit is useless on some databases
+      connection.commit();
+    }
+  }
+
+  /**
+   * Groups sonar-users is referenced by the default organization as its default group.
+   */
+  private static void truncateGroups(String tableName, Statement ddlStatement, Connection connection) throws SQLException {
+    try (PreparedStatement preparedStatement = connection.prepareStatement("delete from groups where name <> ?")) {
+      preparedStatement.setString(1, "sonar-users");
       preparedStatement.execute();
       // commit is useless on some databases
       connection.commit();

@@ -210,8 +210,8 @@ public class DefaultI18n implements I18n, Startable {
     return result;
   }
 
-  String readInputStream(String filePath, InputStream input) {
-    String result = null;
+  private static String readInputStream(String filePath, InputStream input) {
+    String result;
     try {
       result = IOUtils.toString(input, "UTF-8");
     } catch (IOException e) {
@@ -226,8 +226,14 @@ public class DefaultI18n implements I18n, Startable {
     return propertyToBundles.keySet();
   }
 
+  public Locale getEffectiveLocale(Locale locale) {
+    Locale bundleLocale = ResourceBundle.getBundle(BUNDLE_PACKAGE + "core", locale, this.classloader, this.control).getLocale();
+    locale.getISO3Language();
+    return bundleLocale.getLanguage().isEmpty() ? Locale.ENGLISH : bundleLocale;
+  }
+
   @CheckForNull
-  private String formatMessage(@Nullable String message, Object... parameters) {
+  private static String formatMessage(@Nullable String message, Object... parameters) {
     if (message == null || parameters.length == 0) {
       return message;
     }

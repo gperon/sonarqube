@@ -40,13 +40,20 @@ import org.sonar.api.utils.System2;
 import org.sonar.api.utils.UriReader;
 import org.sonar.api.utils.Version;
 import org.sonar.ce.CeConfigurationModule;
+import org.sonar.ce.CeDistributedInformationImpl;
 import org.sonar.ce.CeHttpModule;
 import org.sonar.ce.CeQueueModule;
 import org.sonar.ce.CeTaskCommonsModule;
+import org.sonar.ce.StandaloneCeDistributedInformation;
+import org.sonar.ce.cleaning.CeCleaningModule;
+import org.sonar.ce.cluster.HazelcastClientWrapperImpl;
 import org.sonar.ce.db.ReadOnlyPropertiesDao;
 import org.sonar.ce.log.CeProcessLogging;
 import org.sonar.ce.platform.ComputeEngineExtensionInstaller;
+import org.sonar.ce.queue.CeQueueCleaner;
+import org.sonar.ce.queue.PurgeCeActivities;
 import org.sonar.ce.settings.ProjectSettingsFactory;
+import org.sonar.ce.taskprocessor.CeTaskProcessorModule;
 import org.sonar.ce.user.CeUserSession;
 import org.sonar.core.component.DefaultResourceTypes;
 import org.sonar.core.config.CorePropertyDefinitions;
@@ -68,9 +75,7 @@ import org.sonar.process.logging.LogbackHelper;
 import org.sonar.server.component.ComponentCleanerService;
 import org.sonar.server.component.ComponentFinder;
 import org.sonar.server.component.index.ComponentIndexer;
-import org.sonar.server.computation.queue.PurgeCeActivities;
 import org.sonar.server.computation.task.projectanalysis.ProjectAnalysisTaskModule;
-import org.sonar.server.computation.taskprocessor.CeTaskProcessorModule;
 import org.sonar.server.debt.DebtModelPluginRepository;
 import org.sonar.server.debt.DebtRulesXMLImporter;
 import org.sonar.server.event.NewAlerts;
@@ -92,10 +97,10 @@ import org.sonar.server.measure.index.ProjectMeasuresIndexer;
 import org.sonar.server.metric.CoreCustomMetrics;
 import org.sonar.server.metric.DefaultMetricFinder;
 import org.sonar.server.notification.DefaultNotificationManager;
-import org.sonar.server.notification.NotificationCenter;
 import org.sonar.server.notification.NotificationService;
 import org.sonar.server.notification.email.AlertsEmailTemplate;
 import org.sonar.server.notification.email.EmailNotificationChannel;
+import org.sonar.server.organization.BillingValidationsProxyImpl;
 import org.sonar.server.organization.DefaultOrganizationProviderImpl;
 import org.sonar.server.permission.GroupPermissionChanger;
 import org.sonar.server.permission.PermissionTemplateService;
@@ -171,6 +176,18 @@ public class ComputeEngineContainerImpl implements ComputeEngineContainer {
 
     this.level4 = level3.createChild();
     this.level4.add(level4Components());
+
+    // TODO refactoring levelXComponents()
+    if (props.valueAsBoolean("sonar.cluster.enabled")) {
+      this.level4.add(
+        HazelcastClientWrapperImpl.class,
+        CeDistributedInformationImpl.class
+      );
+    } else {
+      this.level4.add(
+        StandaloneCeDistributedInformation.class
+      );
+    }
     configureFromModules(this.level4);
     ServerExtensionInstaller extensionInstaller = this.level4.getComponentByType(ServerExtensionInstaller.class);
     extensionInstaller.installExtensions(this.level4);
@@ -289,6 +306,7 @@ public class ComputeEngineContainerImpl implements ComputeEngineContainer {
       ResourceTypes.class,
       DefaultResourceTypes.get(),
       Periods.class,
+      BillingValidationsProxyImpl.class,
 
       // quality profile
       ActiveRuleIndexer.class,
@@ -366,7 +384,6 @@ public class ComputeEngineContainerImpl implements ComputeEngineContainer {
       AlertsEmailTemplate.class,
       EmailSettings.class,
       NotificationService.class,
-      NotificationCenter.class,
       DefaultNotificationManager.class,
       EmailNotificationChannel.class,
 
@@ -390,6 +407,9 @@ public class ComputeEngineContainerImpl implements ComputeEngineContainer {
 
       InternalPropertiesImpl.class,
       ProjectSettingsFactory.class,
+
+      // cleaning
+      CeCleaningModule.class
     };
   }
 
@@ -398,6 +418,7 @@ public class ComputeEngineContainerImpl implements ComputeEngineContainer {
       LogServerId.class,
       ServerLifecycleNotifier.class,
       PurgeCeActivities.class,
+      CeQueueCleaner.class
     };
   }
 

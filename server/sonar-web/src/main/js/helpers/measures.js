@@ -27,9 +27,9 @@ const HOURS_IN_DAY = 8;
  * @param {string|number} value
  * @param {string} type
  */
-export function formatMeasure(value, type) {
+export function formatMeasure(value, type, options) {
   const formatter = getFormatter(type);
-  return useFormatter(value, formatter);
+  return useFormatter(value, formatter, options);
 }
 
 /**
@@ -37,9 +37,9 @@ export function formatMeasure(value, type) {
  * @param {string|number} value
  * @param {string} type
  */
-export function formatMeasureVariation(value, type) {
+export function formatMeasureVariation(value, type, options) {
   const formatter = getVariationFormatter(type);
-  return useFormatter(value, formatter);
+  return useFormatter(value, formatter, options);
 }
 
 /**
@@ -102,8 +102,8 @@ export function isDiffMetric(metricKey) {
  * Helpers
  */
 
-function useFormatter(value, formatter) {
-  return value != null && value !== '' && formatter != null ? formatter(value) : null;
+function useFormatter(value, formatter, options) {
+  return value != null && value !== '' && formatter != null ? formatter(value, options) : null;
 }
 
 function getFormatter(type) {
@@ -140,6 +140,10 @@ function getVariationFormatter(type) {
  * Formatters
  */
 
+function genericFormatter(value, formatValue) {
+  return numeral(value).format(formatValue);
+}
+
 function noFormatter(value) {
   return value;
 }
@@ -149,11 +153,11 @@ function emptyFormatter() {
 }
 
 function intFormatter(value) {
-  return numeral(value).format('0,0');
+  return genericFormatter(value, '0,0');
 }
 
 function intVariationFormatter(value) {
-  return numeral(value).format('+0,0');
+  return genericFormatter(value, '+0,0');
 }
 
 function shortIntFormatter(value) {
@@ -164,7 +168,7 @@ function shortIntFormatter(value) {
   if (value >= 10000) {
     format = '0a';
   }
-  return numeral(value).format(format);
+  return genericFormatter(value, format);
 }
 
 function shortIntVariationFormatter(value) {
@@ -173,21 +177,27 @@ function shortIntVariationFormatter(value) {
 }
 
 function floatFormatter(value) {
-  return numeral(value).format('0,0.0[0000]');
+  return genericFormatter(value, '0,0.0[0000]');
 }
 
 function floatVariationFormatter(value) {
-  return value === 0 ? '+0.0' : numeral(value).format('+0,0.0[0000]');
+  return value === 0 ? '+0.0' : genericFormatter(value, '+0,0.0[0000]');
 }
 
-function percentFormatter(value) {
+function percentFormatter(value, options = {}) {
   value = parseFloat(value);
-  return value === 100 ? '100%' : numeral(value / 100).format('0,0.0%');
+  if (options.decimals) {
+    return genericFormatter(value / 100, `0,0.${'0'.repeat(options.decimals)}%`);
+  }
+  return value === 100 ? '100%' : genericFormatter(value / 100, '0,0.0%');
 }
 
-function percentVariationFormatter(value) {
+function percentVariationFormatter(value, options = {}) {
   value = parseFloat(value);
-  return value === 0 ? '+0.0%' : numeral(value / 100).format('+0,0.0%');
+  if (options.decimals) {
+    return genericFormatter(value / 100, `+0,0.${'0'.repeat(options.decimals)}%`);
+  }
+  return value === 0 ? '+0.0%' : genericFormatter(value / 100, '+0,0.0%');
 }
 
 function ratingFormatter(value) {

@@ -17,72 +17,75 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
+// @flow
 import React from 'react';
-import CreateView from './create-view';
-import BulkApplyTemplateView from './views/BulkApplyTemplateView';
+import ChangeVisibilityForm from './ChangeVisibilityForm';
+import { translate } from '../../helpers/l10n';
+import type { Organization } from '../../store/organizations/duck';
+
+type Props = {|
+  hasProvisionPermission: boolean,
+  onProjectCreate: () => void,
+  onVisibilityChange: string => void,
+  organization: Organization
+|};
+
+type State = {
+  visibilityForm: boolean
+};
 
 export default class Header extends React.PureComponent {
-  static propTypes = {
-    hasProvisionPermission: React.PropTypes.bool.isRequired
+  props: Props;
+  state: State = { visibilityForm: false };
+
+  handleCreateProjectClick = (event: Event) => {
+    event.preventDefault();
+    this.props.onProjectCreate();
   };
 
-  createProject() {
-    new CreateView({
-      refresh: this.props.refresh,
-      organization: this.props.organization
-    }).render();
-  }
+  handleChangeVisibilityClick = (event: Event) => {
+    event.preventDefault();
+    this.setState({ visibilityForm: true });
+  };
 
-  bulkApplyTemplate() {
-    new BulkApplyTemplateView({
-      total: this.props.total,
-      selection: this.props.selection,
-      query: this.props.query,
-      qualifier: this.props.qualifier,
-      organization: this.props.organization
-    }).render();
-  }
-
-  renderCreateButton() {
-    if (!this.props.hasProvisionPermission) {
-      return null;
-    }
-    return (
-      <li>
-        <button onClick={this.createProject.bind(this)}>
-          Create Project
-        </button>
-      </li>
-    );
-  }
-
-  renderBulkApplyTemplateButton() {
-    return (
-      <li>
-        <button onClick={this.bulkApplyTemplate.bind(this)}>
-          Bulk Apply Permission Template
-        </button>
-      </li>
-    );
-  }
+  closeVisiblityForm = () => {
+    this.setState({ visibilityForm: false });
+  };
 
   render() {
+    const { organization } = this.props;
+
     return (
       <header className="page-header">
-        <h1 className="page-title">Projects Management</h1>
+        <h1 className="page-title">{translate('projects_management')}</h1>
         <div className="page-actions">
-          <ul className="list-inline">
-            {this.renderCreateButton()}
-            {this.renderBulkApplyTemplateButton()}
-          </ul>
+          <span className="big-spacer-right">
+            {translate('organization.default_visibility_of_new_projects')}
+            {' '}
+            <strong>
+              {translate('visibility', organization.projectVisibility)}
+            </strong>
+            <a
+              className="spacer-left icon-edit"
+              href="#"
+              onClick={this.handleChangeVisibilityClick}
+            />
+          </span>
+          {this.props.hasProvisionPermission &&
+            <button id="create-project" onClick={this.handleCreateProjectClick}>
+              {translate('qualifiers.create.TRK')}
+            </button>}
         </div>
         <p className="page-description">
-          Use this page to delete multiple projects at once, or to provision projects
-          {' '}
-          if you would like to configure them before the first analysis. Note that once
-          {' '}
-          a project is provisioned, you have access to perform all project configurations on it.
+          {translate('projects_management.page.description')}
         </p>
+
+        {this.state.visibilityForm &&
+          <ChangeVisibilityForm
+            onClose={this.closeVisiblityForm}
+            onConfirm={this.props.onVisibilityChange}
+            organization={organization}
+          />}
       </header>
     );
   }

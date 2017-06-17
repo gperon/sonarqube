@@ -86,6 +86,10 @@ describe('#formatMeasure()', () => {
     expect(formatMeasure(1.34, 'PERCENT')).toBe('1.3%');
     expect(formatMeasure(50.89, 'PERCENT')).toBe('50.9%');
     expect(formatMeasure(100.0, 'PERCENT')).toBe('100%');
+    expect(formatMeasure(50.89, 'PERCENT', { decimals: 0 })).toBe('50.9%');
+    expect(formatMeasure(50.89, 'PERCENT', { decimals: 1 })).toBe('50.9%');
+    expect(formatMeasure(50.89, 'PERCENT', { decimals: 2 })).toBe('50.89%');
+    expect(formatMeasure(50.89, 'PERCENT', { decimals: 3 })).toBe('50.890%');
   });
 
   it('should format WORK_DUR', () => {

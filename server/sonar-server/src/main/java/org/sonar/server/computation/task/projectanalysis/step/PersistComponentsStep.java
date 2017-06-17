@@ -92,12 +92,14 @@ public class PersistComponentsStep implements ComputationStep {
       dbClient.componentDao().resetBChangedForRootComponentUuid(dbSession, projectUuid);
 
       Map<String, ComponentDto> existingDtosByKeys = indexExistingDtosByKey(dbSession);
+      boolean isRootPrivate = isRootPrivate(treeRootHolder.getRoot(), existingDtosByKeys);
       // Insert or update the components in database. They are removed from existingDtosByKeys
       // at the same time.
       new PathAwareCrawler<>(new PersistComponentStepsVisitor(existingDtosByKeys, dbSession))
         .visit(treeRootHolder.getRoot());
 
       disableRemainingComponents(dbSession, existingDtosByKeys.values());
+      ensureConsistentVisibility(dbSession, projectUuid, isRootPrivate);
 
       dbSession.commit();
     }
@@ -110,6 +112,22 @@ public class PersistComponentsStep implements ComputationStep {
       .collect(MoreCollectors.toSet(dtos.size()));
     dbClient.componentDao().updateBEnabledToFalse(dbSession, uuids);
     disabledComponentsHolder.setUuids(uuids);
+  }
+
+  private void ensureConsistentVisibility(DbSession dbSession, String projectUuid, boolean isRootPrivate) {
+    dbClient.componentDao().setPrivateForRootComponentUuid(dbSession, projectUuid, isRootPrivate);
+  }
+
+  private static boolean isRootPrivate(Component root, Map<String, ComponentDto> existingDtosByKeys) {
+    String rootKey = root.getKey();
+    ComponentDto rootDto = existingDtosByKeys.get(rootKey);
+    if (rootDto == null) {
+      if (Component.Type.VIEW == root.getType()) {
+        return false;
+      }
+      throw new IllegalStateException(String.format("The project '%s' is not stored in the database, during a project analysis.", rootKey));
+    }
+    return rootDto.isPrivate();
   }
 
   /**

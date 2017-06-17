@@ -22,6 +22,7 @@ package org.sonar.db.permission;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import javax.annotation.Nullable;
 import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
@@ -103,6 +104,15 @@ public class GroupPermissionDao implements Dao {
     return mapper(session).selectProjectPermissionsOfGroup(organizationUuid, groupId, projectId);
   }
 
+  /**
+   * Lists id of groups with at least one permission on the specified root component but which do not have the specified
+   * permission, <strong>excluding group "AnyOne"</strong> (which implies the returned {@code Sett} can't contain
+   * {@code null}).
+   */
+  public Set<Integer> selectGroupIdsWithPermissionOnProjectBut(DbSession session, long projectId, String permission) {
+    return mapper(session).selectGroupIdsWithPermissionOnProjectBut(projectId, permission);
+  }
+
   public void insert(DbSession dbSession, GroupPermissionDto dto) {
     ensureComponentPermissionConsistency(dbSession, dto);
     ensureGroupPermissionConsistency(dbSession, dto);
@@ -136,6 +146,21 @@ public class GroupPermissionDao implements Dao {
    */
   public void deleteByRootComponentId(DbSession dbSession, long rootComponentId) {
     mapper(dbSession).deleteByRootComponentId(rootComponentId);
+  }
+
+  /**
+   * Delete all permissions of the specified group (group "AnyOne" if {@code groupId} is {@code null}) for the specified
+   * component.
+   */
+  public int deleteByRootComponentIdAndGroupId(DbSession dbSession, long rootComponentId, @Nullable Integer groupId) {
+    return mapper(dbSession).deleteByRootComponentIdAndGroupId(rootComponentId, groupId);
+  }
+
+  /**
+   * Delete the specified permission for the specified component for any group (including group AnyOne).
+   */
+  public int deleteByRootComponentIdAndPermission(DbSession dbSession, long rootComponentId, String permission) {
+    return mapper(dbSession).deleteByRootComponentIdAndPermission(rootComponentId, permission);
   }
 
   /**

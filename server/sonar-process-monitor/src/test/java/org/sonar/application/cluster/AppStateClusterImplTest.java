@@ -39,9 +39,9 @@ import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
-import static org.sonar.application.cluster.HazelcastCluster.SONARQUBE_VERSION;
 import static org.sonar.application.cluster.HazelcastTestHelper.createHazelcastClient;
 import static org.sonar.application.cluster.HazelcastTestHelper.newClusterSettings;
+import static org.sonar.process.cluster.ClusterObjectKeys.SONARQUBE_VERSION;
 
 public class AppStateClusterImplTest {
 
@@ -49,7 +49,7 @@ public class AppStateClusterImplTest {
   public ExpectedException expectedException = ExpectedException.none();
 
   @Rule
-  public TestRule safeGuard = new DisableOnDebug(Timeout.seconds(10));
+  public TestRule safeguardTimeout = new DisableOnDebug(Timeout.seconds(60));
 
   @Test
   public void instantiation_throws_ISE_if_cluster_mode_is_disabled() throws Exception {

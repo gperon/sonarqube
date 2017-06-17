@@ -69,6 +69,10 @@ export default class AssigneeFacet extends React.PureComponent {
     this.props.onToggle(this.property);
   };
 
+  handleClear = () => {
+    this.props.onChange({ assigned: true, assignees: [] });
+  };
+
   handleSearch = (query: string) => searchAssignees(query, this.props.component);
 
   handleSelect = (assignee: string) => {
@@ -91,6 +95,7 @@ export default class AssigneeFacet extends React.PureComponent {
             <Avatar
               className="little-spacer-right"
               hash={referencedUsers[assignee].avatar}
+              name={referencedUsers[assignee].name}
               size={16}
             />
             {referencedUsers[assignee].name}
@@ -111,13 +116,18 @@ export default class AssigneeFacet extends React.PureComponent {
     return (
       <span>
         {option.avatar != null &&
-          <Avatar className="little-spacer-right" hash={option.avatar} size={16} />}
+          <Avatar
+            className="little-spacer-right"
+            hash={option.avatar}
+            name={option.label}
+            size={16}
+          />}
         {option.label}
       </span>
     );
   };
 
-  render() {
+  renderList() {
     const { stats } = this.props;
 
     if (!stats) {
@@ -133,35 +143,49 @@ export default class AssigneeFacet extends React.PureComponent {
     );
 
     return (
+      <FacetItemsList>
+        {assignees.map(assignee => (
+          <FacetItem
+            active={this.isAssigneeActive(assignee)}
+            facetMode={this.props.facetMode}
+            key={assignee}
+            name={this.getAssigneeName(assignee)}
+            onClick={this.handleItemClick}
+            stat={this.getStat(assignee)}
+            value={assignee}
+          />
+        ))}
+      </FacetItemsList>
+    );
+  }
+
+  renderFooter() {
+    if (!this.props.stats) {
+      return null;
+    }
+
+    return (
+      <FacetFooter
+        onSearch={this.handleSearch}
+        onSelect={this.handleSelect}
+        renderOption={this.renderOption}
+      />
+    );
+  }
+
+  render() {
+    return (
       <FacetBox property={this.property}>
         <FacetHeader
-          hasValue={!this.props.assigned || this.props.assignees.length > 0}
           name={translate('issues.facet', this.property)}
+          onClear={this.handleClear}
           onClick={this.handleHeaderClick}
           open={this.props.open}
+          values={this.props.assignees.length + (this.props.assigned ? 0 : 1)}
         />
 
-        {this.props.open &&
-          <FacetItemsList>
-            {assignees.map(assignee => (
-              <FacetItem
-                active={this.isAssigneeActive(assignee)}
-                facetMode={this.props.facetMode}
-                key={assignee}
-                name={this.getAssigneeName(assignee)}
-                onClick={this.handleItemClick}
-                stat={this.getStat(assignee)}
-                value={assignee}
-              />
-            ))}
-          </FacetItemsList>}
-
-        {this.props.open &&
-          <FacetFooter
-            onSearch={this.handleSearch}
-            onSelect={this.handleSelect}
-            renderOption={this.renderOption}
-          />}
+        {this.props.open && this.renderList()}
+        {this.props.open && this.renderFooter()}
       </FacetBox>
     );
   }

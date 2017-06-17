@@ -40,7 +40,7 @@ class CreateOrganizationForm extends React.PureComponent {
   mounted: boolean;
   state: State;
   props: {
-    createOrganization: () => Promise<*>,
+    createOrganization: (fields: {}) => Promise<*>,
     router: { push: string => void }
   };
 
@@ -229,14 +229,15 @@ class CreateOrganizationForm extends React.PureComponent {
           </div>
 
           <footer className="modal-foot">
-            {this.state.processing
-              ? <i className="spinner" />
-              : <div>
-                  <button type="submit">{translate('create')}</button>
-                  <button type="reset" className="button-link" onClick={this.closeForm}>
-                    {translate('cancel')}
-                  </button>
-                </div>}
+            <div>
+              <button disabled={this.state.loading} type="submit">
+                {this.state.loading && <i className="spinner little-spacer-right" />}
+                {translate('create')}
+              </button>
+              <button type="reset" className="button-link" onClick={this.closeForm}>
+                {translate('cancel')}
+              </button>
+            </div>
           </footer>
         </form>
       </Modal>

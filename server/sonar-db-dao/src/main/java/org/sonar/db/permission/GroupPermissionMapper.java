@@ -21,6 +21,7 @@ package org.sonar.db.permission;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import javax.annotation.Nullable;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.session.ResultHandler;
@@ -39,8 +40,6 @@ public interface GroupPermissionMapper {
 
   void insert(GroupPermissionDto dto);
 
-  void deleteByRootComponentId(@Param("rootComponentId") long componentId);
-
   void delete(@Param("permission") String permission, @Param("organizationUuid") String organizationUuid,
     @Nullable @Param("groupId") Integer groupId, @Nullable @Param("rootComponentId") Long rootComponentId);
 
@@ -53,6 +52,18 @@ public interface GroupPermissionMapper {
   void selectAllPermissionsByGroupId(@Param("organizationUuid") String organizationUuid,
     @Param("groupId") Integer groupId, ResultHandler resultHandler);
 
+  /**
+   * Lists id of groups with at least one permission on the specified root component but which do not have the specified
+   * permission, <strong>excluding group "AnyOne"</strong> (which implies the returned {@code Set} can't contain
+   * {@code null}).
+   */
+  Set<Integer> selectGroupIdsWithPermissionOnProjectBut(@Param("projectId") long projectId, @Param("role") String permission);
+
   void deleteByOrganization(@Param("organizationUuid") String organizationUuid);
 
+  void deleteByRootComponentId(@Param("rootComponentId") long componentId);
+
+  int deleteByRootComponentIdAndGroupId(@Param("rootComponentId") long rootComponentId, @Nullable @Param("groupId") Integer groupId);
+
+  int deleteByRootComponentIdAndPermission(@Param("rootComponentId") long rootComponentId, @Param("permission") String permission);
 }

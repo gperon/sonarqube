@@ -19,12 +19,15 @@
  */
 package org.sonar.server.component.ws;
 
+import com.google.common.collect.ImmutableSet;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import org.sonar.api.resources.Qualifiers;
 import org.sonar.db.component.ComponentDto;
 import org.sonar.db.component.SnapshotDto;
 import org.sonar.db.organization.OrganizationDto;
+import org.sonar.server.project.Visibility;
 import org.sonarqube.ws.WsComponents;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -33,6 +36,12 @@ import static org.sonar.api.utils.DateUtils.formatDateTime;
 import static org.sonar.core.util.Protobuf.setNullable;
 
 class ComponentDtoToWsComponent {
+
+  /**
+   * The concept of "visibility" will only be configured for these qualifiers.
+   */
+  private static final Set<String> QUALIFIERS_WITH_VISIBILITY = ImmutableSet.of(Qualifiers.PROJECT, Qualifiers.VIEW);
+
   private ComponentDtoToWsComponent() {
     // prevent instantiation
   }
@@ -56,7 +65,14 @@ class ComponentDtoToWsComponent {
     setNullable(emptyToNull(dto.description()), wsComponent::setDescription);
     setNullable(emptyToNull(dto.language()), wsComponent::setLanguage);
     setTags(dto, wsComponent);
-    lastAnalysis.ifPresent(analysis -> wsComponent.setAnalysisDate(formatDateTime(analysis.getCreatedAt())));
+    lastAnalysis.ifPresent(
+      analysis -> {
+        wsComponent.setAnalysisDate(formatDateTime(analysis.getCreatedAt()));
+        setNullable(analysis.getPeriodDate(), leak -> wsComponent.setLeakPeriodDate(formatDateTime(leak)));
+      });
+    if (QUALIFIERS_WITH_VISIBILITY.contains(dto.qualifier())) {
+      wsComponent.setVisibility(Visibility.getLabel(dto.isPrivate()));
+    }
     return wsComponent;
   }
 

@@ -27,7 +27,6 @@ import org.sonar.api.resources.Qualifiers;
 import org.sonar.api.rule.RuleKey;
 import org.sonar.api.utils.DateUtils;
 import org.sonar.api.utils.System2;
-import org.sonar.api.web.UserRole;
 import org.sonar.db.DbTester;
 import org.sonar.db.component.ComponentDto;
 import org.sonar.db.component.ComponentTesting;
@@ -58,7 +57,7 @@ public class IssueQueryFactoryTest {
   @Test
   public void create_from_parameters() {
     OrganizationDto organization = db.organizations().insert();
-    ComponentDto project = db.components().insertProject(organization);
+    ComponentDto project = db.components().insertPrivateProject(organization);
     ComponentDto module = db.components().insertComponent(ComponentTesting.newModuleDto(project));
     ComponentDto file = db.components().insertComponent(ComponentTesting.newFileDto(project));
 
@@ -176,7 +175,7 @@ public class IssueQueryFactoryTest {
 
   @Test
   public void fail_if_componentRoots_references_components_with_different_qualifier() {
-    ComponentDto project = db.components().insertProject();
+    ComponentDto project = db.components().insertPrivateProject();
     ComponentDto file = db.components().insertComponent(ComponentTesting.newFileDto(project));
     SearchWsRequest request = new SearchWsRequest()
       .setComponentRoots(asList(project.key(), file.key()));
@@ -192,7 +191,7 @@ public class IssueQueryFactoryTest {
     ComponentDto view = db.components().insertView();
     SearchWsRequest request = new SearchWsRequest()
       .setComponentRootUuids(asList(view.uuid()));
-    userSession.addProjectUuidPermissions(UserRole.USER, view.uuid());
+    userSession.registerComponents(view);
 
     IssueQuery query = underTest.create(request);
 
@@ -214,7 +213,7 @@ public class IssueQueryFactoryTest {
 
   @Test
   public void param_componentUuids_enables_search_on_project_tree_by_default() {
-    ComponentDto project = db.components().insertProject();
+    ComponentDto project = db.components().insertPrivateProject();
     SearchWsRequest request = new SearchWsRequest()
       .setComponentUuids(asList(project.uuid()));
 
@@ -225,7 +224,7 @@ public class IssueQueryFactoryTest {
 
   @Test
   public void onComponentOnly_restricts_search_to_specified_componentKeys() {
-    ComponentDto project = db.components().insertProject();
+    ComponentDto project = db.components().insertPrivateProject();
     SearchWsRequest request = new SearchWsRequest()
       .setComponentKeys(asList(project.key()))
       .setOnComponentOnly(true);
@@ -239,7 +238,7 @@ public class IssueQueryFactoryTest {
 
   @Test
   public void should_search_in_tree_with_module_uuid() {
-    ComponentDto project = db.components().insertProject();
+    ComponentDto project = db.components().insertPrivateProject();
     ComponentDto module = db.components().insertComponent(ComponentTesting.newModuleDto(project));
     SearchWsRequest request = new SearchWsRequest()
       .setComponentUuids(asList(module.uuid()));
@@ -251,7 +250,7 @@ public class IssueQueryFactoryTest {
 
   @Test
   public void param_componentUuids_enables_search_in_directory_tree() {
-    ComponentDto project = db.components().insertProject();
+    ComponentDto project = db.components().insertPrivateProject();
     ComponentDto dir = db.components().insertComponent(ComponentTesting.newDirectory(project, "src/main/java/foo"));
     SearchWsRequest request = new SearchWsRequest()
       .setComponentUuids(asList(dir.uuid()));
@@ -265,7 +264,7 @@ public class IssueQueryFactoryTest {
 
   @Test
   public void param_componentUuids_enables_search_by_file() {
-    ComponentDto project = db.components().insertProject();
+    ComponentDto project = db.components().insertPrivateProject();
     ComponentDto file = db.components().insertComponent(ComponentTesting.newFileDto(project));
     SearchWsRequest request = new SearchWsRequest()
       .setComponentUuids(asList(file.uuid()));
@@ -277,7 +276,7 @@ public class IssueQueryFactoryTest {
 
   @Test
   public void param_componentUuids_enables_search_by_test_file() {
-    ComponentDto project = db.components().insertProject();
+    ComponentDto project = db.components().insertPrivateProject();
     ComponentDto file = db.components().insertComponent(ComponentTesting.newFileDto(project).setQualifier(Qualifiers.UNIT_TEST_FILE));
     SearchWsRequest request = new SearchWsRequest()
       .setComponentUuids(asList(file.uuid()));

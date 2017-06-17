@@ -19,7 +19,6 @@
  */
 package org.sonar.db.organization;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -40,12 +39,12 @@ public class OrganizationDao implements Dao {
     this.system2 = system2;
   }
 
-  public void insert(DbSession dbSession, OrganizationDto organization) {
+  public void insert(DbSession dbSession, OrganizationDto organization, boolean newProjectPrivate) {
     checkDto(organization);
     long now = system2.now();
     organization.setCreatedAt(now);
     organization.setUpdatedAt(now);
-    getMapper(dbSession).insert(organization);
+    getMapper(dbSession).insert(organization, newProjectPrivate);
   }
 
   public int countByQuery(DbSession dbSession, OrganizationQuery organizationQuery) {
@@ -69,9 +68,6 @@ public class OrganizationDao implements Dao {
   }
 
   public List<OrganizationDto> selectByUuids(DbSession dbSession, Set<String> organizationUuids) {
-    if (organizationUuids.size() == 1) {
-      return Collections.singletonList(getMapper(dbSession).selectByUuid(organizationUuids.iterator().next()));
-    }
     return executeLargeInputs(organizationUuids, getMapper(dbSession)::selectByUuids);
   }
 
@@ -79,8 +75,8 @@ public class OrganizationDao implements Dao {
     return getMapper(dbSession).selectByPermission(userId, permission);
   }
 
-  public List<OrganizationDto> selectOrganizationsWithoutLoadedTemplate(DbSession dbSession, String loadedTemplateType, Pagination pagination) {
-    return getMapper(dbSession).selectOrganizationsWithoutLoadedTemplate(loadedTemplateType, pagination);
+  public List<String> selectAllUuids(DbSession dbSession) {
+    return getMapper(dbSession).selectAllUuids();
   }
 
   /**
@@ -111,6 +107,14 @@ public class OrganizationDao implements Dao {
     checkUuid(uuid);
     Integer defaultGroupId = requireNonNull(defaultGroup, "Default group cannot be null").getId();
     getMapper(dbSession).updateDefaultGroupId(uuid, requireNonNull(defaultGroupId, "Default group id cannot be null"), system2.now());
+  }
+
+  public boolean getNewProjectPrivate(DbSession dbSession, OrganizationDto organization) {
+    return getMapper(dbSession).selectNewProjectPrivateByUuid(organization.getUuid());
+  }
+
+  public void setNewProjectPrivate(DbSession dbSession, OrganizationDto organization, boolean newProjectPrivate) {
+    getMapper(dbSession).updateNewProjectPrivate(organization.getUuid(), newProjectPrivate, system2.now());
   }
 
   public int update(DbSession dbSession, OrganizationDto organization) {
