@@ -13,10 +13,11 @@ You can copy and paste the single properties, into the pom.xml file and the IDE 
 That way multiple projects can share the same settings (useful for formatting rules for example).
 Any value defined here will override the pom.xml file value but is only applicable to the current project.
 -->
+        <org-netbeans-modules-editor-indent.text.x-scala.CodeStyle.project.indent-shift-width>2</org-netbeans-modules-editor-indent.text.x-scala.CodeStyle.project.indent-shift-width>
+        <org-netbeans-modules-editor-indent.text.x-scala.CodeStyle.project.spaces-per-tab>2</org-netbeans-modules-editor-indent.text.x-scala.CodeStyle.project.spaces-per-tab>
         <de-markiewb-netbeans-plugins-eclipse-formatter.SaveActionModifiedLinesOnly>false</de-markiewb-netbeans-plugins-eclipse-formatter.SaveActionModifiedLinesOnly>
         <de-markiewb-netbeans-plugins-eclipse-formatter.preserveBreakPoints>true</de-markiewb-netbeans-plugins-eclipse-formatter.preserveBreakPoints>
         <de-markiewb-netbeans-plugins-eclipse-formatter.linefeed/>
-<<<<<<< HEAD
         <de-markiewb-netbeans-plugins-eclipse-formatter.eclipseFormatterActiveProfile>SonarQube</de-markiewb-netbeans-plugins-eclipse-formatter.eclipseFormatterActiveProfile>
         <de-markiewb-netbeans-plugins-eclipse-formatter.useProjectPref>true</de-markiewb-netbeans-plugins-eclipse-formatter.useProjectPref>
         <de-markiewb-netbeans-plugins-eclipse-formatter.eclipseFormatterLocation>/home/gperon/devel/NetBeansProjects/sonar-formatter.xml</de-markiewb-netbeans-plugins-eclipse-formatter.eclipseFormatterLocation>
@@ -25,6 +26,12 @@ Any value defined here will override the pom.xml file value but is only applicab
         <de-markiewb-netbeans-plugins-eclipse-formatter.enableFormatAsSaveAction>false</de-markiewb-netbeans-plugins-eclipse-formatter.enableFormatAsSaveAction>
         <de-markiewb-netbeans-plugins-eclipse-formatter.sourcelevel/>
         <de-markiewb-netbeans-plugins-eclipse-formatter.useProjectSettings>true</de-markiewb-netbeans-plugins-eclipse-formatter.useProjectSettings>
+        <org-netbeans-modules-editor-indent.CodeStyle.project.text-line-wrap>none</org-netbeans-modules-editor-indent.CodeStyle.project.text-line-wrap>
+        <org-netbeans-modules-editor-indent.CodeStyle.project.indent-shift-width>4</org-netbeans-modules-editor-indent.CodeStyle.project.indent-shift-width>
+        <org-netbeans-modules-editor-indent.CodeStyle.project.spaces-per-tab>4</org-netbeans-modules-editor-indent.CodeStyle.project.spaces-per-tab>
+        <org-netbeans-modules-editor-indent.CodeStyle.project.tab-size>8</org-netbeans-modules-editor-indent.CodeStyle.project.tab-size>
+        <org-netbeans-modules-editor-indent.CodeStyle.project.text-limit-width>80</org-netbeans-modules-editor-indent.CodeStyle.project.text-limit-width>
+        <org-netbeans-modules-editor-indent.CodeStyle.project.expand-tabs>true</org-netbeans-modules-editor-indent.CodeStyle.project.expand-tabs>
         <de-markiewb-netbeans-plugins-eclipse-formatter44.SaveActionModifiedLinesOnly>false</de-markiewb-netbeans-plugins-eclipse-formatter44.SaveActionModifiedLinesOnly>
         <de-markiewb-netbeans-plugins-eclipse-formatter44.preserveBreakPoints>true</de-markiewb-netbeans-plugins-eclipse-formatter44.preserveBreakPoints>
         <de-markiewb-netbeans-plugins-eclipse-formatter44.linefeed/>
@@ -36,35 +43,6 @@ Any value defined here will override the pom.xml file value but is only applicab
         <de-markiewb-netbeans-plugins-eclipse-formatter44.enableFormatAsSaveAction>false</de-markiewb-netbeans-plugins-eclipse-formatter44.enableFormatAsSaveAction>
         <de-markiewb-netbeans-plugins-eclipse-formatter44.sourcelevel/>
         <de-markiewb-netbeans-plugins-eclipse-formatter44.useProjectSettings>false</de-markiewb-netbeans-plugins-eclipse-formatter44.useProjectSettings>
-        <org-netbeans-modules-editor-indent.text.x-scala.CodeStyle.project.indent-shift-width>2</org-netbeans-modules-editor-indent.text.x-scala.CodeStyle.project.indent-shift-width>
-        <org-netbeans-modules-editor-indent.text.x-scala.CodeStyle.project.spaces-per-tab>2</org-netbeans-modules-editor-indent.text.x-scala.CodeStyle.project.spaces-per-tab>
-        <org-netbeans-modules-editor-indent.CodeStyle.project.text-line-wrap>none</org-netbeans-modules-editor-indent.CodeStyle.project.text-line-wrap>
-        <org-netbeans-modules-editor-indent.CodeStyle.project.indent-shift-width>4</org-netbeans-modules-editor-indent.CodeStyle.project.indent-shift-width>
-        <org-netbeans-modules-editor-indent.CodeStyle.project.spaces-per-tab>4</org-netbeans-modules-editor-indent.CodeStyle.project.spaces-per-tab>
-        <org-netbeans-modules-editor-indent.CodeStyle.project.tab-size>8</org-netbeans-modules-editor-indent.CodeStyle.project.tab-size>
-        <org-netbeans-modules-editor-indent.CodeStyle.project.text-limit-width>80</org-netbeans-modules-editor-indent.CodeStyle.project.text-limit-width>
-        <org-netbeans-modules-editor-indent.CodeStyle.project.expand-tabs>true</org-netbeans-modules-editor-indent.CodeStyle.project.expand-tabs>
         <org-netbeans-modules-editor-indent.CodeStyle.usedProfile>project</org-netbeans-modules-editor-indent.CodeStyle.usedProfile>
-=======
-        <de-markiewb-netbeans-plugins-eclipse-formatter.eclipseFormatterActiveProfile/>
-        <de-markiewb-netbeans-plugins-eclipse-formatter.useProjectPref>true</de-markiewb-netbeans-plugins-eclipse-formatter.useProjectPref>
-        <de-markiewb-netbeans-plugins-eclipse-formatter.eclipseFormatterLocation/>
-        <de-markiewb-netbeans-plugins-eclipse-formatter.showNotifications>true</de-markiewb-netbeans-plugins-eclipse-formatter.showNotifications>
-        <de-markiewb-netbeans-plugins-eclipse-formatter.eclipseFormatterEnabled>false</de-markiewb-netbeans-plugins-eclipse-formatter.eclipseFormatterEnabled>
-        <de-markiewb-netbeans-plugins-eclipse-formatter.enableFormatAsSaveAction>false</de-markiewb-netbeans-plugins-eclipse-formatter.enableFormatAsSaveAction>
-        <de-markiewb-netbeans-plugins-eclipse-formatter.sourcelevel/>
-        <de-markiewb-netbeans-plugins-eclipse-formatter.useProjectSettings>false</de-markiewb-netbeans-plugins-eclipse-formatter.useProjectSettings>
-        <de-markiewb-netbeans-plugins-eclipse-formatter44.SaveActionModifiedLinesOnly>false</de-markiewb-netbeans-plugins-eclipse-formatter44.SaveActionModifiedLinesOnly>
-        <de-markiewb-netbeans-plugins-eclipse-formatter44.preserveBreakPoints>true</de-markiewb-netbeans-plugins-eclipse-formatter44.preserveBreakPoints>
-        <de-markiewb-netbeans-plugins-eclipse-formatter44.linefeed/>
-        <de-markiewb-netbeans-plugins-eclipse-formatter44.eclipseFormatterActiveProfile/>
-        <de-markiewb-netbeans-plugins-eclipse-formatter44.useProjectPref>true</de-markiewb-netbeans-plugins-eclipse-formatter44.useProjectPref>
-        <de-markiewb-netbeans-plugins-eclipse-formatter44.eclipseFormatterLocation/>
-        <de-markiewb-netbeans-plugins-eclipse-formatter44.showNotifications>true</de-markiewb-netbeans-plugins-eclipse-formatter44.showNotifications>
-        <de-markiewb-netbeans-plugins-eclipse-formatter44.eclipseFormatterEnabled>false</de-markiewb-netbeans-plugins-eclipse-formatter44.eclipseFormatterEnabled>
-        <de-markiewb-netbeans-plugins-eclipse-formatter44.enableFormatAsSaveAction>false</de-markiewb-netbeans-plugins-eclipse-formatter44.enableFormatAsSaveAction>
-        <de-markiewb-netbeans-plugins-eclipse-formatter44.sourcelevel/>
-        <de-markiewb-netbeans-plugins-eclipse-formatter44.useProjectSettings>false</de-markiewb-netbeans-plugins-eclipse-formatter44.useProjectSettings>
->>>>>>> c2de315a28ca2d2029000582b922dae4048c8ae9
     </properties>
 </project-shared-configuration>

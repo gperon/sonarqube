@@ -39,19 +39,18 @@ import static org.sonar.server.platform.db.migration.def.Validations.validateTab
  *
  * Note that this operation will not be re-entrant on:
  * <ul>
- * <li>Oracle 11G (may raise
- * {@code ORA-01442: column to be modified to NOT NULL is already NOT NULL} or
- * {@code ORA-01451: column to be modified to NULL cannot be modified to NULL})</li>
+ *   <li>Oracle 11G (may raise {@code ORA-01442: column to be modified to NOT NULL is already NOT NULL} or
+ *   {@code ORA-01451: column to be modified to NULL cannot be modified to NULL})</li>
  * </ul>
  */
 public class AlterColumnsBuilder {
 
-    private static final String ALTER_TABLE = "ALTER TABLE ";
-    private static final String ALTER_COLUMN = "ALTER COLUMN ";
+  private static final String ALTER_TABLE = "ALTER TABLE ";
+  private static final String ALTER_COLUMN = "ALTER COLUMN ";
 
-    private final Dialect dialect;
-    private final String tableName;
-    private final List<ColumnDef> columnDefs = newArrayList();
+  private final Dialect dialect;
+  private final String tableName;
+  private final List<ColumnDef> columnDefs = newArrayList();
 
   public AlterColumnsBuilder(Dialect dialect, String tableName) {
     this.dialect = dialect;
