@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "mybatis-3-mapper.dtd">
 
 <mapper namespace="org.sonar.db.issue.IssueMapper">
 
@@ -64,6 +64,38 @@
       </choose>
     </if>
   </sql>
+
+  <sql id="issueForIndexingColumns">
+    i.kee as "key",
+    root.uuid as "projectUuid",
+    i.updated_at as "updatedAt",
+    i.assignee,
+    i.gap,
+    i.issue_attributes as "attributes",
+    i.line,
+    i.message,
+    i.resolution,
+    i.severity,
+    i.manual_severity as "manualSeverity",
+    i.checksum,
+    i.status,
+    i.effort,
+    i.author_login as "authorLogin",
+    i.issue_close_date as "issueCloseDate",
+    i.issue_creation_date as "issueCreationDate",
+    i.issue_update_date as "issueUpdateDate",
+    r.plugin_name as "pluginName",
+    r.plugin_rule_key as "pluginRuleKey",
+    r.language,
+    p.uuid as "projectUuid",
+    p.module_uuid_path as "moduleUuidPath",
+    p.path,
+    p.scope,
+    p.organization_uuid as "organizationUuid",
+    i.tags,
+    i.issue_type as "issueType"
+  </sql>
+
 
   <insert id="insert" parameterType="Issue" useGeneratedKeys="false" keyProperty="id">
     INSERT INTO issues (kee, rule_id, severity, manual_severity,
@@ -150,7 +182,7 @@
     where i.kee=#{kee,jdbcType=VARCHAR}
   </select>
 
-  <select id="selectNonClosedByComponentUuid" parameterType="String" resultType="Issue">
+  <select id="scrollNonClosedByComponentUuid" parameterType="String" resultType="Issue" fetchSize="${_scrollFetchSize}" resultSetType="FORWARD_ONLY">
     select
     <include refid="issueColumns"/>
     from issues i
@@ -158,7 +190,7 @@
     inner join projects p on p.uuid=i.component_uuid
     inner join projects root on root.uuid=i.project_uuid
     where
-    i.component_uuid=#{componentUuid,jdbcType=VARCHAR} and
+    i.component_uuid = #{componentUuid,jdbcType=VARCHAR} and
     i.status &lt;&gt; 'CLOSED'
   </select>
 
@@ -179,6 +211,19 @@
     <foreach collection="list" open="(" close=")" item="key" separator=",">
       #{key,jdbcType=VARCHAR}
     </foreach>
+  </select>
+
+  <select id="scrollNonClosedByModuleOrProject" parameterType="map" resultType="Issue" fetchSize="${_scrollFetchSize}" resultSetType="FORWARD_ONLY">
+    select
+    <include refid="issueColumns"/>
+    from issues i
+    inner join rules r on r.id = i.rule_id
+    inner join projects p on p.uuid = i.component_uuid
+    inner join projects root on root.uuid = i.project_uuid
+    where
+    i.project_uuid = #{projectUuid, jdbcType=VARCHAR} and
+    p.module_uuid_path like  #{likeModuleUuidPath, jdbcType=VARCHAR} escape '/' and
+    i.status &lt;&gt; 'CLOSED'
   </select>
 </mapper>
 

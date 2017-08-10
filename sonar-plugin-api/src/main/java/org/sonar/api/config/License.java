@@ -19,15 +19,6 @@
  */
 package org.sonar.api.config;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Maps;
-import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.StringUtils;
-import org.sonar.api.utils.DateUtils;
-
-import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
@@ -36,6 +27,11 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Nullable;
+import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
+import org.sonar.api.utils.DateUtils;
 
 /**
  * SonarSource license. This class aims to extract metadata but not to validate or - of course -
@@ -100,7 +96,6 @@ public final class License {
     return isExpired(new Date());
   }
 
-  @VisibleForTesting
   boolean isExpired(Date now) {
     Date date = getExpirationDate();
     if (date == null) {
@@ -128,12 +123,10 @@ public final class License {
     return readPlainText(new String(Base64.decodeBase64(base64.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8));
   }
 
-  @VisibleForTesting
   static License readPlainText(String data) {
-    Map<String, String> props = Maps.newHashMap();
-    StringReader reader = new StringReader(data);
+    Map<String, String> props = new HashMap<>();
     try {
-      List<String> lines = IOUtils.readLines(reader);
+      List<String> lines = IOUtils.readLines(new StringReader(data));
       for (String line : lines) {
         if (StringUtils.isNotBlank(line) && line.indexOf(':') > 0) {
           String key = StringUtils.substringBefore(line, ":");
@@ -144,9 +137,6 @@ public final class License {
 
     } catch (IOException e) {
       // silently ignore
-
-    } finally {
-      IOUtils.closeQuietly(reader);
     }
     return new License(props);
   }

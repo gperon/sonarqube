@@ -24,7 +24,7 @@ import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.cluster.health.ClusterHealthStatus;
 import org.junit.Rule;
 import org.junit.Test;
-import org.sonar.api.config.MapSettings;
+import org.sonar.api.config.internal.MapSettings;
 import org.sonar.server.es.EsClient;
 import org.sonar.server.es.EsTester;
 import org.sonar.server.issue.index.IssueIndexDefinition;
@@ -36,7 +36,7 @@ import static org.mockito.Mockito.when;
 public class EsMonitorTest {
 
   @Rule
-  public EsTester esTester = new EsTester(new IssueIndexDefinition(new MapSettings()));
+  public EsTester esTester = new EsTester(new IssueIndexDefinition(new MapSettings().asConfig()));
 
   private EsMonitor underTest = new EsMonitor(esTester.client());
 
@@ -71,8 +71,7 @@ public class EsMonitorTest {
     Map indicesAttributes = (Map) attributes.get("Indices");
 
     // one index "issues"
-    assertThat(indicesAttributes).hasSize(1);
-    Map indexAttributes = (Map) indicesAttributes.values().iterator().next();
+    Map indexAttributes = (Map) indicesAttributes.get(IssueIndexDefinition.INDEX_TYPE_ISSUE.getIndex());
     assertThat(indexAttributes.get("Docs")).isEqualTo(0L);
     assertThat((int) indexAttributes.get("Shards")).isGreaterThan(0);
     assertThat(indexAttributes.get("Store Size")).isNotNull();

@@ -22,8 +22,7 @@ package org.sonar.server.user.ws;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.sonar.api.config.MapSettings;
-import org.sonar.api.config.Settings;
+import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.utils.System2;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbSession;
@@ -53,14 +52,14 @@ public class UpdateActionTest {
 
   private static final OrganizationCreation ORGANIZATION_CREATION_NOT_USED_FOR_UPDATE = null;
 
-  private final Settings settings = new MapSettings();
+  private final MapSettings settings = new MapSettings();
 
   private System2 system2 = new System2();
 
   @Rule
   public DbTester dbTester = DbTester.create(system2);
   @Rule
-  public EsTester esTester = new EsTester(new UserIndexDefinition(settings));
+  public EsTester esTester = new EsTester(new UserIndexDefinition(settings.asConfig()));
   @Rule
   public UserSessionRule userSessionRule = UserSessionRule.standalone().logIn().setSystemAdministrator();
 
@@ -76,8 +75,8 @@ public class UpdateActionTest {
     dbTester.users().insertDefaultGroup(dbTester.getDefaultOrganization(), "sonar-users");
     userIndexer = new UserIndexer(dbClient, esTester.client());
     tester = new WsTester(new UsersWs(new UpdateAction(
-      new UserUpdater(mock(NewUserNotifier.class), dbClient, userIndexer, system2, organizationFlags, defaultOrganizationProvider, ORGANIZATION_CREATION_NOT_USED_FOR_UPDATE,
-        new DefaultGroupFinder(dbTester.getDbClient())),
+      new UserUpdater(mock(NewUserNotifier.class), dbClient, userIndexer, organizationFlags, defaultOrganizationProvider, ORGANIZATION_CREATION_NOT_USED_FOR_UPDATE,
+        new DefaultGroupFinder(dbTester.getDbClient()), settings.asConfig()),
       userSessionRule,
       new UserJsonWriter(userSessionRule), dbClient)));
   }
@@ -222,11 +221,11 @@ public class UpdateActionTest {
       .setLogin("john")
       .setName("John")
       .setScmAccounts(newArrayList("jn"))
-      .setActive(true);
-    dbClient.userDao().insert(session, userDto)
+      .setActive(true)
+      .setLocal(true)
       .setExternalIdentity("jo")
       .setExternalIdentityProvider("sonarqube");
-    session.commit();
-    userIndexer.index(userDto.getLogin());
+    dbClient.userDao().insert(session, userDto);
+    userIndexer.commitAndIndex(session, userDto);
   }
 }

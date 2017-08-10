@@ -19,8 +19,8 @@
  */
 package org.sonar.server.user.ws;
 
-import com.google.common.collect.Sets;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.sonar.api.server.ws.Change;
@@ -118,17 +118,19 @@ public class UpdateAction implements UsersWsAction {
     if (!request.getScmAccounts().isEmpty()) {
       updateUser.setScmAccounts(request.getScmAccounts());
     }
-    userUpdater.update(dbSession, updateUser);
+    userUpdater.updateAndCommit(dbSession, updateUser, u -> {});
   }
 
   private void writeUser(DbSession dbSession, Response response, String login) {
-    JsonWriter json = response.newJsonWriter().beginObject();
-    json.name("user");
-    Set<String> groups = Sets.newHashSet();
-    UserDto user = checkFound(dbClient.userDao().selectByLogin(dbSession, login), "User '%s' doesn't exist", login);
-    groups.addAll(dbClient.groupMembershipDao().selectGroupsByLogins(dbSession, singletonList(login)).get(login));
-    userWriter.write(json, user, groups, UserJsonWriter.FIELDS);
-    json.endObject().close();
+    try (JsonWriter json = response.newJsonWriter()) {
+      json.beginObject();
+      json.name("user");
+      Set<String> groups = new HashSet<>();
+      UserDto user = checkFound(dbClient.userDao().selectByLogin(dbSession, login), "User '%s' doesn't exist", login);
+      groups.addAll(dbClient.groupMembershipDao().selectGroupsByLogins(dbSession, singletonList(login)).get(login));
+      userWriter.write(json, user, groups, UserJsonWriter.FIELDS);
+      json.endObject().close();
+    }
   }
 
   private static UpdateRequest toWsRequest(Request request) {

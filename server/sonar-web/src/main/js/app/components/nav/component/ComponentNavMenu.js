@@ -18,7 +18,10 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 import React from 'react';
+import PropTypes from 'prop-types';
 import { Link } from 'react-router';
+import classNames from 'classnames';
+import NavBarTabs from '../../../../components/nav/NavBarTabs';
 import { translate } from '../../../../helpers/l10n';
 
 const SETTINGS_URLS = [
@@ -37,8 +40,8 @@ const SETTINGS_URLS = [
 
 export default class ComponentNavMenu extends React.PureComponent {
   static propTypes = {
-    component: React.PropTypes.object.isRequired,
-    conf: React.PropTypes.object.isRequired
+    component: PropTypes.object.isRequired,
+    conf: PropTypes.object.isRequired
   };
 
   isProject() {
@@ -54,12 +57,16 @@ export default class ComponentNavMenu extends React.PureComponent {
     return qualifier === 'VW' || qualifier === 'SVW';
   }
 
+  isApplication() {
+    return this.props.component.qualifier === 'APP';
+  }
+
   renderDashboardLink() {
-    const pathname = this.isView() ? '/view' : '/dashboard';
+    const pathname = this.isView() ? '/portfolio' : '/dashboard';
     return (
       <li>
         <Link to={{ pathname, query: { id: this.props.component.key } }} activeClassName="active">
-          <i className="icon-home" />
+          {translate('overview.page')}
         </Link>
       </li>
     );
@@ -75,14 +82,16 @@ export default class ComponentNavMenu extends React.PureComponent {
         <Link
           to={{ pathname: '/code', query: { id: this.props.component.key } }}
           activeClassName="active">
-          {this.isView() ? translate('view_projects.page') : translate('code.page')}
+          {this.isView() || this.isApplication()
+            ? translate('view_projects.page')
+            : translate('code.page')}
         </Link>
       </li>
     );
   }
 
   renderActivityLink() {
-    if (!this.isProject()) {
+    if (!this.isProject() && !this.isApplication()) {
       return null;
     }
 
@@ -131,11 +140,10 @@ export default class ComponentNavMenu extends React.PureComponent {
     }
 
     const isSettingsActive = SETTINGS_URLS.some(url => window.location.href.indexOf(url) !== -1);
-    const className = 'dropdown' + (isSettingsActive ? ' active' : '');
     return (
-      <li className={className}>
+      <li className="dropdown">
         <a
-          className="dropdown-toggle navbar-admin-link"
+          className={classNames('dropdown-toggle', 'is-admin', { active: isSettingsActive })}
           id="component-navigation-admin"
           data-toggle="dropdown"
           href="#">
@@ -165,7 +173,7 @@ export default class ComponentNavMenu extends React.PureComponent {
   }
 
   renderSettingsLink() {
-    if (!this.props.conf.showSettings) {
+    if (!this.props.conf.showSettings || this.isApplication()) {
       return null;
     }
     return (
@@ -291,7 +299,7 @@ export default class ComponentNavMenu extends React.PureComponent {
       return null;
     }
 
-    if (qualifier !== 'TRK' && qualifier !== 'VW') {
+    if (qualifier !== 'TRK' && qualifier !== 'VW' && qualifier !== 'APP') {
       return null;
     }
 
@@ -348,7 +356,7 @@ export default class ComponentNavMenu extends React.PureComponent {
 
   render() {
     return (
-      <ul className="nav navbar-nav nav-tabs">
+      <NavBarTabs>
         {this.renderDashboardLink()}
         {this.renderIssuesLink()}
         {this.renderComponentMeasuresLink()}
@@ -356,7 +364,7 @@ export default class ComponentNavMenu extends React.PureComponent {
         {this.renderActivityLink()}
         {this.renderAdministration()}
         {this.renderExtensions()}
-      </ul>
+      </NavBarTabs>
     );
   }
 }

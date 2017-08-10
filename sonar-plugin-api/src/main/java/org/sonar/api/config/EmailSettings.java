@@ -19,14 +19,12 @@
  */
 package org.sonar.api.config;
 
-import com.google.common.base.MoreObjects;
-import com.google.common.collect.ImmutableList;
 import java.util.List;
 import org.sonar.api.PropertyType;
-import org.sonar.api.batch.ScannerSide;
 import org.sonar.api.ce.ComputeEngineSide;
 import org.sonar.api.server.ServerSide;
 
+import static java.util.Arrays.asList;
 import static org.sonar.api.CoreProperties.CATEGORY_GENERAL;
 import static org.sonar.api.CoreProperties.SERVER_BASE_URL;
 import static org.sonar.api.CoreProperties.SERVER_BASE_URL_DEFAULT_VALUE;
@@ -35,11 +33,8 @@ import static org.sonar.api.PropertyType.INTEGER;
 import static org.sonar.api.PropertyType.SINGLE_SELECT_LIST;
 
 /**
- * If batch extensions use this component, then batch must be executed with administrator rights (see properties sonar.login and sonar.password)
- *
  * @since 3.2
  */
-@ScannerSide
 @ServerSide
 @ComputeEngineSide
 public class EmailSettings {
@@ -58,10 +53,10 @@ public class EmailSettings {
   public static final String PREFIX = "email.prefix";
   public static final String PREFIX_DEFAULT = "[SONARQUBE]";
 
-  private final Settings settings;
+  private final Configuration config;
 
-  public EmailSettings(Settings settings) {
-    this.settings = settings;
+  public EmailSettings(Configuration config) {
+    this.config = config;
   }
 
   public String getSmtpHost() {
@@ -97,14 +92,14 @@ public class EmailSettings {
   }
 
   private String get(String key, String defaultValue) {
-    return MoreObjects.firstNonNull(settings.getString(key), defaultValue);
+    return config.get(key).orElse(defaultValue);
   }
 
   /**
    * @since 6.1
    */
   public static List<PropertyDefinition> definitions() {
-    return ImmutableList.of(
+    return asList(
       PropertyDefinition.builder(SMTP_HOST)
         .name("SMTP host")
         .description("For example \"smtp.gmail.com\". Leave blank to disable email sending.")

@@ -135,7 +135,7 @@ public class SetActionTest {
     ComponentDto project = db.components().insertPrivateProject();
     logInAsProjectAdministrator(project);
 
-    callForProjectSettingByKey("my.key", "my project value", project.key());
+    callForProjectSettingByKey("my.key", "my project value", project.getDbKey());
 
     assertGlobalSetting("my.key", "my global value");
     assertComponentSetting("my.key", "my project value", project.getId());
@@ -147,7 +147,7 @@ public class SetActionTest {
     ComponentDto project = db.components().insertPrivateProject();
     logInAsProjectAdministrator(project);
 
-    callForProjectSettingByKey("my.key", "my value", project.key());
+    callForProjectSettingByKey("my.key", "my value", project.getDbKey());
 
     assertComponentSetting("my.key", "my value", project.getId());
   }
@@ -160,7 +160,7 @@ public class SetActionTest {
     assertComponentSetting("my.key", "my project value", project.getId());
     logInAsProjectAdministrator(project);
 
-    callForProjectSettingByKey("my.key", "my new project value", project.key());
+    callForProjectSettingByKey("my.key", "my new project value", project.getDbKey());
 
     assertComponentSetting("my.key", "my new project value", project.getId());
   }
@@ -299,10 +299,10 @@ public class SetActionTest {
     callForComponentPropertySet("my.key", newArrayList(
       GSON.toJson(ImmutableMap.of("firstField", "firstValue", "secondField", "secondValue")),
       GSON.toJson(ImmutableMap.of("firstField", "anotherFirstValue", "secondField", "anotherSecondValue"))),
-      project.key());
+      project.getDbKey());
 
     assertThat(dbClient.propertiesDao().selectGlobalProperties(dbSession)).hasSize(3);
-    assertThat(dbClient.propertiesDao().selectProjectProperties(dbSession, project.key())).hasSize(5);
+    assertThat(dbClient.propertiesDao().selectProjectProperties(dbSession, project.getDbKey())).hasSize(5);
     assertGlobalSetting("my.key", "1");
     assertGlobalSetting("my.key.1.firstField", "oldFirstValue");
     assertGlobalSetting("my.key.1.secondField", "oldSecondValue");
@@ -318,7 +318,7 @@ public class SetActionTest {
   @Test
   public void persist_multi_value_with_type_metric() {
     definitions.addComponent(PropertyDefinition
-      .builder("my.key")
+      .builder("my_key")
       .name("foo")
       .description("desc")
       .category("cat")
@@ -327,13 +327,13 @@ public class SetActionTest {
       .defaultValue("default")
       .multiValues(true)
       .build());
-    dbClient.metricDao().insert(dbSession, newMetricDto().setKey("metric.key.1"));
-    dbClient.metricDao().insert(dbSession, newMetricDto().setKey("metric.key.2"));
+    dbClient.metricDao().insert(dbSession, newMetricDto().setKey("metric_key_1"));
+    dbClient.metricDao().insert(dbSession, newMetricDto().setKey("metric_key_2"));
     dbSession.commit();
 
-    callForMultiValueGlobalSetting("my.key", newArrayList("metric.key.1", "metric.key.2"));
+    callForMultiValueGlobalSetting("my_key", newArrayList("metric_key_1", "metric_key_2"));
 
-    assertGlobalSetting("my.key", "metric.key.1,metric.key.2");
+    assertGlobalSetting("my_key", "metric_key_1,metric_key_2");
   }
 
   @Test
@@ -464,7 +464,7 @@ public class SetActionTest {
   @Test
   public void fail_when_data_and_metric_type_with_invalid_key() {
     definitions.addComponent(PropertyDefinition
-      .builder("my.key")
+      .builder("my_key")
       .name("foo")
       .description("desc")
       .category("cat")
@@ -473,14 +473,14 @@ public class SetActionTest {
       .defaultValue("default")
       .multiValues(true)
       .build());
-    dbClient.metricDao().insert(dbSession, newMetricDto().setKey("metric.key"));
-    dbClient.metricDao().insert(dbSession, newMetricDto().setKey("metric.disabled.key").setEnabled(false));
+    dbClient.metricDao().insert(dbSession, newMetricDto().setKey("metric_key"));
+    dbClient.metricDao().insert(dbSession, newMetricDto().setKey("metric_disabled_key").setEnabled(false));
     dbSession.commit();
 
     expectedException.expect(BadRequestException.class);
-    expectedException.expectMessage("Error when validating metric setting with key 'my.key' and values [metric.key, metric.disabled.key]. A value is not a valid metric key.");
+    expectedException.expectMessage("Error when validating metric setting with key 'my_key' and values [metric_key, metric_disabled_key]. A value is not a valid metric key.");
 
-    callForMultiValueGlobalSetting("my.key", newArrayList("metric.key", "metric.disabled.key"));
+    callForMultiValueGlobalSetting("my_key", newArrayList("metric_key", "metric_disabled_key"));
   }
 
   @Test
@@ -557,7 +557,7 @@ public class SetActionTest {
     expectedException.expectMessage("Setting 'my.key' cannot be set on a View");
     logInAsProjectAdministrator(view);
 
-    callForProjectSettingByKey("my.key", "My Value", view.key());
+    callForProjectSettingByKey("my.key", "My Value", view.getDbKey());
   }
 
   @Test
@@ -580,7 +580,7 @@ public class SetActionTest {
     expectedException.expect(BadRequestException.class);
     expectedException.expectMessage("Setting 'my.key' cannot be set on a CptLabel");
 
-    callForProjectSettingByKey("my.key", "My Value", file.key());
+    callForProjectSettingByKey("my.key", "My Value", file.getDbKey());
   }
 
   @Test
@@ -634,7 +634,7 @@ public class SetActionTest {
   private void succeedForPropertyWithoutDefinitionAndValidComponent(ComponentDto project, ComponentDto module) {
     logInAsProjectAdministrator(project);
 
-    callForProjectSettingByKey("my.key", "My Value", module.key());
+    callForProjectSettingByKey("my.key", "My Value", module.getDbKey());
 
     assertComponentSetting("my.key", "My Value", module.getId());
   }
@@ -646,7 +646,7 @@ public class SetActionTest {
     expectedException.expect(BadRequestException.class);
     expectedException.expectMessage("Setting 'my.key' cannot be set on a QualifierLabel");
 
-    callForProjectSettingByKey("my.key", "My Value", component.key());
+    callForProjectSettingByKey("my.key", "My Value", component.getDbKey());
   }
 
   @Test
@@ -895,7 +895,7 @@ public class SetActionTest {
     expectedException.expectMessage("Setting 'my.key' cannot be set on a Project");
 
     callForComponentPropertySet("my.key", newArrayList(
-      GSON.toJson(ImmutableMap.of("firstField", "firstValue"))), project.key());
+      GSON.toJson(ImmutableMap.of("firstField", "firstValue"))), project.getDbKey());
   }
 
   @Test

@@ -28,7 +28,7 @@ export default function GlobalContainer(props: Object) {
 
   return (
     <div className="global-container">
-      <div className="page-wrapper page-wrapper-global" id="container">
+      <div className="page-wrapper" id="container">
         <div className="page-container">
           <GlobalNav location={props.location} />
           <GlobalMessagesContainer />

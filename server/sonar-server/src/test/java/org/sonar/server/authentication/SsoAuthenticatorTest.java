@@ -31,8 +31,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.sonar.api.config.MapSettings;
-import org.sonar.api.config.Settings;
+import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.utils.System2;
 import org.sonar.api.utils.internal.AlwaysIncreasingSystem2;
 import org.sonar.core.util.stream.MoreCollectors;
@@ -40,17 +39,20 @@ import org.sonar.db.DbTester;
 import org.sonar.db.user.GroupDto;
 import org.sonar.db.user.UserDto;
 import org.sonar.server.authentication.event.AuthenticationEvent;
+import org.sonar.server.authentication.event.AuthenticationEvent.Source;
+import org.sonar.server.es.EsTester;
 import org.sonar.server.organization.DefaultOrganizationProvider;
 import org.sonar.server.organization.OrganizationCreation;
 import org.sonar.server.organization.TestDefaultOrganizationProvider;
 import org.sonar.server.organization.TestOrganizationFlags;
 import org.sonar.server.user.NewUserNotifier;
 import org.sonar.server.user.UserUpdater;
+import org.sonar.server.user.index.UserIndexDefinition;
 import org.sonar.server.user.index.UserIndexer;
 import org.sonar.server.usergroups.DefaultGroupFinder;
 
 import static java.util.Arrays.stream;
-import static org.assertj.core.api.Java6Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.rules.ExpectedException.none;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyMap;
@@ -61,16 +63,18 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 import static org.sonar.db.user.UserTesting.newUserDto;
-import static org.sonar.server.authentication.event.AuthenticationEvent.Source;
 import static org.sonar.server.authentication.event.AuthenticationExceptionMatcher.authenticationException;
 
 public class SsoAuthenticatorTest {
 
-  @Rule
-  public ExpectedException expectedException = none();
+  private MapSettings settings = new MapSettings();
 
   @Rule
+  public ExpectedException expectedException = none();
+  @Rule
   public DbTester db = DbTester.create(new AlwaysIncreasingSystem2());
+  @Rule
+  public EsTester es = new EsTester(new UserIndexDefinition(settings.asConfig()));
 
   private static final String DEFAULT_LOGIN = "john";
   private static final String DEFAULT_NAME = "John";
@@ -94,22 +98,22 @@ public class SsoAuthenticatorTest {
   private GroupDto sonarUsers;
 
   private System2 system2 = mock(System2.class);
-  private Settings settings = new MapSettings();
   private OrganizationCreation organizationCreation = mock(OrganizationCreation.class);
   private DefaultOrganizationProvider defaultOrganizationProvider = TestDefaultOrganizationProvider.from(db);
   private TestOrganizationFlags organizationFlags = TestOrganizationFlags.standalone();
 
+  private UserIndexer userIndexer = new UserIndexer(db.getDbClient(), es.client());
   private UserIdentityAuthenticator userIdentityAuthenticator = new UserIdentityAuthenticator(
     db.getDbClient(),
-    new UserUpdater(mock(NewUserNotifier.class), db.getDbClient(), mock(UserIndexer.class), System2.INSTANCE, organizationFlags, defaultOrganizationProvider, organizationCreation,
-      new DefaultGroupFinder(db.getDbClient())),
+    new UserUpdater(mock(NewUserNotifier.class), db.getDbClient(), userIndexer, organizationFlags, defaultOrganizationProvider, organizationCreation,
+      new DefaultGroupFinder(db.getDbClient()), settings.asConfig()),
     defaultOrganizationProvider, organizationFlags, new DefaultGroupFinder(db.getDbClient()));
 
   private HttpServletResponse response = mock(HttpServletResponse.class);
   private JwtHttpHandler jwtHttpHandler = mock(JwtHttpHandler.class);
   private AuthenticationEvent authenticationEvent = mock(AuthenticationEvent.class);
 
-  private SsoAuthenticator underTest = new SsoAuthenticator(system2, settings, userIdentityAuthenticator, jwtHttpHandler, authenticationEvent);
+  private SsoAuthenticator underTest = new SsoAuthenticator(system2, settings.asConfig(), userIdentityAuthenticator, jwtHttpHandler, authenticationEvent);
 
   @Before
   public void setUp() throws Exception {

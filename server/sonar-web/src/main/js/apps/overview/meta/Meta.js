@@ -18,6 +18,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 import React from 'react';
+import { withRouter } from 'react-router';
 import { connect } from 'react-redux';
 import MetaKey from './MetaKey';
 import MetaOrganizationKey from './MetaOrganizationKey';
@@ -29,20 +30,19 @@ import MetaSize from './MetaSize';
 import MetaTags from './MetaTags';
 import { areThereCustomOrganizations } from '../../../store/rootReducer';
 
-const Meta = ({ component, measures, areThereCustomOrganizations }) => {
+const Meta = ({ component, history, measures, areThereCustomOrganizations, router }) => {
   const { qualifier, description, qualityProfiles, qualityGate } = component;
 
   const isProject = qualifier === 'TRK';
-  const isView = qualifier === 'VW' || qualifier === 'SVW';
-  const isDeveloper = qualifier === 'DEV';
+  const isApplication = qualifier === 'APP';
 
   const hasDescription = !!description;
   const hasQualityProfiles = Array.isArray(qualityProfiles) && qualityProfiles.length > 0;
   const hasQualityGate = !!qualityGate;
 
-  const shouldShowQualityProfiles = !isView && !isDeveloper && hasQualityProfiles;
-  const shouldShowQualityGate = !isView && !isDeveloper && hasQualityGate;
-  const shouldShowOrganizationKey = component.organization != null && areThereCustomOrganizations;
+  const shouldShowQualityProfiles = isProject && hasQualityProfiles;
+  const shouldShowQualityGate = isProject && hasQualityGate;
+  const hasOrganization = component.organization != null && areThereCustomOrganizations;
 
   return (
     <div className="overview-meta">
@@ -55,7 +55,19 @@ const Meta = ({ component, measures, areThereCustomOrganizations }) => {
 
       {isProject && <MetaTags component={component} />}
 
-      {shouldShowQualityGate && <MetaQualityGate gate={qualityGate} />}
+      {(isProject || isApplication) &&
+        <AnalysesList
+          project={component.key}
+          qualifier={component.qualifier}
+          history={history}
+          router={router}
+        />}
+
+      {shouldShowQualityGate &&
+        <MetaQualityGate
+          gate={qualityGate}
+          organization={hasOrganization && component.organization}
+        />}
 
       {shouldShowQualityProfiles &&
         <MetaQualityProfiles
@@ -64,13 +76,11 @@ const Meta = ({ component, measures, areThereCustomOrganizations }) => {
           profiles={qualityProfiles}
         />}
 
-      <MetaLinks component={component} />
+      {isProject && <MetaLinks component={component} />}
 
       <MetaKey component={component} />
 
-      {shouldShowOrganizationKey && <MetaOrganizationKey component={component} />}
-
-      {isProject && <AnalysesList project={component.key} />}
+      {hasOrganization && <MetaOrganizationKey component={component} />}
     </div>
   );
 };
@@ -79,4 +89,4 @@ const mapStateToProps = state => ({
   areThereCustomOrganizations: areThereCustomOrganizations(state)
 });
 
-export default connect(mapStateToProps)(Meta);
+export default connect(mapStateToProps)(withRouter(Meta));

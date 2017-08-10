@@ -24,6 +24,7 @@ import java.util.Optional;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.join.query.JoinQueryBuilders;
 import org.sonar.api.ce.ComputeEngineSide;
 import org.sonar.api.server.ServerSide;
 import org.sonar.db.user.GroupDto;
@@ -40,10 +41,9 @@ import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 @ComputeEngineSide
 public class AuthorizationTypeSupport {
 
-  private static final String TYPE_AUTHORIZATION = "authorization";
+  public static final String TYPE_AUTHORIZATION = "authorization";
   public static final String FIELD_GROUP_IDS = "groupIds";
   public static final String FIELD_USER_IDS = "userIds";
-  public static final String FIELD_UPDATED_AT = "updatedAt";
 
   /**
    * When true, then anybody can access to the project. In that case
@@ -85,7 +85,6 @@ public class AuthorizationTypeSupport {
 
     NewIndex.NewIndexType authType = type.getIndex().createType(TYPE_AUTHORIZATION);
     authType.setAttribute("_routing", ImmutableMap.of("required", true));
-    authType.createDateTimeField(FIELD_UPDATED_AT);
     authType.createLongField(FIELD_GROUP_IDS);
     authType.createLongField(FIELD_USER_IDS);
     authType.createBooleanField(FIELD_ALLOW_ANYONE);
@@ -119,7 +118,9 @@ public class AuthorizationTypeSupport {
       .map(GroupDto::getId)
       .forEach(groupId -> filter.should(termQuery(FIELD_GROUP_IDS, groupId)));
 
-    return QueryBuilders.hasParentQuery(TYPE_AUTHORIZATION,
-      QueryBuilders.boolQuery().filter(filter));
+    return JoinQueryBuilders.hasParentQuery(
+      TYPE_AUTHORIZATION,
+      QueryBuilders.boolQuery().filter(filter),
+      false);
   }
 }

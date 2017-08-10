@@ -42,6 +42,9 @@ public interface QualityProfileMapper {
 
   List<RulesProfileDto> selectBuiltInRuleProfiles();
 
+  @CheckForNull
+  RulesProfileDto selectRuleProfile(@Param("uuid") String ruleProfileUuid);
+
   List<QProfileDto> selectOrderedByOrganizationUuid(@Param("organizationUuid") String organizationUuid);
 
   @CheckForNull
@@ -77,7 +80,7 @@ public interface QualityProfileMapper {
 
   // PROJECTS
 
-  List<KeyLongValue> countProjectsByProfileUuid(@Param("organizationUuid") String organizationUuid);
+  List<KeyLongValue> countProjectsByOrganizationAndProfiles(@Param("organizationUuid") String organizationUuid, @Param("profileUuids") List<String> profiles);
 
   @CheckForNull
   QProfileDto selectAssociatedToProjectUuidAndLanguage(

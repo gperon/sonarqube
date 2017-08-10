@@ -30,7 +30,7 @@ import org.sonar.db.DbTester;
 import org.sonar.db.component.ComponentDto;
 import org.sonar.db.organization.OrganizationDto;
 import org.sonar.server.component.ComponentUpdater;
-import org.sonar.server.es.ProjectIndexer;
+import org.sonar.server.es.TestProjectIndexers;
 import org.sonar.server.exceptions.BadRequestException;
 import org.sonar.server.exceptions.ForbiddenException;
 import org.sonar.server.favorite.FavoriteUpdater;
@@ -82,13 +82,13 @@ public class CreateActionTest {
 
   private DefaultOrganizationProvider defaultOrganizationProvider = TestDefaultOrganizationProvider.from(db);
   private BillingValidationsProxy billingValidations = mock(BillingValidationsProxy.class);
-
+  private TestProjectIndexers projectIndexers = new TestProjectIndexers();
   private WsActionTester ws = new WsActionTester(
     new CreateAction(
       new ProjectsWsSupport(db.getDbClient(), billingValidations),
       db.getDbClient(), userSession,
       new ComponentUpdater(db.getDbClient(), i18n, system2, mock(PermissionTemplateService.class), new FavoriteUpdater(db.getDbClient()),
-        mock(ProjectIndexer.class)),
+        projectIndexers),
       defaultOrganizationProvider));
 
   @Test
@@ -104,7 +104,7 @@ public class CreateActionTest {
       .extracting(Project::getKey, Project::getName, Project::getQualifier, Project::getVisibility)
       .containsOnly(DEFAULT_PROJECT_KEY, DEFAULT_PROJECT_NAME, "TRK", "public");
     assertThat(db.getDbClient().componentDao().selectByKey(db.getSession(), DEFAULT_PROJECT_KEY).get())
-      .extracting(ComponentDto::getKey, ComponentDto::name, ComponentDto::qualifier, ComponentDto::scope, ComponentDto::isPrivate)
+      .extracting(ComponentDto::getDbKey, ComponentDto::name, ComponentDto::qualifier, ComponentDto::scope, ComponentDto::isPrivate)
       .containsOnly(DEFAULT_PROJECT_KEY, DEFAULT_PROJECT_NAME, "TRK", "PRJ", false);
   }
 
@@ -238,7 +238,7 @@ public class CreateActionTest {
   @Test
   public void fail_when_project_already_exists() throws Exception {
     OrganizationDto organization = db.organizations().insert();
-    db.components().insertPublicProject(project -> project.setKey(DEFAULT_PROJECT_KEY));
+    db.components().insertPublicProject(project -> project.setDbKey(DEFAULT_PROJECT_KEY));
     userSession.addPermission(PROVISION_PROJECTS, organization);
 
     expectedException.expect(BadRequestException.class);

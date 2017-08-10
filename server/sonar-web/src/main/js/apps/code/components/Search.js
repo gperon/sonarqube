@@ -18,6 +18,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 import React from 'react';
+import PropTypes from 'prop-types';
 import classNames from 'classnames';
 import { debounce } from 'lodash';
 import Components from './Components';
@@ -28,13 +29,13 @@ import { getComponentUrl } from '../../../helpers/urls';
 
 export default class Search extends React.PureComponent {
   static contextTypes = {
-    router: React.PropTypes.object.isRequired
+    router: PropTypes.object.isRequired
   };
 
   static propTypes = {
-    component: React.PropTypes.object.isRequired,
-    location: React.PropTypes.object.isRequired,
-    onError: React.PropTypes.func.isRequired
+    component: PropTypes.object.isRequired,
+    location: PropTypes.object.isRequired,
+    onError: PropTypes.func.isRequired
   };
 
   state = {
@@ -131,8 +132,8 @@ export default class Search extends React.PureComponent {
       const { component, onError } = this.props;
       this.setState({ loading: true });
 
-      const isView = component.qualifier === 'VW' || component.qualifier === 'SVW';
-      const qualifiers = isView ? 'SVW,TRK' : 'BRC,UTS,FIL';
+      const isPortfolio = ['VW', 'SVW', 'APP'].includes(component.qualifier);
+      const qualifiers = isPortfolio ? 'SVW,TRK' : 'BRC,UTS,FIL';
 
       getTree(component.key, { q: query, s: 'qualifier,name', qualifiers })
         .then(r => {

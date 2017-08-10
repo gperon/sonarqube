@@ -18,6 +18,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 import React from 'react';
+import PropTypes from 'prop-types';
 import ProjectCard from './ProjectCard';
 import ListFooter from '../../../components/controls/ListFooter';
 import { projectsListType } from './propTypes';
@@ -26,9 +27,9 @@ import { translate } from '../../../helpers/l10n';
 export default class Projects extends React.PureComponent {
   static propTypes = {
     projects: projectsListType.isRequired,
-    total: React.PropTypes.number.isRequired,
-    loading: React.PropTypes.bool.isRequired,
-    loadMore: React.PropTypes.func.isRequired
+    total: PropTypes.number.isRequired,
+    loading: PropTypes.bool.isRequired,
+    loadMore: PropTypes.func.isRequired
   };
 
   render() {
@@ -46,11 +47,11 @@ export default class Projects extends React.PureComponent {
 
         {projects.length > 0 &&
           <ul className="account-projects-list">
-            {projects.map(project => (
+            {projects.map(project =>
               <li key={project.key}>
                 <ProjectCard project={project} />
               </li>
-            ))}
+            )}
           </ul>}
 
         {projects.length > 0 &&

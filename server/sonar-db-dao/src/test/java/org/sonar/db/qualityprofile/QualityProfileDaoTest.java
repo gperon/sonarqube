@@ -148,6 +148,14 @@ public class QualityProfileDaoTest {
   }
 
   @Test
+  public void selectRuleProfile() {
+    RulesProfileDto rp = insertRulesProfile();
+
+    assertThat(underTest.selectRuleProfile(dbSession, rp.getKee()).getId()).isEqualTo(rp.getId());
+    assertThat(underTest.selectRuleProfile(dbSession, "missing")).isNull();
+  }
+
+  @Test
   public void deleteRulesProfilesByUuids() {
     RulesProfileDto rp1 = insertRulesProfile();
     RulesProfileDto rp2 = insertRulesProfile();
@@ -245,7 +253,7 @@ public class QualityProfileDaoTest {
   }
 
   @Test
-  public void find_all_is_sorted_by_profile_name() {
+  public void selectOrderedByOrganizationUuid_is_sorted_by_profile_name() {
     QProfileDto dto1 = new QProfileDto()
       .setKee("js_first")
       .setRulesProfileUuid("rp-js_first")
@@ -304,7 +312,7 @@ public class QualityProfileDaoTest {
 
   @Test
   public void selectDefaultProfiles() {
-    List<QProfileDto> sharedData = createSharedData();
+    createSharedData();
 
     List<QProfileDto> java = underTest.selectDefaultProfiles(dbSession, organization, singletonList("java"));
     assertThat(java).extracting(QProfileDto::getKee).containsOnly("java_sonar_way");
@@ -312,10 +320,11 @@ public class QualityProfileDaoTest {
     assertThat(underTest.selectDefaultProfiles(dbSession, organization, singletonList("js"))).isEmpty();
     assertThat(underTest.selectDefaultProfiles(dbSession, organization, of("java", "js"))).extracting(QProfileDto::getKee).containsOnly("java_sonar_way");
     assertThat(underTest.selectDefaultProfiles(dbSession, organization, of("js", "java"))).extracting(QProfileDto::getKee).containsOnly("java_sonar_way");
+    assertThat(underTest.selectDefaultProfiles(dbSession, organization, Collections.emptyList())).isEmpty();
   }
 
   @Test
-  public void get_by_name_and_language() {
+  public void selectByNameAndLanguage() {
     List<QProfileDto> sharedData = createSharedData();
 
     QProfileDto dto = underTest.selectByNameAndLanguage(dbSession, organization, "Sonar Way", "java");
@@ -328,7 +337,7 @@ public class QualityProfileDaoTest {
   }
 
   @Test
-  public void get_by_name_and_languages() {
+  public void selectByNameAndLanguages() {
     createSharedData();
 
     List<QProfileDto> dtos = underTest.selectByNameAndLanguages(dbSession, organization, "Sonar Way", singletonList("java"));
@@ -362,7 +371,7 @@ public class QualityProfileDaoTest {
   }
 
   @Test
-  public void should_not_find_by_language_in_wrong_organization() {
+  public void should_not_selectByLanguage_in_wrong_organization() {
     QProfileDto profile = QualityProfileTesting.newQualityProfileDto()
       .setOrganizationUuid(organization.getUuid());
     underTest.insert(dbSession, profile);
@@ -372,7 +381,7 @@ public class QualityProfileDaoTest {
   }
 
   @Test
-  public void should_not_find_by_language_with_wrong_language() {
+  public void should_not_selectByLanguage_with_wrong_language() {
     QProfileDto profile = QualityProfileTesting.newQualityProfileDto()
       .setOrganizationUuid(organization.getUuid());
     underTest.insert(dbSession, profile);
@@ -382,7 +391,7 @@ public class QualityProfileDaoTest {
   }
 
   @Test
-  public void find_children() {
+  public void selectChildren() {
     QProfileDto original1 = new QProfileDto()
       .setKee("java_child1")
       .setRulesProfileUuid("rp-java_child1")
@@ -488,8 +497,10 @@ public class QualityProfileDaoTest {
     ComponentDto projectInOtherOrg = db.components().insertPrivateProject(otherOrg);
     db.qualityProfiles().associateWithProject(projectInOtherOrg, profileInOtherOrg);
 
-    assertThat(underTest.countProjectsByProfileUuid(dbSession, organization)).containsOnly(
+    assertThat(underTest.countProjectsByOrganizationAndProfiles(dbSession, organization, asList(profileWithoutProjects, profileWithProjects, profileInOtherOrg))).containsOnly(
       MapEntry.entry(profileWithProjects.getKee(), 2L));
+    assertThat(underTest.countProjectsByOrganizationAndProfiles(dbSession, otherOrg, singletonList(profileWithoutProjects))).isEmpty();
+    assertThat(underTest.countProjectsByOrganizationAndProfiles(dbSession, organization, Collections.emptyList())).isEmpty();
   }
 
   @Test
@@ -529,6 +540,8 @@ public class QualityProfileDaoTest {
     assertThat(underTest.selectAssociatedToProjectUuidAndLanguages(dbSession, project1, of("java", "js")))
       .extracting(QProfileDto::getKee).containsExactlyInAnyOrder(javaProfile.getKee(), jsProfile.getKee());
     assertThat(underTest.selectAssociatedToProjectUuidAndLanguages(dbSession, project2, singletonList("java")))
+      .isEmpty();
+    assertThat(underTest.selectAssociatedToProjectUuidAndLanguages(dbSession, project2, Collections.emptyList()))
       .isEmpty();
   }
 
@@ -581,8 +594,8 @@ public class QualityProfileDaoTest {
     assertThat(underTest.selectSelectedProjects(dbSession, organization, profile1, null))
       .extracting("projectId", "projectUuid", "projectKey", "projectName", "profileKey")
       .containsOnly(
-        tuple(project1.getId(), project1.uuid(), project1.key(), project1.name(), profile1.getKee()),
-        tuple(project2.getId(), project2.uuid(), project2.key(), project2.name(), profile1.getKee()));
+        tuple(project1.getId(), project1.uuid(), project1.getDbKey(), project1.name(), profile1.getKee()),
+        tuple(project2.getId(), project2.uuid(), project2.getDbKey(), project2.name(), profile1.getKee()));
 
     assertThat(underTest.selectSelectedProjects(dbSession, organization, profile1, "ect1")).hasSize(1);
     assertThat(underTest.selectSelectedProjects(dbSession, organization, profile3, null)).isEmpty();
@@ -608,8 +621,8 @@ public class QualityProfileDaoTest {
     assertThat(underTest.selectDeselectedProjects(dbSession, organization, profile1, null))
       .extracting("projectId", "projectUuid", "projectKey", "projectName", "profileKey")
       .containsExactly(
-        tuple(project2.getId(), project2.uuid(), project2.key(), project2.name(), null),
-        tuple(project3.getId(), project3.uuid(), project3.key(), project3.name(), null));
+        tuple(project2.getId(), project2.uuid(), project2.getDbKey(), project2.name(), null),
+        tuple(project3.getId(), project3.uuid(), project3.getDbKey(), project3.name(), null));
 
     assertThat(underTest.selectDeselectedProjects(dbSession, organization, profile1, "ect2")).hasSize(1);
     assertThat(underTest.selectDeselectedProjects(dbSession, organization, profile3, null)).hasSize(3);
@@ -635,9 +648,9 @@ public class QualityProfileDaoTest {
     assertThat(underTest.selectProjectAssociations(dbSession, organization, profile1, null))
       .extracting("projectId", "projectUuid", "projectKey", "projectName", "profileKey")
       .containsOnly(
-        tuple(project1.getId(), project1.uuid(), project1.key(), project1.name(), profile1.getKee()),
-        tuple(project2.getId(), project2.uuid(), project2.key(), project2.name(), null),
-        tuple(project3.getId(), project3.uuid(), project3.key(), project3.name(), null));
+        tuple(project1.getId(), project1.uuid(), project1.getDbKey(), project1.name(), profile1.getKee()),
+        tuple(project2.getId(), project2.uuid(), project2.getDbKey(), project2.name(), null),
+        tuple(project3.getId(), project3.uuid(), project3.getDbKey(), project3.name(), null));
 
     assertThat(underTest.selectProjectAssociations(dbSession, organization, profile1, "ect2")).hasSize(1);
     assertThat(underTest.selectProjectAssociations(dbSession, organization, profile3, null)).hasSize(3);

@@ -130,8 +130,8 @@ public class RegisterRules implements Startable {
       keysToIndex.addAll(removedRules.stream().map(RuleDefinitionDto::getKey).collect(Collectors.toList()));
 
       persistRepositories(dbSession, context.repositories());
-      ruleIndexer.indexRuleDefinitions(keysToIndex);
-      activeRuleIndexer.indexChanges(dbSession, changes);
+      ruleIndexer.commitAndIndex(dbSession, keysToIndex);
+      activeRuleIndexer.commitAndIndex(dbSession, changes);
       profiler.stopDebug();
 
       webServerRuleFinder.startCaching();

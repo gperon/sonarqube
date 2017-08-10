@@ -21,9 +21,10 @@ import React from 'react';
 import { translate } from '../../../helpers/l10n';
 
 const ComponentsHeader = ({ baseComponent, rootComponent }) => {
-  const isView = rootComponent.qualifier === 'VW' || rootComponent.qualifier === 'SVW';
+  const isPortfolio = rootComponent.qualifier === 'VW' || rootComponent.qualifier === 'SVW';
+  const isApplication = rootComponent.qualifier === 'APP';
 
-  const columns = isView
+  const columns = isPortfolio
     ? [
         translate('metric_domain.Releasability'),
         translate('metric_domain.Reliability'),
@@ -32,24 +33,25 @@ const ComponentsHeader = ({ baseComponent, rootComponent }) => {
         translate('metric', 'ncloc', 'name')
       ]
     : [
+        isApplication && translate('metric.alert_status.name'),
         translate('metric', 'ncloc', 'name'),
         translate('metric', 'bugs', 'name'),
         translate('metric', 'vulnerabilities', 'name'),
         translate('metric', 'code_smells', 'name'),
         translate('metric', 'coverage', 'name'),
         translate('metric', 'duplicated_lines_density', 'short_name')
-      ];
+      ].filter(Boolean);
 
   return (
     <thead>
       <tr className="code-components-header">
         <th className="thin nowrap">&nbsp;</th>
         <th>&nbsp;</th>
-        {columns.map(column => (
+        {columns.map(column =>
           <th key={column} className="thin nowrap text-right code-components-cell">
             {baseComponent && column}
           </th>
-        ))}
+        )}
       </tr>
     </thead>
   );

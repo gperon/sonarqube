@@ -18,7 +18,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 import {
-  getQualityProfiles,
+  searchQualityProfiles,
   associateProject,
   dissociateProject
 } from '../../../api/quality-profiles';
@@ -49,10 +49,10 @@ export const receiveProjectProfiles = (projectKey, profiles) => ({
 
 export const fetchProjectProfiles = (projectKey, organization) => dispatch => {
   Promise.all([
-    organization ? getQualityProfiles({ organization }) : getQualityProfiles(),
+    organization ? searchQualityProfiles({ organization }) : searchQualityProfiles(),
     organization
-      ? getQualityProfiles({ organization, projectKey })
-      : getQualityProfiles({ projectKey })
+      ? searchQualityProfiles({ organization, projectKey })
+      : searchQualityProfiles({ projectKey })
   ]).then(responses => {
     const [allProfiles, projectProfiles] = responses;
     dispatch(receiveProfiles(allProfiles));
@@ -117,9 +117,10 @@ const setProjectGateAction = (projectKey, gateId) => ({
 });
 
 export const setProjectGate = (projectKey, oldId, newId) => dispatch => {
-  const request = newId != null
-    ? associateGateWithProject(newId, projectKey)
-    : dissociateGateWithProject(oldId, projectKey);
+  const request =
+    newId != null
+      ? associateGateWithProject(newId, projectKey)
+      : dissociateGateWithProject(oldId, projectKey);
 
   request.then(() => {
     dispatch(setProjectGateAction(projectKey, newId));

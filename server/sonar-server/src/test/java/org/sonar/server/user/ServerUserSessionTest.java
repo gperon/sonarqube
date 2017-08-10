@@ -84,7 +84,7 @@ public class ServerUserSessionTest {
     organization = db.organizations().insert();
     publicProject = db.components().insertPublicProject(organization, PUBLIC_PROJECT_UUID);
     privateProject = db.components().insertPrivateProject(organization, dto -> dto.setUuid(PRIVATE_PROJECT_UUID).setProjectUuid(PRIVATE_PROJECT_UUID).setPrivate(true));
-    db.components().insertComponent(ComponentTesting.newFileDto(publicProject, null, FILE_UUID).setKey(FILE_KEY));
+    db.components().insertComponent(ComponentTesting.newFileDto(publicProject, null, FILE_UUID).setDbKey(FILE_KEY));
     user = db.users().insertUser(LOGIN);
     groupOfUser = db.users().insertGroup(organization);
   }
@@ -484,7 +484,7 @@ public class ServerUserSessionTest {
 
     session.checkIsSystemAdministrator();
 
-    db.getDbClient().userDao().deactivateUserById(db.getSession(), user.getId());
+    db.getDbClient().userDao().deactivateUser(db.getSession(), user);
     db.commit();
 
     // should fail but succeeds because flag is kept in cache

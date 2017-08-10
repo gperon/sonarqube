@@ -89,7 +89,7 @@ export function getIssuesCount(query: {}): Promise<*> {
 }
 
 export const searchIssueTags = (
-  data: { ps?: number, q?: string } = { ps: 500 }
+  data: { organization?: string, ps?: number, q?: string } = { ps: 500 }
 ): Promise<Array<string>> => getJSON('/api/issues/tags', data).then(r => r.tags);
 
 export function getIssueChangelog(issue: string): Promise<*> {
@@ -117,9 +117,10 @@ export function editIssueComment(data: { comment: string, text: string }): Promi
   return postJSON(url, data);
 }
 
-export function setIssueAssignee(
-  data: { issue: string, assignee?: string }
-): Promise<IssueResponse> {
+export function setIssueAssignee(data: {
+  issue: string,
+  assignee?: string
+}): Promise<IssueResponse> {
   const url = '/api/issues/assign';
   return postJSON(url, data);
 }
@@ -134,9 +135,10 @@ export function setIssueTags(data: { issue: string, tags: string }): Promise<Iss
   return postJSON(url, data);
 }
 
-export function setIssueTransition(
-  data: { issue: string, transition: string }
-): Promise<IssueResponse> {
+export function setIssueTransition(data: {
+  issue: string,
+  transition: string
+}): Promise<IssueResponse> {
   const url = '/api/issues/do_transition';
   return postJSON(url, data);
 }

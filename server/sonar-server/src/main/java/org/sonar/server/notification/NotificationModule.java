@@ -21,12 +21,7 @@ package org.sonar.server.notification;
 
 import org.sonar.api.config.EmailSettings;
 import org.sonar.core.platform.Module;
-import org.sonar.server.notification.email.AlertsEmailTemplate;
 import org.sonar.server.notification.email.EmailNotificationChannel;
-import org.sonar.server.notification.ws.AddAction;
-import org.sonar.server.notification.ws.ListAction;
-import org.sonar.server.notification.ws.NotificationsWs;
-import org.sonar.server.notification.ws.RemoveAction;
 
 public class NotificationModule extends Module {
   @Override
@@ -38,12 +33,6 @@ public class NotificationModule extends Module {
       NotificationUpdater.class,
       DefaultNotificationManager.class,
       NotificationDaemon.class,
-      AlertsEmailTemplate.class,
-      EmailNotificationChannel.class,
-      // WS
-      NotificationsWs.class,
-      AddAction.class,
-      RemoveAction.class,
-      ListAction.class);
+      EmailNotificationChannel.class);
   }
 }

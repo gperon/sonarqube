@@ -22,8 +22,7 @@ package org.sonar.scanner.rule;
 import java.util.Arrays;
 import org.junit.Test;
 import org.sonar.api.batch.rule.internal.ActiveRulesBuilder;
-import org.sonar.api.config.Settings;
-import org.sonar.api.config.MapSettings;
+import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.profiles.RulesProfile;
 import org.sonar.api.rule.RuleKey;
 
@@ -34,16 +33,16 @@ import static org.mockito.Mockito.when;
 
 public class RulesProfileProviderTest {
 
-  ModuleQProfiles qProfiles = mock(ModuleQProfiles.class);
-  Settings settings = new MapSettings();
-  RulesProfileProvider provider = new RulesProfileProvider();
+  private ModuleQProfiles qProfiles = mock(ModuleQProfiles.class);
+  private MapSettings settings = new MapSettings();
+  private RulesProfileProvider provider = new RulesProfileProvider();
 
   @Test
   public void merge_profiles() {
-    QProfile qProfile = new QProfile().setKey("java-sw").setName("Sonar way").setLanguage("java");
+    QProfile qProfile = new QProfile("java-sw", "Sonar way", "java", null);
     when(qProfiles.findAll()).thenReturn(Arrays.asList(qProfile));
 
-    RulesProfile profile = provider.provide(qProfiles, new ActiveRulesBuilder().build(), settings);
+    RulesProfile profile = provider.provide(qProfiles, new ActiveRulesBuilder().build(), settings.asConfig());
 
     // merge of all profiles
     assertThat(profile).isNotNull().isInstanceOf(RulesProfileWrapper.class);
@@ -62,10 +61,10 @@ public class RulesProfileProviderTest {
   public void keep_compatibility_with_single_language_projects() {
     settings.setProperty("sonar.language", "java");
 
-    QProfile qProfile = new QProfile().setKey("java-sw").setName("Sonar way").setLanguage("java");
+    QProfile qProfile = new QProfile("java-sw", "Sonar way", "java", null);
     when(qProfiles.findByLanguage("java")).thenReturn(qProfile);
 
-    RulesProfile profile = provider.provide(qProfiles, new ActiveRulesBuilder().build(), settings);
+    RulesProfile profile = provider.provide(qProfiles, new ActiveRulesBuilder().build(), settings.asConfig());
 
     // no merge, directly the old hibernate profile
     assertThat(profile).isNotNull();
@@ -75,12 +74,12 @@ public class RulesProfileProviderTest {
 
   @Test
   public void support_rule_templates() {
-    QProfile qProfile = new QProfile().setKey("java-sw").setName("Sonar way").setLanguage("java");
+    QProfile qProfile = new QProfile("java-sw", "Sonar way", "java", null);
     when(qProfiles.findAll()).thenReturn(Arrays.asList(qProfile));
     ActiveRulesBuilder activeRulesBuilder = new ActiveRulesBuilder();
     activeRulesBuilder.create(RuleKey.of("java", "S001")).setTemplateRuleKey("T001").setLanguage("java").activate();
 
-    RulesProfile profile = provider.provide(qProfiles, activeRulesBuilder.build(), settings);
+    RulesProfile profile = provider.provide(qProfiles, activeRulesBuilder.build(), settings.asConfig());
 
     assertThat(profile.getActiveRule("java", "S001").getRule().getTemplate().getKey()).isEqualTo("T001");
   }

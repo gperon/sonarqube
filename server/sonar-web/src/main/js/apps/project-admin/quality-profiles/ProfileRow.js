@@ -18,14 +18,15 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 import React from 'react';
+import PropTypes from 'prop-types';
 import Select from 'react-select';
 import { translate } from '../../../helpers/l10n';
 
 export default class ProfileRow extends React.PureComponent {
   static propTypes = {
-    profile: React.PropTypes.object.isRequired,
-    possibleProfiles: React.PropTypes.array.isRequired,
-    onChangeProfile: React.PropTypes.func.isRequired
+    profile: PropTypes.object.isRequired,
+    possibleProfiles: PropTypes.array.isRequired,
+    onChangeProfile: PropTypes.func.isRequired
   };
 
   state = {
@@ -49,7 +50,9 @@ export default class ProfileRow extends React.PureComponent {
     if (profileOption.isDefault) {
       return (
         <span>
-          <strong>{translate('default')}</strong>
+          <strong>
+            {translate('default')}
+          </strong>
           {': '}
           {profileOption.label}
         </span>
@@ -87,8 +90,12 @@ export default class ProfileRow extends React.PureComponent {
 
     return (
       <tr data-key={profile.language}>
-        <td className="thin nowrap">{profile.languageName}</td>
-        <td className="thin nowrap">{this.renderProfileSelect()}</td>
+        <td className="thin nowrap">
+          {profile.languageName}
+        </td>
+        <td className="thin nowrap">
+          {this.renderProfileSelect()}
+        </td>
         <td>
           {this.state.loading && <i className="spinner" />}
         </td>

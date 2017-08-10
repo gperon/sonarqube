@@ -100,7 +100,7 @@ public class SearchHistoryActionTest {
     complexityMetric = insertComplexityMetric();
     newViolationMetric = insertNewViolationMetric();
     metrics = newArrayList(nclocMetric.getKey(), complexityMetric.getKey(), newViolationMetric.getKey());
-    wsRequest = SearchHistoryRequest.builder().setComponent(project.getKey()).setMetrics(metrics);
+    wsRequest = SearchHistoryRequest.builder().setComponent(project.getDbKey()).setMetrics(metrics);
   }
 
   @Test
@@ -108,7 +108,7 @@ public class SearchHistoryActionTest {
     project = db.components().insertPrivateProject();
     userSession.addProjectPermission(UserRole.USER, project);
     wsRequest
-      .setComponent(project.getKey())
+      .setComponent(project.getDbKey())
       .setMetrics(singletonList(complexityMetric.getKey()));
 
     SearchHistoryResponse result = call();
@@ -119,6 +119,22 @@ public class SearchHistoryActionTest {
     assertThat(result.getPaging()).extracting(Paging::getPageIndex, Paging::getPageSize, Paging::getTotal)
       // pagination is applied to the number of analyses
       .containsExactly(1, 100, 0);
+  }
+
+  @Test
+  public void analyses_but_no_measure() {
+    project = db.components().insertPrivateProject();
+    analysis = db.components().insertSnapshot(project);
+    userSession.addProjectPermission(UserRole.USER, project);
+    wsRequest
+      .setComponent(project.getDbKey())
+      .setMetrics(singletonList(complexityMetric.getKey()));
+
+    SearchHistoryResponse result = call();
+
+    assertThat(result.getPaging()).extracting(Paging::getPageIndex, Paging::getPageSize, Paging::getTotal).containsExactly(1, 100, 1);
+    assertThat(result.getMeasuresList()).hasSize(1);
+    assertThat(result.getMeasures(0).getHistoryList()).extracting(HistoryValue::hasDate, HistoryValue::hasValue).containsExactly(tuple(true, false));
   }
 
   @Test
@@ -162,8 +178,8 @@ public class SearchHistoryActionTest {
     // ncloc measures
     HistoryMeasure nclocMeasures = result.getMeasures(1);
     assertThat(nclocMeasures.getMetric()).isEqualTo(nclocMetric.getKey());
-    assertThat(nclocMeasures.getHistoryList()).extracting(HistoryValue::getDate, HistoryValue::getValue)
-      .containsExactly(tuple(analysisDate, "201"));
+    assertThat(nclocMeasures.getHistoryList()).extracting(HistoryValue::getDate, HistoryValue::getValue, HistoryValue::hasValue).containsExactly(
+      tuple(analysisDate, "201", true), tuple(laterAnalysisDate, "", false));
     // new_violation measures
     HistoryMeasure newViolationMeasures = result.getMeasures(2);
     assertThat(newViolationMeasures.getMetric()).isEqualTo(newViolationMetric.getKey());
@@ -181,7 +197,7 @@ public class SearchHistoryActionTest {
       .map(a -> formatDateTime(a.getCreatedAt()))
       .collect(MoreCollectors.toList());
     db.commit();
-    wsRequest.setComponent(project.getKey()).setPage(2).setPageSize(3);
+    wsRequest.setComponent(project.getDbKey()).setPage(2).setPageSize(3);
 
     SearchHistoryResponse result = call();
 
@@ -200,7 +216,7 @@ public class SearchHistoryActionTest {
       .map(a -> formatDateTime(a.getCreatedAt()))
       .collect(MoreCollectors.toList());
     db.commit();
-    wsRequest.setComponent(project.getKey()).setFrom(analysisDates.get(1)).setTo(analysisDates.get(3));
+    wsRequest.setComponent(project.getDbKey()).setFrom(analysisDates.get(1)).setTo(analysisDates.get(3));
 
     SearchHistoryResponse result = call();
 
@@ -215,7 +231,7 @@ public class SearchHistoryActionTest {
     dbClient.metricDao().insert(dbSession, newMetricDto().setKey("new_optimized").setValueType(ValueType.INT.name()).setOptimizedBestValue(true).setBestValue(789d));
     db.commit();
     ComponentDto file = db.components().insertComponent(newFileDto(project));
-    wsRequest.setComponent(file.getKey()).setMetrics(Arrays.asList("optimized", "new_optimized"));
+    wsRequest.setComponent(file.getDbKey()).setMetrics(Arrays.asList("optimized", "new_optimized"));
 
     SearchHistoryResponse result = call();
 
@@ -224,9 +240,11 @@ public class SearchHistoryActionTest {
     assertThat(result.getMeasuresList().get(1).getHistoryList()).extracting(HistoryValue::getValue).containsExactly("456");
 
     // Best value is not applied to project
-    wsRequest.setComponent(project.getKey());
+    wsRequest.setComponent(project.getDbKey());
     result = call();
-    assertThat(result.getMeasuresList().get(0).getHistoryCount()).isEqualTo(0);
+    assertThat(result.getMeasuresList().get(0).getHistoryCount()).isEqualTo(1);
+    assertThat(result.getMeasuresList().get(0).getHistory(0).hasDate()).isTrue();
+    assertThat(result.getMeasuresList().get(0).getHistory(0).hasValue()).isFalse();
   }
 
   @Test
@@ -249,7 +267,9 @@ public class SearchHistoryActionTest {
     SearchHistoryResponse result = call();
 
     assertThat(result.getMeasuresCount()).isEqualTo(1);
-    assertThat(result.getMeasures(0).getHistoryCount()).isEqualTo(0);
+    assertThat(result.getMeasures(0).getHistoryCount()).isEqualTo(1);
+    assertThat(result.getMeasures(0).getHistory(0).hasDate()).isTrue();
+    assertThat(result.getMeasures(0).getHistory(0).hasValue()).isFalse();
   }
 
   @Test
@@ -283,7 +303,7 @@ public class SearchHistoryActionTest {
   @Test
   public void fail_when_component_is_removed() {
     ComponentDto project = db.components().insertComponent(newPrivateProjectDto(db.getDefaultOrganization()));
-    db.components().insertComponent(newFileDto(project).setKey("file-key").setEnabled(false));
+    db.components().insertComponent(newFileDto(project).setDbKey("file-key").setEnabled(false));
     userSession.addProjectPermission(UserRole.USER, project);
 
     expectedException.expect(NotFoundException.class);
@@ -320,7 +340,7 @@ public class SearchHistoryActionTest {
     db.commit();
 
     String result = ws.newRequest()
-      .setParam(PARAM_COMPONENT, project.getKey())
+      .setParam(PARAM_COMPONENT, project.getDbKey())
       .setParam(PARAM_METRICS, String.join(",", metrics))
       .execute().getInput();
 

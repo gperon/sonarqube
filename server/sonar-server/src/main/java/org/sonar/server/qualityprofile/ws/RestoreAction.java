@@ -65,8 +65,8 @@ public class RestoreAction implements QProfileWsAction {
     WebService.NewAction action = controller.createAction(ACTION_RESTORE)
       .setSince("5.2")
       .setDescription("Restore a quality profile using an XML file. The restored profile name is taken from the backup file, " +
-        "so if a profile with the same name and language already exists, it will be overwritten. " +
-        "Require Administer Quality Profiles permission.")
+        "so if a profile with the same name and language already exists, it will be overwritten.<br> " +
+        "Requires to be logged in and the 'Administer Quality Profiles' permission.")
       .setPost(true)
       .setHandler(this);
 
@@ -83,11 +83,11 @@ public class RestoreAction implements QProfileWsAction {
     userSession.checkLoggedIn();
 
     InputStream backup = request.paramAsInputStream(PARAM_BACKUP);
+    checkArgument(backup != null, "A backup file must be provided");
     String organizationKey = request.param(PARAM_ORGANIZATION);
     InputStreamReader reader = null;
 
     try (DbSession dbSession = dbClient.openSession(false)) {
-      checkArgument(backup != null, "A backup file must be provided");
       reader = new InputStreamReader(backup, UTF_8);
 
       OrganizationDto organization = wsSupport.getOrganizationByKey(dbSession, organizationKey);

@@ -18,6 +18,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 import React from 'react';
+import PropTypes from 'prop-types';
 import Helmet from 'react-helmet';
 import { translate } from '../../../helpers/l10n';
 import { getServerId, generateServerId } from '../../../api/settings';
@@ -25,8 +26,8 @@ import { parseError } from '../../code/utils';
 
 export default class ServerIdApp extends React.PureComponent {
   static propTypes = {
-    addGlobalErrorMessage: React.PropTypes.func.isRequired,
-    closeAllGlobalMessages: React.PropTypes.func.isRequired
+    addGlobalErrorMessage: PropTypes.func.isRequired,
+    closeAllGlobalMessages: PropTypes.func.isRequired
   };
 
   state = {
@@ -79,9 +80,13 @@ export default class ServerIdApp extends React.PureComponent {
       <div id="server-id-page" className="page page-limited">
         <Helmet title={translate('property.category.server_id')} />
         <header className="page-header">
-          <h1 className="page-title">{translate('property.category.server_id')}</h1>
+          <h1 className="page-title">
+            {translate('property.category.server_id')}
+          </h1>
           {this.state.loading && <i className="spinner" />}
-          <div className="page-description">{translate('server_id_configuration.information')}</div>
+          <div className="page-description">
+            {translate('server_id_configuration.information')}
+          </div>
         </header>
 
         {this.state.serverId != null &&
@@ -95,7 +100,9 @@ export default class ServerIdApp extends React.PureComponent {
               value={this.state.serverId}
             />
             {!!this.state.invalidServerId &&
-              <span className="spacer-left">{translate('server_id_configuration.bad_key')}</span>}
+              <span className="spacer-left">
+                {translate('server_id_configuration.bad_key')}
+              </span>}
           </div>}
 
         <div className="panel">
@@ -136,9 +143,11 @@ export default class ServerIdApp extends React.PureComponent {
               <div className="modal-field-description">
                 {translate('server_id_configuration.ip.desc')}
                 <ul className="list-styled">
-                  {this.state.validIpAddresses.map(ip => (
-                    <li key={ip} className="little-spacer-top">{ip}</li>
-                  ))}
+                  {this.state.validIpAddresses.map(ip =>
+                    <li key={ip} className="little-spacer-top">
+                      {ip}
+                    </li>
+                  )}
                 </ul>
               </div>
             </div>

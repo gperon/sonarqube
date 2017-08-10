@@ -27,8 +27,8 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 import org.sonar.api.config.Encryption;
-import org.sonar.api.config.MapSettings;
 import org.sonar.api.config.Settings;
+import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.server.ws.WebService;
 import org.sonar.server.exceptions.ForbiddenException;
 import org.sonar.server.tester.UserSessionRule;
@@ -46,7 +46,7 @@ public class CheckSecretKeyActionTest {
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  private Settings settings = new MapSettings();
+  private MapSettings settings = new MapSettings();
   private Encryption encryption = settings.getEncryption();
   private CheckSecretKeyAction underTest = new CheckSecretKeyAction(settings, userSession);
   private WsActionTester ws = new WsActionTester(underTest);

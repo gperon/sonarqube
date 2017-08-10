@@ -19,12 +19,12 @@
  */
 package org.sonar.scanner.scan;
 
-import org.junit.Before;
+import java.util.Arrays;
 import org.junit.Test;
+import org.sonar.api.batch.AnalysisMode;
 import org.sonar.api.batch.bootstrap.ProjectDefinition;
 import org.sonar.api.batch.fs.InputModule;
-import org.sonar.api.scan.filesystem.PathResolver;
-import org.sonar.scanner.scan.filesystem.BatchIdGenerator;
+import org.sonar.api.batch.fs.internal.DefaultInputModule;
 import org.sonar.scanner.scan.filesystem.InputComponentStore;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -35,32 +35,46 @@ public class ModuleIndexerTest {
   private ModuleIndexer indexer;
   private DefaultComponentTree tree;
   private DefaultInputModuleHierarchy moduleHierarchy;
-  private ImmutableProjectReactor reactor;
   private InputComponentStore componentStore;
 
-  @Before
-  public void setUp() {
-    reactor = mock(ImmutableProjectReactor.class);
-    componentStore = new InputComponentStore(new PathResolver());
+  public void createIndexer(DefaultInputModule rootModule) {
+    componentStore = new InputComponentStore(rootModule, mock(AnalysisMode.class));
     tree = new DefaultComponentTree();
-    moduleHierarchy = new DefaultInputModuleHierarchy();
-    indexer = new ModuleIndexer(reactor, tree, componentStore, new BatchIdGenerator(), moduleHierarchy);
+    moduleHierarchy = mock(DefaultInputModuleHierarchy.class);
+    indexer = new ModuleIndexer(tree, componentStore, moduleHierarchy);
   }
 
   @Test
   public void testIndex() {
-    ProjectDefinition root = ProjectDefinition.create().setKey("root");
-    ProjectDefinition mod1 = ProjectDefinition.create().setKey("mod1");
-    ProjectDefinition mod2 = ProjectDefinition.create().setKey("mod2");
-    ProjectDefinition mod3 = ProjectDefinition.create().setKey("mod3");
-    ProjectDefinition mod4 = ProjectDefinition.create().setKey("mod4");
+    ProjectDefinition rootDef = mock(ProjectDefinition.class);
+    ProjectDefinition def = mock(ProjectDefinition.class);
+    when(rootDef.getParent()).thenReturn(null);
+    when(def.getParent()).thenReturn(rootDef);
 
-    root.addSubProject(mod1);
-    mod1.addSubProject(mod2);
-    root.addSubProject(mod3);
-    root.addSubProject(mod4);
+    DefaultInputModule root = mock(DefaultInputModule.class);
+    DefaultInputModule mod1 = mock(DefaultInputModule.class);
+    DefaultInputModule mod2 = mock(DefaultInputModule.class);
+    DefaultInputModule mod3 = mock(DefaultInputModule.class);
 
-    when(reactor.getRoot()).thenReturn(root);
+    when(root.key()).thenReturn("root");
+    when(mod1.key()).thenReturn("mod1");
+    when(mod2.key()).thenReturn("mod2");
+    when(mod3.key()).thenReturn("mod3");
+
+    when(root.getKeyWithBranch()).thenReturn("root");
+    when(mod1.getKeyWithBranch()).thenReturn("mod1");
+    when(mod2.getKeyWithBranch()).thenReturn("mod2");
+    when(mod3.getKeyWithBranch()).thenReturn("mod3");
+
+    when(root.definition()).thenReturn(rootDef);
+    when(mod1.definition()).thenReturn(def);
+    when(mod2.definition()).thenReturn(def);
+    when(mod3.definition()).thenReturn(def);
+
+    createIndexer(root);
+    when(moduleHierarchy.root()).thenReturn(root);
+    when(moduleHierarchy.children(root)).thenReturn(Arrays.asList(mod1, mod2, mod3));
+
     indexer.start();
 
     InputModule rootModule = moduleHierarchy.root();

@@ -18,6 +18,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 import React from 'react';
+import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { Link } from 'react-router';
 import QualifierIcon from '../../../../components/shared/QualifierIcon';
@@ -29,9 +30,9 @@ import { collapsePath, limitComponentName } from '../../../../helpers/path';
 
 class ComponentNavBreadcrumbs extends React.PureComponent {
   static propTypes = {
-    breadcrumbs: React.PropTypes.array,
-    component: React.PropTypes.shape({
-      visibility: React.PropTypes.string
+    breadcrumbs: PropTypes.array,
+    component: PropTypes.shape({
+      visibility: PropTypes.string
     }).isRequired
   };
 
@@ -59,10 +60,14 @@ class ComponentNavBreadcrumbs extends React.PureComponent {
           <Link
             title={item.name}
             to={{ pathname: '/dashboard', query: { id: item.key } }}
-            className="link-base-color">
+            className="link-base-color link-no-underline">
             {index === breadcrumbs.length - 1
-              ? <strong>{itemName}</strong>
-              : <span>{itemName}</span>}
+              ? <strong>
+                  {itemName}
+                </strong>
+              : <span>
+                  {itemName}
+                </span>}
           </Link>
           {index < breadcrumbs.length - 1 && <span className="slash-separator" />}
         </span>
@@ -70,7 +75,7 @@ class ComponentNavBreadcrumbs extends React.PureComponent {
     });
 
     return (
-      <h2 className="navbar-context-title">
+      <h1 className="navbar-context-header">
         <OrganizationHelmet
           title={component.name}
           organization={displayOrganization ? organization : null}
@@ -80,21 +85,23 @@ class ComponentNavBreadcrumbs extends React.PureComponent {
             <span className="navbar-context-title-qualifier little-spacer-right">
               <QualifierIcon qualifier={lastItem.qualifier} />
             </span>
-            <OrganizationLink organization={organization} className="link-base-color">
+            <OrganizationLink
+              organization={organization}
+              className="link-base-color link-no-underline">
               {organization.name}
             </OrganizationLink>
             <span className="slash-separator" />
           </span>}
         {items}
         {component.visibility === 'private' && <PrivateBadge className="spacer-left" />}
-      </h2>
+      </h1>
     );
   }
 }
 
 const mapStateToProps = (state, ownProps) => ({
-  organization: ownProps.component.organization &&
-    getOrganizationByKey(state, ownProps.component.organization),
+  organization:
+    ownProps.component.organization && getOrganizationByKey(state, ownProps.component.organization),
   shouldOrganizationBeDisplayed: areThereCustomOrganizations(state)
 });
 

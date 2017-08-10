@@ -52,10 +52,11 @@ import org.sonar.ce.log.CeProcessLogging;
 import org.sonar.ce.platform.ComputeEngineExtensionInstaller;
 import org.sonar.ce.queue.CeQueueCleaner;
 import org.sonar.ce.queue.PurgeCeActivities;
-import org.sonar.ce.settings.ProjectSettingsFactory;
+import org.sonar.ce.settings.ProjectConfigurationFactory;
 import org.sonar.ce.taskprocessor.CeTaskProcessorModule;
 import org.sonar.ce.user.CeUserSession;
 import org.sonar.core.component.DefaultResourceTypes;
+import org.sonar.core.config.ConfigurationProvider;
 import org.sonar.core.config.CorePropertyDefinitions;
 import org.sonar.core.i18n.DefaultI18n;
 import org.sonar.core.i18n.RuleI18nManager;
@@ -65,6 +66,7 @@ import org.sonar.core.platform.PluginClassloaderFactory;
 import org.sonar.core.platform.PluginLoader;
 import org.sonar.core.timemachine.Periods;
 import org.sonar.core.util.UuidFactoryImpl;
+import org.sonar.db.DBSessionsImpl;
 import org.sonar.db.DaoModule;
 import org.sonar.db.DatabaseChecker;
 import org.sonar.db.DbClient;
@@ -72,7 +74,6 @@ import org.sonar.db.DefaultDatabase;
 import org.sonar.db.purge.PurgeProfiler;
 import org.sonar.process.Props;
 import org.sonar.process.logging.LogbackHelper;
-import org.sonar.server.component.ComponentCleanerService;
 import org.sonar.server.component.ComponentFinder;
 import org.sonar.server.component.index.ComponentIndexer;
 import org.sonar.server.computation.task.projectanalysis.ProjectAnalysisTaskModule;
@@ -181,12 +182,10 @@ public class ComputeEngineContainerImpl implements ComputeEngineContainer {
     if (props.valueAsBoolean("sonar.cluster.enabled")) {
       this.level4.add(
         HazelcastClientWrapperImpl.class,
-        CeDistributedInformationImpl.class
-      );
+        CeDistributedInformationImpl.class);
     } else {
       this.level4.add(
-        StandaloneCeDistributedInformation.class
-      );
+        StandaloneCeDistributedInformation.class);
     }
     configureFromModules(this.level4);
     ServerExtensionInstaller extensionInstaller = this.level4.getComponentByType(ServerExtensionInstaller.class);
@@ -225,6 +224,7 @@ public class ComputeEngineContainerImpl implements ComputeEngineContainer {
     Version apiVersion = ApiVersion.load(System2.INSTANCE);
     return new Object[] {
       ThreadLocalSettings.class,
+      new ConfigurationProvider(),
       new SonarQubeVersion(apiVersion),
       SonarRuntimeImpl.forSonarQube(ApiVersion.load(System2.INSTANCE), SonarQubeSide.COMPUTE_ENGINE),
       CeProcessLogging.class,
@@ -247,6 +247,7 @@ public class ComputeEngineContainerImpl implements ComputeEngineContainer {
       // DB
       DaoModule.class,
       ReadOnlyPropertiesDao.class,
+      DBSessionsImpl.class,
       DbClient.class,
 
       // Elasticsearch
@@ -348,7 +349,6 @@ public class ComputeEngineContainerImpl implements ComputeEngineContainer {
       ComponentFinder.class, // used in ComponentService
       NewAlerts.class,
       NewAlerts.newMetadata(),
-      ComponentCleanerService.class,
       ProjectMeasuresIndexer.class,
       ComponentIndexer.class,
 
@@ -406,7 +406,7 @@ public class ComputeEngineContainerImpl implements ComputeEngineContainer {
       CeTaskProcessorModule.class,
 
       InternalPropertiesImpl.class,
-      ProjectSettingsFactory.class,
+      ProjectConfigurationFactory.class,
 
       // cleaning
       CeCleaningModule.class

@@ -24,6 +24,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -32,8 +33,8 @@ import org.apache.commons.lang.StringUtils;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbSession;
 
+import static org.apache.commons.lang.StringUtils.repeat;
 import static org.sonar.db.DatabaseUtils.executeLargeInputs;
-import static org.sonar.db.DatabaseUtils.repeatCondition;
 
 /**
  * No streaming because of union of joins -> no need to use ResultSetIterator
@@ -42,24 +43,18 @@ public class PermissionIndexerDao {
 
   public static final class Dto {
     private final String projectUuid;
-    private final long updatedAt;
     private final String qualifier;
     private final List<Integer> userIds = new ArrayList<>();
     private final List<Integer> groupIds = new ArrayList<>();
     private boolean allowAnyone = false;
 
-    public Dto(String projectUuid, long updatedAt, String qualifier) {
+    public Dto(String projectUuid, String qualifier) {
       this.projectUuid = projectUuid;
-      this.updatedAt = updatedAt;
       this.qualifier = qualifier;
     }
 
     public String getProjectUuid() {
       return projectUuid;
-    }
-
-    public long getUpdatedAt() {
-      return updatedAt;
     }
 
     public String getQualifier() {
@@ -102,7 +97,6 @@ public class PermissionIndexerDao {
     "  project_authorization.project as project, " +
     "  project_authorization.user_id as user_id, " +
     "  project_authorization.group_id as group_id, " +
-    "  project_authorization.updated_at as updated_at, " +
     "  project_authorization.qualifier as qualifier " +
     "FROM ( " +
 
@@ -110,14 +104,15 @@ public class PermissionIndexerDao {
 
     "      SELECT '" + RowKind.USER + "' as kind," +
     "      projects.uuid AS project, " +
-    "      projects.authorization_updated_at AS updated_at, " +
     "      projects.qualifier AS qualifier, " +
     "      user_roles.user_id  AS user_id, " +
     "      NULL  AS group_id " +
     "      FROM projects " +
     "      INNER JOIN user_roles ON user_roles.resource_id = projects.id AND user_roles.role = 'user' " +
     "      WHERE " +
-    "        (projects.qualifier = 'TRK' or  projects.qualifier = 'VW') " +
+    "        (projects.qualifier = 'TRK' " +
+    "         or  projects.qualifier = 'VW' " +
+    "         or  projects.qualifier = 'APP') " +
     "        AND projects.copy_component_uuid is NULL " +
     "        {projectsCondition} " +
     "      UNION " +
@@ -126,7 +121,6 @@ public class PermissionIndexerDao {
 
     "      SELECT '" + RowKind.GROUP + "' as kind," +
     "      projects.uuid AS project, " +
-    "      projects.authorization_updated_at AS updated_at, " +
     "      projects.qualifier AS qualifier, " +
     "      NULL  AS user_id, " +
     "      groups.id  AS group_id " +
@@ -134,7 +128,9 @@ public class PermissionIndexerDao {
     "      INNER JOIN group_roles ON group_roles.resource_id = projects.id AND group_roles.role = 'user' " +
     "      INNER JOIN groups ON groups.id = group_roles.group_id " +
     "      WHERE " +
-    "        (projects.qualifier = 'TRK' or  projects.qualifier = 'VW') " +
+    "        (projects.qualifier = 'TRK' " +
+    "         or  projects.qualifier = 'VW' " +
+    "         or  projects.qualifier = 'APP') " +
     "        AND projects.copy_component_uuid is NULL " +
     "        {projectsCondition} " +
     "        AND group_id IS NOT NULL " +
@@ -144,13 +140,14 @@ public class PermissionIndexerDao {
 
     "      SELECT '" + RowKind.ANYONE + "' as kind," +
     "      projects.uuid AS project, " +
-    "      projects.authorization_updated_at AS updated_at, " +
     "      projects.qualifier AS qualifier, " +
     "      NULL         AS user_id, " +
     "      NULL     AS group_id " +
     "      FROM projects " +
     "      WHERE " +
-    "        (projects.qualifier = 'TRK' or  projects.qualifier = 'VW') " +
+    "        (projects.qualifier = 'TRK' " +
+    "         or  projects.qualifier = 'VW' " +
+    "         or  projects.qualifier = 'APP') " +
     "        AND projects.copy_component_uuid is NULL " +
     "        AND projects.private = ? " +
     "        {projectsCondition} " +
@@ -159,13 +156,14 @@ public class PermissionIndexerDao {
     // private project is returned when no authorization
     "      SELECT '" + RowKind.NONE + "' as kind," +
     "      projects.uuid AS project, " +
-    "      projects.authorization_updated_at AS updated_at, " +
     "      projects.qualifier AS qualifier, " +
     "      NULL AS user_id, " +
     "      NULL  AS group_id " +
     "      FROM projects " +
     "      WHERE " +
-    "        (projects.qualifier = 'TRK' or  projects.qualifier = 'VW') " +
+    "        (projects.qualifier = 'TRK' " +
+    "         or  projects.qualifier = 'VW' " +
+    "         or  projects.qualifier = 'APP') " +
     "        AND projects.copy_component_uuid is NULL " +
     "        AND projects.private = ? " +
     "        {projectsCondition} " +
@@ -176,7 +174,7 @@ public class PermissionIndexerDao {
     return doSelectByProjects(dbClient, session, Collections.emptyList());
   }
 
-  List<Dto> selectByUuids(DbClient dbClient, DbSession session, List<String> projectOrViewUuids) {
+  List<Dto> selectByUuids(DbClient dbClient, DbSession session, Collection<String> projectOrViewUuids) {
     return executeLargeInputs(projectOrViewUuids, subProjectOrViewUuids -> doSelectByProjects(dbClient, session, subProjectOrViewUuids));
   }
 
@@ -200,7 +198,7 @@ public class PermissionIndexerDao {
     if (projectUuids.isEmpty()) {
       sql = StringUtils.replace(SQL_TEMPLATE, "{projectsCondition}", "");
     } else {
-      sql = StringUtils.replace(SQL_TEMPLATE, "{projectsCondition}", " AND (" + repeatCondition("projects.uuid = ?", projectUuids.size(), "OR") + ")");
+      sql = StringUtils.replace(SQL_TEMPLATE, "{projectsCondition}", " AND (" + repeat("projects.uuid = ?", " or ", projectUuids.size()) + ")");
     }
     PreparedStatement stmt = dbClient.getMyBatis().newScrollingSelectStatement(session, sql);
     int index = 1;
@@ -239,9 +237,8 @@ public class PermissionIndexerDao {
 
     Dto dto = dtosByProjectUuid.get(projectUuid);
     if (dto == null) {
-      long updatedAt = rs.getLong(5);
-      String qualifier = rs.getString(6);
-      dto = new Dto(projectUuid, updatedAt, qualifier);
+      String qualifier = rs.getString(5);
+      dto = new Dto(projectUuid, qualifier);
       dtosByProjectUuid.put(projectUuid, dto);
     }
     switch (rowKind) {

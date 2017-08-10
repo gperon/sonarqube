@@ -28,8 +28,8 @@ import org.sonar.db.DbClient;
 import org.sonar.db.DbTester;
 import org.sonar.db.organization.OrganizationDto;
 import org.sonar.db.permission.OrganizationPermission;
-import org.sonar.server.exceptions.BadRequestException;
 import org.sonar.db.qualityprofile.QProfileDto;
+import org.sonar.server.exceptions.BadRequestException;
 import org.sonar.server.exceptions.ForbiddenException;
 import org.sonar.server.exceptions.UnauthorizedException;
 import org.sonar.server.organization.TestDefaultOrganizationProvider;
@@ -43,6 +43,7 @@ import static org.apache.commons.lang.RandomStringUtils.randomAlphanumeric;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.sonar.server.platform.db.migration.def.VarcharColumnDef.UUID_SIZE;
+import static org.sonarqube.ws.client.qualityprofile.QualityProfileWsParameters.PARAM_TARGET_PROFILE;
 
 public class DeactivateRulesActionTest {
 
@@ -80,26 +81,29 @@ public class DeactivateRulesActionTest {
       "is_template",
       "inheritance",
       "qprofile",
+      "compareToProfile",
       "tags",
       "asc",
       "q",
       "active_severities",
       "s",
       "repositories",
-      "profile_key",
+      "targetProfile",
       "statuses",
       "rule_key",
       "available_since",
       "activation",
       "severities",
       "organization");
+    WebService.Param targetProfile = definition.param("targetProfile");
+    assertThat(targetProfile.deprecatedKey()).isEqualTo("profile_key");
   }
 
   @Test
   public void should_fail_if_not_logged_in() {
     TestRequest request = wsActionTester.newRequest()
       .setMethod("POST")
-      .setParam("profile_key", randomAlphanumeric(UUID_SIZE));
+      .setParam(PARAM_TARGET_PROFILE, randomAlphanumeric(UUID_SIZE));
 
     thrown.expect(UnauthorizedException.class);
     request.execute();
@@ -111,7 +115,7 @@ public class DeactivateRulesActionTest {
     QProfileDto qualityProfile = dbTester.qualityProfiles().insert(defaultOrganization, p -> p.setIsBuiltIn(true));
     TestRequest request = wsActionTester.newRequest()
       .setMethod("POST")
-      .setParam("profile_key", qualityProfile.getKee());
+      .setParam(PARAM_TARGET_PROFILE, qualityProfile.getKee());
 
     thrown.expect(BadRequestException.class);
 
@@ -124,7 +128,7 @@ public class DeactivateRulesActionTest {
     QProfileDto qualityProfile = dbTester.qualityProfiles().insert(organization);
     TestRequest request = wsActionTester.newRequest()
       .setMethod("POST")
-      .setParam("profile_key", qualityProfile.getKee());
+      .setParam(PARAM_TARGET_PROFILE, qualityProfile.getKee());
 
     thrown.expect(ForbiddenException.class);
     request.execute();

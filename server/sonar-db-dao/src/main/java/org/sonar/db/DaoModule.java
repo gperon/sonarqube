@@ -25,13 +25,14 @@ import org.sonar.core.platform.Module;
 import org.sonar.db.ce.CeActivityDao;
 import org.sonar.db.ce.CeQueueDao;
 import org.sonar.db.ce.CeScannerContextDao;
+import org.sonar.db.ce.CeTaskCharacteristicDao;
 import org.sonar.db.ce.CeTaskInputDao;
 import org.sonar.db.component.ComponentDao;
 import org.sonar.db.component.ComponentKeyUpdaterDao;
 import org.sonar.db.component.ComponentLinkDao;
-import org.sonar.db.component.ResourceDao;
 import org.sonar.db.component.SnapshotDao;
 import org.sonar.db.duplication.DuplicationDao;
+import org.sonar.db.es.EsQueueDao;
 import org.sonar.db.event.EventDao;
 import org.sonar.db.issue.IssueChangeDao;
 import org.sonar.db.issue.IssueDao;
@@ -79,6 +80,7 @@ public class DaoModule extends Module {
     CeActivityDao.class,
     CeQueueDao.class,
     CeScannerContextDao.class,
+    CeTaskCharacteristicDao.class,
     CeTaskInputDao.class,
     ComponentDao.class,
     ComponentKeyUpdaterDao.class,
@@ -86,6 +88,7 @@ public class DaoModule extends Module {
     CustomMeasureDao.class,
     DefaultQProfileDao.class,
     DuplicationDao.class,
+    EsQueueDao.class,
     EventDao.class,
     FileSourceDao.class,
     GroupDao.class,
@@ -109,7 +112,6 @@ public class DaoModule extends Module {
     QualityGateConditionDao.class,
     QualityGateDao.class,
     QualityProfileDao.class,
-    ResourceDao.class,
     RoleDao.class,
     RuleDao.class,
     RuleRepositoryDao.class,

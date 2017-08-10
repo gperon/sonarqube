@@ -19,7 +19,11 @@
  */
 package org.sonar.server.computation.task.projectanalysis.step;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.util.Date;
+
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -34,11 +38,13 @@ import org.sonar.db.component.SnapshotTesting;
 import org.sonar.db.organization.OrganizationDto;
 import org.sonar.scanner.protocol.output.ScannerReport;
 import org.sonar.scanner.protocol.output.ScannerReport.Component.ComponentType;
+import org.sonar.server.computation.task.projectanalysis.analysis.Analysis;
 import org.sonar.server.computation.task.projectanalysis.analysis.AnalysisMetadataHolderRule;
 import org.sonar.server.computation.task.projectanalysis.batch.BatchReportReaderRule;
-import org.sonar.server.computation.task.projectanalysis.component.TreeRootHolderRule;
 import org.sonar.server.computation.task.projectanalysis.component.Component;
 import org.sonar.server.computation.task.projectanalysis.component.ReportComponent;
+import org.sonar.server.computation.task.projectanalysis.component.TreeRootHolderRule;
+import org.sonar.server.computation.task.projectanalysis.validation.ValidateIncremental;
 
 public class ValidateProjectStepTest {
 
@@ -62,11 +68,14 @@ public class ValidateProjectStepTest {
   @Rule
   public AnalysisMetadataHolderRule analysisMetadataHolder = new AnalysisMetadataHolderRule()
     .setAnalysisDate(new Date(DEFAULT_ANALYSIS_TIME))
+    .setIncrementalAnalysis(false)
     .setBranch(DEFAULT_BRANCH);
+
+  public ValidateIncremental validateIncremental = mock(ValidateIncremental.class);
 
   DbClient dbClient = dbTester.getDbClient();
 
-  ValidateProjectStep underTest = new ValidateProjectStep(dbClient, reportReader, treeRootHolder, analysisMetadataHolder);
+  ValidateProjectStep underTest = new ValidateProjectStep(dbClient, reportReader, treeRootHolder, analysisMetadataHolder, validateIncremental);
 
   @Test
   public void fail_if_root_component_is_not_a_project_in_db() {
@@ -77,7 +86,7 @@ public class ValidateProjectStepTest {
       .build());
     treeRootHolder.setRoot(ReportComponent.builder(Component.Type.PROJECT, 1).setUuid("ABCD").setKey(PROJECT_KEY).build());
 
-    ComponentDto project = ComponentTesting.newView(dbTester.organizations().insert(), "ABCD").setKey(PROJECT_KEY);
+    ComponentDto project = ComponentTesting.newView(dbTester.organizations().insert(), "ABCD").setDbKey(PROJECT_KEY);
     dbClient.componentDao().insert(dbTester.getSession(), project);
     dbTester.getSession().commit();
 
@@ -159,7 +168,7 @@ public class ValidateProjectStepTest {
       .setKey(MODULE_KEY)
       .build());
 
-    ComponentDto project = ComponentTesting.newPrivateProjectDto(dbTester.organizations().insert(), "ABCD").setKey(MODULE_KEY);
+    ComponentDto project = ComponentTesting.newPrivateProjectDto(dbTester.organizations().insert(), "ABCD").setDbKey(MODULE_KEY);
     dbClient.componentDao().insert(dbTester.getSession(), project);
     dbTester.getSession().commit();
 
@@ -192,10 +201,10 @@ public class ValidateProjectStepTest {
       .build());
 
     OrganizationDto organizationDto = dbTester.organizations().insert();
-    ComponentDto project = ComponentTesting.newPrivateProjectDto(organizationDto, "ABCD").setKey(PROJECT_KEY);
-    ComponentDto anotherProject = ComponentTesting.newPrivateProjectDto(organizationDto).setKey(anotherProjectKey);
+    ComponentDto project = ComponentTesting.newPrivateProjectDto(organizationDto, "ABCD").setDbKey(PROJECT_KEY);
+    ComponentDto anotherProject = ComponentTesting.newPrivateProjectDto(organizationDto).setDbKey(anotherProjectKey);
     dbClient.componentDao().insert(dbTester.getSession(), project, anotherProject);
-    ComponentDto module = ComponentTesting.newModuleDto("BCDE", anotherProject).setKey(MODULE_KEY);
+    ComponentDto module = ComponentTesting.newModuleDto("BCDE", anotherProject).setDbKey(MODULE_KEY);
     dbClient.componentDao().insert(dbTester.getSession(), module);
     dbTester.getSession().commit();
 
@@ -226,9 +235,9 @@ public class ValidateProjectStepTest {
       .setKey(MODULE_KEY)
       .build());
 
-    ComponentDto anotherProject = ComponentTesting.newPrivateProjectDto(dbTester.organizations().insert()).setKey(anotherProjectKey);
+    ComponentDto anotherProject = ComponentTesting.newPrivateProjectDto(dbTester.organizations().insert()).setDbKey(anotherProjectKey);
     dbClient.componentDao().insert(dbTester.getSession(), anotherProject);
-    ComponentDto module = ComponentTesting.newModuleDto("ABCD", anotherProject).setKey(PROJECT_KEY);
+    ComponentDto module = ComponentTesting.newModuleDto("ABCD", anotherProject).setDbKey(PROJECT_KEY);
     dbClient.componentDao().insert(dbTester.getSession(), module);
     dbTester.getSession().commit();
 
@@ -255,7 +264,7 @@ public class ValidateProjectStepTest {
       .addChildRef(2)
       .build());
 
-    ComponentDto project = ComponentTesting.newPrivateProjectDto(dbTester.organizations().insert(), "ABCD").setKey(PROJECT_KEY);
+    ComponentDto project = ComponentTesting.newPrivateProjectDto(dbTester.organizations().insert(), "ABCD").setDbKey(PROJECT_KEY);
     dbClient.componentDao().insert(dbTester.getSession(), project);
     dbClient.snapshotDao().insert(dbTester.getSession(), SnapshotTesting.newAnalysis(project).setCreatedAt(1420088400000L)); // 2015-01-01
     dbTester.getSession().commit();
@@ -276,7 +285,7 @@ public class ValidateProjectStepTest {
       .addChildRef(2)
       .build());
 
-    ComponentDto project = ComponentTesting.newPrivateProjectDto(dbTester.organizations().insert(), "ABCD").setKey(PROJECT_KEY);
+    ComponentDto project = ComponentTesting.newPrivateProjectDto(dbTester.organizations().insert(), "ABCD").setDbKey(PROJECT_KEY);
     dbClient.componentDao().insert(dbTester.getSession(), project);
     dbClient.snapshotDao().insert(dbTester.getSession(), SnapshotTesting.newAnalysis(project).setCreatedAt(1433131200000L)); // 2015-06-01
     dbTester.getSession().commit();
@@ -287,6 +296,74 @@ public class ValidateProjectStepTest {
     thrown.expectMessage("Validation of project failed:");
     thrown.expectMessage("Date of analysis cannot be older than the date of the last known analysis on this project. Value: ");
     thrown.expectMessage("Latest analysis: ");
+
+    underTest.execute();
+  }
+
+  @Test
+  public void fail_if_incremental_plugin_not_found() {
+    ValidateProjectStep underTest = new ValidateProjectStep(dbClient, reportReader, treeRootHolder, analysisMetadataHolder, null);
+
+    when(validateIncremental.execute()).thenReturn(false);
+    analysisMetadataHolder.setBaseAnalysis(new Analysis.Builder().setId(1).setUuid("base").setCreatedAt(DEFAULT_ANALYSIS_TIME).build());
+    analysisMetadataHolder.setIncrementalAnalysis(true);
+
+    reportReader.putComponent(ScannerReport.Component.newBuilder()
+      .setRef(1)
+      .setType(ComponentType.PROJECT)
+      .setKey(PROJECT_KEY)
+      .addChildRef(2)
+      .build());
+
+    treeRootHolder.setRoot(ReportComponent.builder(Component.Type.PROJECT, 1).setUuid("ABCD").setKey(PROJECT_KEY).build());
+
+    thrown.expect(MessageException.class);
+    thrown.expectMessage("Validation of project failed:");
+    thrown.expectMessage("Can't process an incremental analysis of the project \"PROJECT_KEY\" because the incremental plugin is not loaded");
+
+    underTest.execute();
+  }
+
+  @Test
+  public void fail_if_incremental_validation_fails() {
+    when(validateIncremental.execute()).thenReturn(false);
+    analysisMetadataHolder.setBaseAnalysis(new Analysis.Builder().setId(1).setUuid("base").setCreatedAt(DEFAULT_ANALYSIS_TIME).build());
+    analysisMetadataHolder.setIncrementalAnalysis(true);
+
+    reportReader.putComponent(ScannerReport.Component.newBuilder()
+      .setRef(1)
+      .setType(ComponentType.PROJECT)
+      .setKey(PROJECT_KEY)
+      .addChildRef(2)
+      .build());
+
+    treeRootHolder.setRoot(ReportComponent.builder(Component.Type.PROJECT, 1).setUuid("ABCD").setKey(PROJECT_KEY).build());
+
+    thrown.expect(MessageException.class);
+    thrown.expectMessage("Validation of project failed:");
+    thrown.expectMessage("The installation of the incremental plugin is invalid");
+
+    underTest.execute();
+  }
+
+  @Test
+  public void fail_if_incremental_and_first_analysis() {
+    when(validateIncremental.execute()).thenReturn(true);
+    analysisMetadataHolder.setBaseAnalysis(null);
+    analysisMetadataHolder.setIncrementalAnalysis(true);
+
+    reportReader.putComponent(ScannerReport.Component.newBuilder()
+      .setRef(1)
+      .setType(ComponentType.PROJECT)
+      .setKey(PROJECT_KEY)
+      .addChildRef(2)
+      .build());
+
+    treeRootHolder.setRoot(ReportComponent.builder(Component.Type.PROJECT, 1).setUuid("ABCD").setKey(PROJECT_KEY).build());
+
+    thrown.expect(MessageException.class);
+    thrown.expectMessage("Validation of project failed:");
+    thrown.expectMessage("hasn't been analysed before and the first analysis can't be incremental. Please launch a full analysis of the project.");
 
     underTest.execute();
   }

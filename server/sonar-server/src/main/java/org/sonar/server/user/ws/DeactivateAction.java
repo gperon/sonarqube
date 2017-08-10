@@ -19,8 +19,8 @@
  */
 package org.sonar.server.user.ws;
 
-import com.google.common.collect.Sets;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -101,11 +101,10 @@ public class DeactivateAction implements UsersWsAction {
       dbClient.userPermissionDao().deleteByUserId(dbSession, userId);
       dbClient.permissionTemplateDao().deleteUserPermissionsByUserId(dbSession, userId);
       dbClient.organizationMemberDao().deleteByUserId(dbSession, userId);
-      dbClient.userDao().deactivateUserById(dbSession, userId);
-      dbSession.commit();
+      dbClient.userDao().deactivateUser(dbSession, user);
+      userIndexer.commitAndIndex(dbSession, user);
     }
 
-    userIndexer.index(login);
     writeResponse(response, login);
   }
 
@@ -116,12 +115,14 @@ public class DeactivateAction implements UsersWsAction {
       // when deactivating user
       checkFound(user, "User '%s' doesn't exist", login);
 
-      JsonWriter json = response.newJsonWriter().beginObject();
-      json.name("user");
-      Set<String> groups = Sets.newHashSet();
-      groups.addAll(dbClient.groupMembershipDao().selectGroupsByLogins(dbSession, singletonList(login)).get(login));
-      userWriter.write(json, user, groups, UserJsonWriter.FIELDS);
-      json.endObject().close();
+      try (JsonWriter json = response.newJsonWriter()) {
+        json.beginObject();
+        json.name("user");
+        Set<String> groups = new HashSet<>();
+        groups.addAll(dbClient.groupMembershipDao().selectGroupsByLogins(dbSession, singletonList(login)).get(login));
+        userWriter.write(json, user, groups, UserJsonWriter.FIELDS);
+        json.endObject();
+      }
     }
   }
 

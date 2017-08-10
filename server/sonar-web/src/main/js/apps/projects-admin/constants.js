@@ -19,7 +19,7 @@
  */
 export const PAGE_SIZE = 50;
 
-export const QUALIFIERS_ORDER = ['TRK', 'VW', 'DEV'];
+export const QUALIFIERS_ORDER = ['TRK', 'VW', 'APP', 'DEV'];
 
 export const TYPE = {
   ALL: 'ALL',

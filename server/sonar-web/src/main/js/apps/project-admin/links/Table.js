@@ -18,14 +18,15 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 import React from 'react';
+import PropTypes from 'prop-types';
 import LinkRow from './LinkRow';
 import { orderLinks } from './utils';
 import { translate } from '../../../helpers/l10n';
 
 export default class Table extends React.PureComponent {
   static propTypes = {
-    links: React.PropTypes.array.isRequired,
-    onDelete: React.PropTypes.func.isRequired
+    links: PropTypes.array.isRequired,
+    onDelete: PropTypes.func.isRequired
   };
 
   handleDeleteLink(link) {
@@ -52,14 +53,16 @@ export default class Table extends React.PureComponent {
   render() {
     const orderedLinks = orderLinks(this.props.links);
 
-    const linkRows = orderedLinks.map(link => (
+    const linkRows = orderedLinks.map(link =>
       <LinkRow key={link.id} link={link} onDelete={this.handleDeleteLink.bind(this, link)} />
-    ));
+    );
 
     return (
       <table id="project-links" className="data zebra">
         {this.renderHeader()}
-        <tbody>{linkRows}</tbody>
+        <tbody>
+          {linkRows}
+        </tbody>
       </table>
     );
   }

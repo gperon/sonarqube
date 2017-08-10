@@ -122,7 +122,9 @@ export default class GlobalNavUser extends React.PureComponent {
           <ul className="dropdown-menu dropdown-menu-right">
             <li className="dropdown-item">
               <div className="text-ellipsis text-muted" title={currentUser.name}>
-                <strong>{currentUser.name}</strong>
+                <strong>
+                  {currentUser.name}
+                </strong>
               </div>
               {currentUser.email != null &&
                 <div
@@ -133,22 +135,30 @@ export default class GlobalNavUser extends React.PureComponent {
             </li>
             <li className="divider" />
             <li>
-              <Link to="/account" onClick={this.closeDropdown}>{translate('my_account.page')}</Link>
+              <Link to="/account" onClick={this.closeDropdown}>
+                {translate('my_account.page')}
+              </Link>
             </li>
             {hasOrganizations && <li role="separator" className="divider" />}
             {hasOrganizations &&
-              <li className="dropdown-header spacer-left">{translate('my_organizations')}</li>}
+              <li className="dropdown-header spacer-left">
+                {translate('my_organizations')}
+              </li>}
             {hasOrganizations &&
-              sortBy(organizations, org => org.name.toLowerCase()).map(organization => (
+              sortBy(organizations, org => org.name.toLowerCase()).map(organization =>
                 <li key={organization.key}>
                   <OrganizationLink organization={organization} onClick={this.closeDropdown}>
-                    <span className="spacer-left">{organization.name}</span>
+                    <span className="spacer-left">
+                      {organization.name}
+                    </span>
                   </OrganizationLink>
                 </li>
-              ))}
+              )}
             {hasOrganizations && <li role="separator" className="divider" />}
             <li>
-              <a onClick={this.handleLogout} href="#">{translate('layout.logout')}</a>
+              <a onClick={this.handleLogout} href="#">
+                {translate('layout.logout')}
+              </a>
             </li>
           </ul>}
       </li>
@@ -158,7 +168,9 @@ export default class GlobalNavUser extends React.PureComponent {
   renderAnonymous() {
     return (
       <li>
-        <a onClick={this.handleLogin} href="#">{translate('layout.login')}</a>
+        <a className="navbar-login" onClick={this.handleLogin} href="#">
+          {translate('layout.login')}
+        </a>
       </li>
     );
   }

@@ -73,8 +73,8 @@ export default ModalForm.extend({
     const { selection } = this.options;
     let lastRequest = Promise.resolve();
 
-    selection.forEach(projectId => {
-      const data = { templateId: permissionTemplate, projectId };
+    selection.forEach(projectKey => {
+      const data = { templateId: permissionTemplate, projectKey };
       if (this.options.organization) {
         data.organization = this.options.organization.key;
       }
@@ -90,9 +90,10 @@ export default ModalForm.extend({
     const applyTo = this.$('[name="apply-to"]:checked').val();
     this.disableForm();
 
-    const request = applyTo === 'all'
-      ? this.bulkApplyToAll(permissionTemplate)
-      : this.bulkApplyToSelected(permissionTemplate);
+    const request =
+      applyTo === 'all'
+        ? this.bulkApplyToAll(permissionTemplate)
+        : this.bulkApplyToSelected(permissionTemplate);
 
     request
       .then(() => {

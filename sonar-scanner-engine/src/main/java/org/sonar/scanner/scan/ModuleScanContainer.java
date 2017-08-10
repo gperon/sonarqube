@@ -25,14 +25,15 @@ import org.sonar.api.batch.AnalysisMode;
 import org.sonar.api.batch.InstantiationStrategy;
 import org.sonar.api.batch.fs.internal.DefaultInputModule;
 import org.sonar.api.batch.fs.internal.FileMetadata;
+import org.sonar.api.batch.fs.internal.SensorStrategy;
 import org.sonar.api.batch.rule.CheckFactory;
 import org.sonar.api.resources.Project;
 import org.sonar.api.scan.filesystem.FileExclusions;
 import org.sonar.core.platform.ComponentContainer;
 import org.sonar.scanner.DefaultFileLinesContextFactory;
-import org.sonar.scanner.bootstrap.ScannerExtensionDictionnary;
 import org.sonar.scanner.bootstrap.ExtensionInstaller;
 import org.sonar.scanner.bootstrap.ExtensionUtils;
+import org.sonar.scanner.bootstrap.ScannerExtensionDictionnary;
 import org.sonar.scanner.deprecated.DeprecatedSensorContext;
 import org.sonar.scanner.deprecated.perspectives.ScannerPerspectives;
 import org.sonar.scanner.events.EventBus;
@@ -47,6 +48,7 @@ import org.sonar.scanner.issue.ignore.pattern.IssueInclusionPatternInitializer;
 import org.sonar.scanner.issue.ignore.pattern.PatternMatcher;
 import org.sonar.scanner.issue.ignore.scanner.IssueExclusionsLoader;
 import org.sonar.scanner.phases.AbstractPhaseExecutor;
+import org.sonar.scanner.phases.CoverageExclusions;
 import org.sonar.scanner.phases.InitializersExecutor;
 import org.sonar.scanner.phases.IssuesPhaseExecutor;
 import org.sonar.scanner.phases.PostJobsExecutor;
@@ -60,7 +62,6 @@ import org.sonar.scanner.rule.RulesProfileProvider;
 import org.sonar.scanner.scan.filesystem.DefaultModuleFileSystem;
 import org.sonar.scanner.scan.filesystem.ExclusionFilters;
 import org.sonar.scanner.scan.filesystem.FileIndexer;
-import org.sonar.scanner.scan.filesystem.FileSystemLogger;
 import org.sonar.scanner.scan.filesystem.InputFileBuilder;
 import org.sonar.scanner.scan.filesystem.LanguageDetection;
 import org.sonar.scanner.scan.filesystem.MetadataGeneratorProvider;
@@ -70,8 +71,6 @@ import org.sonar.scanner.scan.filesystem.StatusDetectionFactory;
 import org.sonar.scanner.scan.report.IssuesReports;
 import org.sonar.scanner.sensor.DefaultSensorStorage;
 import org.sonar.scanner.sensor.SensorOptimizer;
-import org.sonar.scanner.sensor.SensorStrategy;
-import org.sonar.scanner.sensor.coverage.CoverageExclusions;
 import org.sonar.scanner.source.HighlightableBuilder;
 import org.sonar.scanner.source.SymbolizableBuilder;
 
@@ -95,9 +94,10 @@ public class ModuleScanContainer extends ComponentContainer {
     add(
       module.definition(),
       // still injected by some plugins
-      new Project(module.definition()),
+      new Project(module),
       module,
-      ModuleSettings.class);
+      MutableModuleSettings.class,
+      new ModuleSettingsProvider());
 
     if (getComponentByType(AnalysisMode.class).isIssues()) {
       add(IssuesPhaseExecutor.class,
@@ -123,7 +123,6 @@ public class ModuleScanContainer extends ComponentContainer {
       LanguageDetection.class,
       FileIndexer.class,
       InputFileBuilder.class,
-      FileSystemLogger.class,
       DefaultModuleFileSystem.class,
       ModuleFileSystemInitializer.class,
       QProfileVerifier.class,

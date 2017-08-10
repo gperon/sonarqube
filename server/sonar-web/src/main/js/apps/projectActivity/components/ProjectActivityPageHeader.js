@@ -20,42 +20,55 @@
 // @flow
 import React from 'react';
 import Select from 'react-select';
+import ProjectActivityEventSelectOption from './ProjectActivityEventSelectOption';
+import ProjectActivityEventSelectValue from './ProjectActivityEventSelectValue';
+import ProjectActivityDateInput from './ProjectActivityDateInput';
+import { EVENT_TYPES, APPLICATION_EVENT_TYPES } from '../utils';
 import { translate } from '../../../helpers/l10n';
+import type { RawQuery } from '../../../helpers/query';
 
 type Props = {
-  changeFilter: (filter: ?string) => void,
-  filter: ?string
+  category?: string,
+  from: ?Date,
+  project: { qualifier: string },
+  to: ?Date,
+  updateQuery: RawQuery => void
 };
 
 export default class ProjectActivityPageHeader extends React.PureComponent {
+  options: Array<{ label: string, value: string }>;
   props: Props;
 
-  handleChange = (option: null | { value: string }) => {
-    this.props.changeFilter(option && option.value);
-  };
+  handleCategoryChange = (option: ?{ value: string }) =>
+    this.props.updateQuery({ category: option ? option.value : '' });
+
   render() {
-    const selectOptions = ['VERSION', 'QUALITY_GATE', 'QUALITY_PROFILE', 'OTHER'].map(category => ({
+    const eventTypes =
+      this.props.project.qualifier === 'APP' ? APPLICATION_EVENT_TYPES : EVENT_TYPES;
+    this.options = eventTypes.map(category => ({
       label: translate('event.category', category),
       value: category
     }));
 
     return (
       <header className="page-header">
-        <div className="page-actions">
-          <Select
-            className="input-medium"
-            placeholder={translate('filter_verb') + '...'}
-            clearable={true}
-            searchable={false}
-            value={this.props.filter}
-            options={selectOptions}
-            onChange={this.handleChange}
-          />
-        </div>
-
-        <div className="page-description">
-          {translate('project_activity.page.description')}
-        </div>
+        <Select
+          className="input-medium pull-left big-spacer-right"
+          placeholder={translate('project_activity.filter_events') + '...'}
+          clearable={true}
+          searchable={false}
+          value={this.props.category}
+          optionComponent={ProjectActivityEventSelectOption}
+          valueComponent={ProjectActivityEventSelectValue}
+          options={this.options}
+          onChange={this.handleCategoryChange}
+        />
+        <ProjectActivityDateInput
+          className="pull-left"
+          from={this.props.from}
+          to={this.props.to}
+          onChange={this.props.updateQuery}
+        />
       </header>
     );
   }

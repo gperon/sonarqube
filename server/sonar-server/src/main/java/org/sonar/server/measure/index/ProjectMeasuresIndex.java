@@ -30,16 +30,18 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.IntStream;
 import javax.annotation.Nullable;
+import org.apache.lucene.search.join.ScoreMode;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.search.aggregations.AbstractAggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation.Bucket;
-import org.elasticsearch.search.aggregations.bucket.filters.FiltersAggregationBuilder;
-import org.elasticsearch.search.aggregations.bucket.range.RangeBuilder;
+import org.elasticsearch.search.aggregations.bucket.filters.FiltersAggregator.KeyedFilter;
+import org.elasticsearch.search.aggregations.bucket.range.RangeAggregationBuilder;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
-import org.elasticsearch.search.aggregations.bucket.terms.TermsBuilder;
+import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
+import org.elasticsearch.search.aggregations.bucket.terms.support.IncludeExclude;
 import org.elasticsearch.search.sort.FieldSortBuilder;
 import org.sonar.core.util.stream.MoreCollectors;
 import org.sonar.server.es.DefaultIndexSettingsElement;
@@ -112,7 +114,7 @@ public class ProjectMeasuresIndex {
   private static final Double[] LINES_THRESHOLDS = new Double[] {1_000d, 10_000d, 100_000d, 500_000d};
   private static final Double[] COVERAGE_THRESHOLDS = new Double[] {30d, 50d, 70d, 80d};
   private static final Double[] DUPLICATIONS_THRESHOLDS = new Double[] {3d, 5d, 10d, 20d};
-
+  
   private static final String FIELD_MEASURES_KEY = FIELD_MEASURES + "." + ProjectMeasuresIndexDefinition.FIELD_MEASURES_KEY;
   private static final String FIELD_MEASURES_VALUE = FIELD_MEASURES + "." + ProjectMeasuresIndexDefinition.FIELD_MEASURES_VALUE;
 
@@ -192,8 +194,7 @@ public class ProjectMeasuresIndex {
 
   private static void addRangeFacetIncludingNoData(SearchRequestBuilder esSearch, String metricKey, StickyFacetBuilder facetBuilder, Double... thresholds) {
     esSearch.addAggregation(createStickyFacet(metricKey, facetBuilder,
-      AggregationBuilders.filter("combined_" + metricKey)
-        .filter(matchAllQuery())
+      AggregationBuilders.filter("combined_" + metricKey, matchAllQuery())
         .subAggregation(createRangeFacet(metricKey, thresholds))
         .subAggregation(createNoDataFacet(metricKey))));
   }
@@ -224,13 +225,14 @@ public class ProjectMeasuresIndex {
     BoolQueryBuilder facetFilter = facetBuilder.getStickyFacetFilter(facetKey);
     return AggregationBuilders
       .global(facetKey)
-      .subAggregation(AggregationBuilders.filter("facet_filter_" + facetKey)
-        .filter(facetFilter)
-        .subAggregation(aggregationBuilder));
+      .subAggregation(
+        AggregationBuilders
+          .filter("facet_filter_" + facetKey, facetFilter)
+          .subAggregation(aggregationBuilder));
   }
 
   private static AbstractAggregationBuilder createRangeFacet(String metricKey, Double... thresholds) {
-    RangeBuilder rangeAgg = AggregationBuilders.range(metricKey)
+    RangeAggregationBuilder rangeAgg = AggregationBuilders.range(metricKey)
       .field(FIELD_MEASURES_VALUE);
     final int lastIndex = thresholds.length - 1;
     IntStream.range(0, thresholds.length)
@@ -245,38 +247,36 @@ public class ProjectMeasuresIndex {
         }
       });
 
-    return AggregationBuilders.nested("nested_" + metricKey)
-      .path(FIELD_MEASURES)
+    return AggregationBuilders.nested("nested_" + metricKey, FIELD_MEASURES)
       .subAggregation(
-        AggregationBuilders.filter("filter_" + metricKey)
-          .filter(termsQuery(FIELD_MEASURES_KEY, metricKey))
+        AggregationBuilders.filter("filter_" + metricKey, termsQuery(FIELD_MEASURES_KEY, metricKey))
           .subAggregation(rangeAgg));
   }
 
   private static AbstractAggregationBuilder createNoDataFacet(String metricKey) {
-    return AggregationBuilders.filter("no_data_" + metricKey)
-      .filter(boolQuery()
-        .mustNot(nestedQuery(FIELD_MEASURES, termQuery(FIELD_MEASURES_KEY, metricKey))));
+    return AggregationBuilders.filter(
+      "no_data_" + metricKey,
+      boolQuery().mustNot(nestedQuery(FIELD_MEASURES, termQuery(FIELD_MEASURES_KEY, metricKey), ScoreMode.Avg)));
   }
 
   private static AbstractAggregationBuilder createRatingFacet(String metricKey) {
-    return AggregationBuilders.nested("nested_" + metricKey)
-      .path(FIELD_MEASURES)
+    return AggregationBuilders.nested("nested_" + metricKey, FIELD_MEASURES)
       .subAggregation(
-        AggregationBuilders.filter("filter_" + metricKey)
-          .filter(termsQuery(FIELD_MEASURES_KEY, metricKey))
-          .subAggregation(filters(metricKey)
-            .filter("1", termQuery(FIELD_MEASURES_VALUE, 1d))
-            .filter("2", termQuery(FIELD_MEASURES_VALUE, 2d))
-            .filter("3", termQuery(FIELD_MEASURES_VALUE, 3d))
-            .filter("4", termQuery(FIELD_MEASURES_VALUE, 4d))
-            .filter("5", termQuery(FIELD_MEASURES_VALUE, 5d))));
+              AggregationBuilders.filter("filter_" + metricKey, termsQuery(FIELD_MEASURES_KEY, metricKey))
+                      .subAggregation(filters(metricKey,
+                              new KeyedFilter("1", termQuery(FIELD_MEASURES_VALUE, 1d)),
+                              new KeyedFilter("2", termQuery(FIELD_MEASURES_VALUE, 2d)),
+                              new KeyedFilter("3", termQuery(FIELD_MEASURES_VALUE, 3d)),
+                              new KeyedFilter("4", termQuery(FIELD_MEASURES_VALUE, 4d)),
+                              new KeyedFilter("5", termQuery(FIELD_MEASURES_VALUE, 5d)))));
   }
 
   private static AbstractAggregationBuilder createQualityGateFacet() {
-    FiltersAggregationBuilder qualityGateStatusFilter = AggregationBuilders.filters(ALERT_STATUS_KEY);
-    QUALITY_GATE_STATUS.entrySet().forEach(entry -> qualityGateStatusFilter.filter(entry.getKey(), termQuery(FIELD_QUALITY_GATE_STATUS, entry.getValue())));
-    return qualityGateStatusFilter;
+    return AggregationBuilders.filters(
+      ALERT_STATUS_KEY,
+      QUALITY_GATE_STATUS.entrySet().stream()
+        .map(entry -> new KeyedFilter(entry.getKey(), termQuery(FIELD_QUALITY_GATE_STATUS, entry.getValue())))
+        .toArray(KeyedFilter[]::new));
   }
 
   private Map<String, QueryBuilder> createFilters(ProjectMeasuresQuery query) {
@@ -284,13 +284,13 @@ public class ProjectMeasuresIndex {
     filters.put("__authorization", authorizationTypeSupport.createQueryFilter());
     Multimap<String, MetricCriterion> metricCriterionMultimap = ArrayListMultimap.create();
     query.getMetricCriteria().forEach(metricCriterion -> metricCriterionMultimap.put(metricCriterion.getMetricKey(), metricCriterion));
-    metricCriterionMultimap.asMap().entrySet().forEach(entry -> {
+    metricCriterionMultimap.asMap().forEach((key, value) -> {
       BoolQueryBuilder metricFilters = boolQuery();
-      entry.getValue()
+      value
         .stream()
         .map(ProjectMeasuresIndex::toQuery)
         .forEach(metricFilters::must);
-      filters.put(entry.getKey(), metricFilters);
+      filters.put(key, metricFilters);
     });
 
     query.getQualityGateStatus()
@@ -308,25 +308,26 @@ public class ProjectMeasuresIndex {
     query.getTags()
       .ifPresent(tags -> filters.put(FIELD_TAGS, termsQuery(FIELD_TAGS, tags)));
 
-    createTextQueryFilter(query).ifPresent(queryBuilder -> filters.put("textQuery", queryBuilder));
+    query.getQueryText()
+      .map(ProjectsTextSearchQueryFactory::createQuery)
+      .ifPresent(queryBuilder -> filters.put("textQuery", queryBuilder));
     return filters;
-  }
-
-  private static Optional<QueryBuilder> createTextQueryFilter(ProjectMeasuresQuery query) {
-    Optional<String> queryText = query.getQueryText();
-    if (!queryText.isPresent()) {
-      return Optional.empty();
-    }
-    return Optional.of(ProjectsTextSearchQueryFactory.createQuery(queryText.get()));
   }
 
   private static QueryBuilder toQuery(MetricCriterion criterion) {
     if (criterion.isNoData()) {
-      return boolQuery().mustNot(nestedQuery(FIELD_MEASURES, termQuery(FIELD_MEASURES_KEY, criterion.getMetricKey())));
+      return boolQuery().mustNot(
+        nestedQuery(
+          FIELD_MEASURES,
+          termQuery(FIELD_MEASURES_KEY, criterion.getMetricKey()),
+          ScoreMode.Avg));
     }
-    return nestedQuery(FIELD_MEASURES, boolQuery()
-      .filter(termQuery(FIELD_MEASURES_KEY, criterion.getMetricKey()))
-      .filter(toValueQuery(criterion)));
+    return nestedQuery(
+      FIELD_MEASURES,
+      boolQuery()
+        .filter(termQuery(FIELD_MEASURES_KEY, criterion.getMetricKey()))
+        .filter(toValueQuery(criterion)),
+      ScoreMode.Avg);
   }
 
   private static QueryBuilder toValueQuery(MetricCriterion criterion) {
@@ -348,19 +349,20 @@ public class ProjectMeasuresIndex {
     }
   }
 
-  public List<String> searchTags(@Nullable String textQuery, int pageSize) {
-    checkArgument(pageSize <= 100, "Page size must be lower than or equals to " + 100);
-    if (pageSize == 0) {
+  public List<String> searchTags(@Nullable String textQuery, int size) {
+    int maxPageSize = 500;
+    checkArgument(size <= maxPageSize, "Page size must be lower than or equals to " + maxPageSize);
+    if (size <= 0) {
       return emptyList();
     }
 
-    TermsBuilder tagFacet = AggregationBuilders.terms(FIELD_TAGS)
+    TermsAggregationBuilder tagFacet = AggregationBuilders.terms(FIELD_TAGS)
       .field(FIELD_TAGS)
-      .size(pageSize)
+      .size(size)
       .minDocCount(1)
       .order(Terms.Order.term(true));
     if (textQuery != null) {
-      tagFacet.include(".*" + escapeSpecialRegexChars(textQuery) + ".*");
+      tagFacet.includeExclude(new IncludeExclude(".*" + escapeSpecialRegexChars(textQuery) + ".*", null));
     }
 
     SearchRequestBuilder searchQuery = client

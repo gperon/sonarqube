@@ -18,15 +18,16 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 import React from 'react';
+import PropTypes from 'prop-types';
 import GroupIcon from './GroupIcon';
 
 export default class GroupHolder extends React.PureComponent {
   static propTypes = {
-    group: React.PropTypes.object.isRequired,
-    permissions: React.PropTypes.array.isRequired,
-    selectedPermission: React.PropTypes.string,
-    permissionsOrder: React.PropTypes.array.isRequired,
-    onToggle: React.PropTypes.func.isRequired
+    group: PropTypes.object.isRequired,
+    permissions: PropTypes.array.isRequired,
+    selectedPermission: PropTypes.string,
+    permissionsOrder: PropTypes.array.isRequired,
+    onToggle: PropTypes.func.isRequired
   };
 
   handleClick(permission, e) {
@@ -37,7 +38,7 @@ export default class GroupHolder extends React.PureComponent {
 
   render() {
     const { selectedPermission } = this.props;
-    const permissionCells = this.props.permissionsOrder.map(p => (
+    const permissionCells = this.props.permissionsOrder.map(p =>
       <td
         key={p.key}
         className="text-center text-middle"
@@ -48,7 +49,7 @@ export default class GroupHolder extends React.PureComponent {
             : <i className="icon-checkbox" />}
         </button>
       </td>
-    ));
+    );
 
     const { group } = this.props;
 
@@ -60,7 +61,9 @@ export default class GroupHolder extends React.PureComponent {
           </div>
           <div className="display-inline-block text-middle">
             <div>
-              <strong>{group.name}</strong>
+              <strong>
+                {group.name}
+              </strong>
             </div>
             <div className="little-spacer-top" style={{ whiteSpace: 'normal' }}>
               {group.description}

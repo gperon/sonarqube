@@ -31,6 +31,7 @@ type Props = {|
   onIssueChange: Issue => void,
   onIssueCheck?: string => void,
   onIssueClick: string => void,
+  organization?: { key: string },
   selectedIssue: ?Issue
 |};
 
@@ -42,7 +43,7 @@ export default class IssuesList extends React.PureComponent {
 
     return (
       <div>
-        {issues.map((issue, index) => (
+        {issues.map((issue, index) =>
           <ListItem
             checked={checked.includes(issue.key)}
             component={component}
@@ -52,10 +53,11 @@ export default class IssuesList extends React.PureComponent {
             onCheck={this.props.onIssueCheck}
             onClick={this.props.onIssueClick}
             onFilterChange={this.props.onFilterChange}
+            organization={this.props.organization}
             previousIssue={index > 0 ? issues[index - 1] : null}
             selected={selectedIssue != null && selectedIssue.key === issue.key}
           />
-        ))}
+        )}
       </div>
     );
   }

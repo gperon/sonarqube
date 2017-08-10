@@ -1,0 +1,245 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`creates new project 1`] = `
+<NewProjectForm
+  onDelete={[Function]}
+  onDone={[Function]}
+>
+  <div
+    className="big-spacer-top"
+  >
+    <h4
+      className="spacer-bottom"
+    >
+      onboarding.language.project_key
+    </h4>
+    <form
+      onSubmit={[Function]}
+    >
+      <input
+        autoFocus={true}
+        className="input-large spacer-right text-middle"
+        maxLength={400}
+        minLength={1}
+        onChange={[Function]}
+        required={true}
+        type="text"
+        value=""
+      />
+      <button
+        className="text-middle"
+        disabled={true}
+      >
+        Done
+      </button>
+      <div
+        className="note spacer-top abs-width-300"
+      >
+        onboarding.project_key_requirement
+      </div>
+    </form>
+  </div>
+</NewProjectForm>
+`;
+
+exports[`creates new project 2`] = `
+<NewProjectForm
+  onDelete={[Function]}
+  onDone={[Function]}
+>
+  <div
+    className="big-spacer-top"
+  >
+    <h4
+      className="spacer-bottom"
+    >
+      onboarding.language.project_key
+    </h4>
+    <form
+      onSubmit={[Function]}
+    >
+      <input
+        autoFocus={true}
+        className="input-large spacer-right text-middle"
+        maxLength={400}
+        minLength={1}
+        onChange={[Function]}
+        required={true}
+        type="text"
+        value="foo"
+      />
+      <i
+        className="spinner text-middle"
+      />
+      <div
+        className="note spacer-top abs-width-300"
+      >
+        onboarding.project_key_requirement
+      </div>
+    </form>
+  </div>
+</NewProjectForm>
+`;
+
+exports[`creates new project 3`] = `
+<NewProjectForm
+  onDelete={[Function]}
+  onDone={[Function]}
+>
+  <div
+    className="big-spacer-top"
+  >
+    <h4
+      className="spacer-bottom"
+    >
+      onboarding.language.project_key
+    </h4>
+    <form
+      onSubmit={[Function]}
+    >
+      <span
+        className="spacer-right text-middle"
+      >
+        foo
+      </span>
+      <button
+        className="button-clean text-middle"
+      >
+        <CloseIcon
+          className="icon-red"
+        >
+          <svg
+            className="icon-red"
+            height={16}
+            viewBox="0 0 16 16"
+            width={16}
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M12.843 11.232q0 0.357-0.25 0.607l-1.214 1.214q-0.25 0.25-0.607 0.25t-0.607-0.25l-2.625-2.625-2.625 2.625q-0.25 0.25-0.607 0.25t-0.607-0.25l-1.214-1.214q-0.25-0.25-0.25-0.607t0.25-0.607l2.625-2.625-2.625-2.625q-0.25-0.25-0.25-0.607t0.25-0.607l1.214-1.214q0.25-0.25 0.607-0.25t0.607 0.25l2.625 2.625 2.625-2.625q0.25-0.25 0.607-0.25t0.607 0.25l1.214 1.214q0.25 0.25 0.25 0.607t-0.25 0.607l-2.625 2.625 2.625 2.625q0.25 0.25 0.25 0.607z"
+              fill="currentColor"
+            />
+          </svg>
+        </CloseIcon>
+      </button>
+    </form>
+  </div>
+</NewProjectForm>
+`;
+
+exports[`deletes project 1`] = `
+<NewProjectForm
+  onDelete={[Function]}
+  onDone={[Function]}
+>
+  <div
+    className="big-spacer-top"
+  >
+    <h4
+      className="spacer-bottom"
+    >
+      onboarding.language.project_key
+    </h4>
+    <form
+      onSubmit={[Function]}
+    >
+      <span
+        className="spacer-right text-middle"
+      >
+        foo
+      </span>
+      <button
+        className="button-clean text-middle"
+      >
+        <CloseIcon
+          className="icon-red"
+        >
+          <svg
+            className="icon-red"
+            height={16}
+            viewBox="0 0 16 16"
+            width={16}
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M12.843 11.232q0 0.357-0.25 0.607l-1.214 1.214q-0.25 0.25-0.607 0.25t-0.607-0.25l-2.625-2.625-2.625 2.625q-0.25 0.25-0.607 0.25t-0.607-0.25l-1.214-1.214q-0.25-0.25-0.25-0.607t0.25-0.607l2.625-2.625-2.625-2.625q-0.25-0.25-0.25-0.607t0.25-0.607l1.214-1.214q0.25-0.25 0.607-0.25t0.607 0.25l2.625 2.625 2.625-2.625q0.25-0.25 0.607-0.25t0.607 0.25l1.214 1.214q0.25 0.25 0.25 0.607t-0.25 0.607l-2.625 2.625 2.625 2.625q0.25 0.25 0.25 0.607z"
+              fill="currentColor"
+            />
+          </svg>
+        </CloseIcon>
+      </button>
+    </form>
+  </div>
+</NewProjectForm>
+`;
+
+exports[`deletes project 2`] = `
+<NewProjectForm
+  onDelete={[Function]}
+  onDone={[Function]}
+>
+  <div
+    className="big-spacer-top"
+  >
+    <h4
+      className="spacer-bottom"
+    >
+      onboarding.language.project_key
+    </h4>
+    <form
+      onSubmit={[Function]}
+    >
+      <span
+        className="spacer-right text-middle"
+      >
+        foo
+      </span>
+      <i
+        className="spinner text-middle"
+      />
+    </form>
+  </div>
+</NewProjectForm>
+`;
+
+exports[`deletes project 3`] = `
+<NewProjectForm
+  onDelete={[Function]}
+  onDone={[Function]}
+>
+  <div
+    className="big-spacer-top"
+  >
+    <h4
+      className="spacer-bottom"
+    >
+      onboarding.language.project_key
+    </h4>
+    <form
+      onSubmit={[Function]}
+    >
+      <input
+        autoFocus={true}
+        className="input-large spacer-right text-middle"
+        maxLength={400}
+        minLength={1}
+        onChange={[Function]}
+        required={true}
+        type="text"
+        value=""
+      />
+      <button
+        className="text-middle"
+        disabled={true}
+      >
+        Done
+      </button>
+      <div
+        className="note spacer-top abs-width-300"
+      >
+        onboarding.project_key_requirement
+      </div>
+    </form>
+  </div>
+</NewProjectForm>
+`;

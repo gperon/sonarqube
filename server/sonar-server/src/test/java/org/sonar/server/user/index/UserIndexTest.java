@@ -25,7 +25,7 @@ import java.util.Locale;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.sonar.api.config.MapSettings;
+import org.sonar.api.config.internal.MapSettings;
 import org.sonar.server.es.EsTester;
 import org.sonar.server.es.SearchOptions;
 
@@ -43,7 +43,7 @@ public class UserIndexTest {
   private static final long DATE_2 = 1_500_000_000_001L;
 
   @Rule
-  public EsTester esTester = new EsTester(new UserIndexDefinition(new MapSettings()));
+  public EsTester esTester = new EsTester(new UserIndexDefinition(new MapSettings().asConfig()));
 
   private UserIndex underTest;
 
@@ -67,8 +67,6 @@ public class UserIndexTest {
     assertThat(userDoc.email()).isEqualTo(user1.email());
     assertThat(userDoc.active()).isTrue();
     assertThat(userDoc.scmAccounts()).isEqualTo(user1.scmAccounts());
-    assertThat(userDoc.createdAt()).isEqualTo(user1.createdAt());
-    assertThat(userDoc.updatedAt()).isEqualTo(user1.updatedAt());
 
     assertThat(underTest.getNullableByLogin("")).isNull();
     assertThat(underTest.getNullableByLogin("unknown")).isNull();
@@ -202,9 +200,7 @@ public class UserIndexTest {
       .setName(login.toUpperCase(Locale.ENGLISH))
       .setEmail(login + "@mail.com")
       .setActive(true)
-      .setScmAccounts(scmAccounts)
-      .setCreatedAt(DATE_1)
-      .setUpdatedAt(DATE_2);
+      .setScmAccounts(scmAccounts);
   }
 
   private static UserDoc newUser(String login, String email, List<String> scmAccounts) {
@@ -213,8 +209,6 @@ public class UserIndexTest {
       .setName(login.toUpperCase(Locale.ENGLISH))
       .setEmail(email)
       .setActive(true)
-      .setScmAccounts(scmAccounts)
-      .setCreatedAt(DATE_1)
-      .setUpdatedAt(DATE_2);
+      .setScmAccounts(scmAccounts);
   }
 }

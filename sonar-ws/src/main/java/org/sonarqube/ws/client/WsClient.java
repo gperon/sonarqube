@@ -36,6 +36,7 @@ import org.sonarqube.ws.client.rule.RulesService;
 import org.sonarqube.ws.client.setting.SettingsService;
 import org.sonarqube.ws.client.system.SystemService;
 import org.sonarqube.ws.client.user.UsersService;
+import org.sonarqube.ws.client.usergroup.UserGroupsService;
 import org.sonarqube.ws.client.usertoken.UserTokensService;
 import org.sonarqube.ws.client.webhook.WebhooksService;
 
@@ -72,6 +73,8 @@ public interface WsClient {
 
   UsersService users();
 
+  UserGroupsService userGroups();
+
   UserTokensService userTokens();
 
   QualityGatesService qualityGates();
@@ -99,12 +102,12 @@ public interface WsClient {
   /**
    * @since 6.1
    */
-  SettingsService settingsService();
+  SettingsService settings();
 
   /**
    * @since 6.2
    */
-  RootsService rootService();
+  RootsService roots();
 
   /**
    * @since 6.2
@@ -114,5 +117,5 @@ public interface WsClient {
   /**
    * @since 6.3
    */
-  ProjectAnalysisService projectAnanlysis();
+  ProjectAnalysisService projectAnalysis();
 }

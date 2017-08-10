@@ -36,6 +36,7 @@ import org.sonarqube.ws.client.rule.RulesService;
 import org.sonarqube.ws.client.setting.SettingsService;
 import org.sonarqube.ws.client.system.SystemService;
 import org.sonarqube.ws.client.user.UsersService;
+import org.sonarqube.ws.client.usergroup.UserGroupsService;
 import org.sonarqube.ws.client.usertoken.UserTokensService;
 import org.sonarqube.ws.client.webhook.WebhooksService;
 
@@ -55,6 +56,7 @@ class DefaultWsClient implements WsClient {
   private final QualityProfilesService qualityProfilesService;
   private final IssuesService issuesService;
   private final UsersService usersService;
+  private final UserGroupsService userGroupsService;
   private final UserTokensService userTokensService;
   private final QualityGatesService qualityGatesService;
   private final MeasuresService measuresService;
@@ -77,6 +79,7 @@ class DefaultWsClient implements WsClient {
     this.qualityProfilesService = new QualityProfilesService(wsConnector);
     this.issuesService = new IssuesService(wsConnector);
     this.usersService = new UsersService(wsConnector);
+    this.userGroupsService = new UserGroupsService(wsConnector);
     this.userTokensService = new UserTokensService(wsConnector);
     this.qualityGatesService = new QualityGatesService(wsConnector);
     this.measuresService = new MeasuresService(wsConnector);
@@ -132,6 +135,11 @@ class DefaultWsClient implements WsClient {
   }
 
   @Override
+  public UserGroupsService userGroups() {
+    return userGroupsService;
+  }
+
+  @Override
   public UserTokensService userTokens() {
     return userTokensService;
   }
@@ -172,12 +180,12 @@ class DefaultWsClient implements WsClient {
   }
 
   @Override
-  public SettingsService settingsService() {
+  public SettingsService settings() {
     return settingsService;
   }
 
   @Override
-  public RootsService rootService() {
+  public RootsService roots() {
     return rootsService;
   }
 
@@ -187,7 +195,7 @@ class DefaultWsClient implements WsClient {
   }
 
   @Override
-  public ProjectAnalysisService projectAnanlysis() {
+  public ProjectAnalysisService projectAnalysis() {
     return projectAnalysisService;
   }
 }

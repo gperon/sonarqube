@@ -22,10 +22,12 @@ package org.sonar.api.batch.fs.internal;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.Immutable;
 import org.sonar.api.batch.fs.IndexedFile;
 import org.sonar.api.batch.fs.InputFile.Type;
 import org.sonar.api.utils.PathUtils;
@@ -33,40 +35,47 @@ import org.sonar.api.utils.PathUtils;
 /**
  * @since 6.3
  */
+@Immutable
 public class DefaultIndexedFile extends DefaultInputComponent implements IndexedFile {
-  private final String relativePath;
+  private final String projectRelativePath;
+  private final String moduleRelativePath;
   private final String moduleKey;
-  private final Path moduleBaseDir;
-  private String language;
+  private final String language;
   private final Type type;
+  private final Path absolutePath;
+  private final SensorStrategy sensorStrategy;
 
   /**
    * Testing purposes only!
    */
-  public DefaultIndexedFile(String moduleKey, Path moduleBaseDir, String relativePath) {
-    this(moduleKey, moduleBaseDir, relativePath, TestInputFileBuilder.nextBatchId());
+  public DefaultIndexedFile(String moduleKey, Path baseDir, String relativePath, @Nullable String language) {
+    this(baseDir.resolve(relativePath), moduleKey, PathUtils.sanitize(relativePath), PathUtils.sanitize(relativePath), Type.MAIN, language, TestInputFileBuilder.nextBatchId(),
+      new SensorStrategy());
   }
 
-  public DefaultIndexedFile(String moduleKey, Path moduleBaseDir, String relativePath, int batchId) {
-    this(moduleKey, moduleBaseDir, relativePath, Type.MAIN, batchId);
-  }
-
-  public DefaultIndexedFile(String moduleKey, Path moduleBaseDir, String relativePath, Type type, int batchId) {
+  public DefaultIndexedFile(Path absolutePath, String moduleKey, String projectRelativePath, String moduleRelativePath, Type type, @Nullable String language, int batchId,
+    SensorStrategy sensorStrategy) {
     super(batchId);
     this.moduleKey = moduleKey;
-    this.relativePath = PathUtils.sanitize(relativePath);
-    this.moduleBaseDir = moduleBaseDir.normalize();
+    this.projectRelativePath = projectRelativePath;
+    this.moduleRelativePath = moduleRelativePath;
     this.type = type;
-  }
-
-  public DefaultIndexedFile setLanguage(@Nullable String language) {
     this.language = language;
-    return this;
+    this.sensorStrategy = sensorStrategy;
+    this.absolutePath = absolutePath;
   }
 
   @Override
   public String relativePath() {
-    return relativePath;
+    return sensorStrategy.isGlobal() ? projectRelativePath : moduleRelativePath;
+  }
+
+  public String getModuleRelativePath() {
+    return moduleRelativePath;
+  }
+
+  public String getProjectRelativePath() {
+    return projectRelativePath;
   }
 
   @Override
@@ -81,7 +90,7 @@ public class DefaultIndexedFile extends DefaultInputComponent implements Indexed
 
   @Override
   public Path path() {
-    return moduleBaseDir.resolve(relativePath);
+    return absolutePath;
   }
 
   @Override
@@ -105,7 +114,7 @@ public class DefaultIndexedFile extends DefaultInputComponent implements Indexed
    */
   @Override
   public String key() {
-    return new StringBuilder().append(moduleKey).append(":").append(relativePath).toString();
+    return new StringBuilder().append(moduleKey).append(":").append(moduleRelativePath).toString();
   }
 
   public String moduleKey() {
@@ -123,21 +132,31 @@ public class DefaultIndexedFile extends DefaultInputComponent implements Indexed
     }
 
     DefaultIndexedFile that = (DefaultIndexedFile) o;
-    return moduleKey.equals(that.moduleKey) && relativePath.equals(that.relativePath);
+    return projectRelativePath.equals(that.projectRelativePath);
   }
 
   @Override
   public int hashCode() {
-    return moduleKey.hashCode() + relativePath.hashCode() * 13;
+    return projectRelativePath.hashCode();
   }
 
   @Override
   public String toString() {
-    return "[moduleKey=" + moduleKey + ", relative=" + relativePath + ", basedir=" + moduleBaseDir + "]";
+    return projectRelativePath;
   }
 
   @Override
   public boolean isFile() {
     return true;
+  }
+
+  @Override
+  public String filename() {
+    return path().getFileName().toString();
+  }
+
+  @Override
+  public URI uri() {
+    return path().toUri();
   }
 }

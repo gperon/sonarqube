@@ -49,6 +49,7 @@ import static org.sonarqube.ws.client.project.ProjectsWsParameters.PARAM_VISIBIL
 
 /**
  * Maps web service {@code api/projects}.
+ *
  * @since 5.5
  */
 public class ProjectsService extends BaseService {
@@ -77,8 +78,15 @@ public class ProjectsService extends BaseService {
    */
   public void delete(DeleteRequest request) {
     call(new PostRequest(path("delete"))
-      .setParam("id", request.getId())
-      .setParam("key", request.getKey()));
+      .setParam("project", request.getKey()));
+  }
+
+  public void bulkDelete(BulkDeleteRequest request) {
+    PostRequest post = new PostRequest(path("bulk_delete"))
+      .setParam("organization", request.getOrganization())
+      .setParam("projects", String.join(",", request.getProjectKeys()));
+
+    call(post);
   }
 
   public void updateKey(UpdateKeyWsRequest request) {

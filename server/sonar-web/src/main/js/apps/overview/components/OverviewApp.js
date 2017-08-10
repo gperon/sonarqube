@@ -17,82 +17,58 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
+// @flow
 import React from 'react';
+import { uniq } from 'lodash';
 import moment from 'moment';
 import QualityGate from '../qualityGate/QualityGate';
+import ApplicationQualityGate from '../qualityGate/ApplicationQualityGate';
 import BugsAndVulnerabilities from '../main/BugsAndVulnerabilities';
 import CodeSmells from '../main/CodeSmells';
 import Coverage from '../main/Coverage';
 import Duplications from '../main/Duplications';
-import Meta from './../meta/Meta';
+import Meta from '../meta/Meta';
+import throwGlobalError from '../../../app/utils/throwGlobalError';
 import { getMeasuresAndMeta } from '../../../api/measures';
-import { getTimeMachineData } from '../../../api/time-machine';
+import { getAllTimeMachineData } from '../../../api/time-machine';
 import { enhanceMeasuresWithMetrics } from '../../../helpers/measures';
 import { getLeakPeriod } from '../../../helpers/periods';
-import { ComponentType } from '../propTypes';
-import { TooltipsContainer } from '../../../components/mixins/tooltips-mixin';
+import { getCustomGraph, getGraph } from '../../../helpers/storage';
+import { METRICS, HISTORY_METRICS_LIST } from '../utils';
+import { DEFAULT_GRAPH, getDisplayedHistoryMetrics } from '../../projectActivity/utils';
+import type { Component, History, MeasuresList, Period } from '../types';
 import '../styles.css';
 
-const METRICS = [
-  // quality gate
-  'alert_status',
-  'quality_gate_details',
+type Props = {
+  component: Component
+};
 
-  // bugs
-  'bugs',
-  'new_bugs',
-  'reliability_rating',
-  'new_reliability_rating',
-
-  // vulnerabilities
-  'vulnerabilities',
-  'new_vulnerabilities',
-  'security_rating',
-  'new_security_rating',
-
-  // code smells
-  'code_smells',
-  'new_code_smells',
-  'sqale_rating',
-  'new_maintainability_rating',
-  'sqale_index',
-  'new_technical_debt',
-
-  // coverage
-  'coverage',
-  'new_coverage',
-  'new_lines_to_cover',
-  'tests',
-
-  // duplications
-  'duplicated_lines_density',
-  'new_duplicated_lines_density',
-  'duplicated_blocks',
-
-  // size
-  'ncloc',
-  'ncloc_language_distribution',
-  'new_lines'
-];
-
-const HISTORY_METRICS_LIST = ['sqale_index', 'duplicated_lines_density', 'ncloc', 'coverage'];
+type State = {
+  history?: History,
+  historyStartDate?: Date,
+  loading: boolean,
+  measures: MeasuresList,
+  periods?: Array<Period>
+};
 
 export default class OverviewApp extends React.PureComponent {
-  static propTypes = {
-    component: ComponentType.isRequired
-  };
-
-  state = {
-    loading: true
+  mounted: boolean;
+  props: Props;
+  state: State = {
+    loading: true,
+    measures: []
   };
 
   componentDidMount() {
     this.mounted = true;
-    document.querySelector('html').classList.add('dashboard-page');
+    const domElement = document.querySelector('html');
+    if (domElement) {
+      domElement.classList.add('dashboard-page');
+    }
     this.loadMeasures(this.props.component.key).then(() => this.loadHistory(this.props.component));
   }
 
-  componentDidUpdate(prevProps) {
+  componentDidUpdate(prevProps: Props) {
     if (this.props.component.key !== prevProps.component.key) {
       this.loadMeasures(this.props.component.key).then(() =>
         this.loadHistory(this.props.component)
@@ -102,10 +78,13 @@ export default class OverviewApp extends React.PureComponent {
 
   componentWillUnmount() {
     this.mounted = false;
-    document.querySelector('html').classList.remove('dashboard-page');
+    const domElement = document.querySelector('html');
+    if (domElement) {
+      domElement.classList.remove('dashboard-page');
+    }
   }
 
-  loadMeasures(componentKey) {
+  loadMeasures(componentKey: string) {
     this.setState({ loading: true });
 
     return getMeasuresAndMeta(componentKey, METRICS, {
@@ -118,13 +97,19 @@ export default class OverviewApp extends React.PureComponent {
           periods: r.periods
         });
       }
-    });
+    }, throwGlobalError);
   }
 
-  loadHistory(component) {
-    return getTimeMachineData(component.key, HISTORY_METRICS_LIST).then(r => {
+  loadHistory(component: Component) {
+    let graphMetrics = getDisplayedHistoryMetrics(getGraph(), getCustomGraph());
+    if (!graphMetrics || graphMetrics.length <= 0) {
+      graphMetrics = getDisplayedHistoryMetrics(DEFAULT_GRAPH, []);
+    }
+
+    const metrics = uniq(HISTORY_METRICS_LIST.concat(graphMetrics));
+    return getAllTimeMachineData(component.key, metrics).then(r => {
       if (this.mounted) {
-        const history = {};
+        const history: History = {};
         r.measures.forEach(measure => {
           const measureHistory = measure.history.map(analysis => ({
             date: moment(analysis.date).toDate(),
@@ -135,8 +120,11 @@ export default class OverviewApp extends React.PureComponent {
         const historyStartDate = history[HISTORY_METRICS_LIST[0]][0].date;
         this.setState({ history, historyStartDate });
       }
-    });
+    }, throwGlobalError);
   }
+
+  getApplicationLeakPeriod = () =>
+    this.state.measures.find(measure => measure.metric.key === 'new_bugs') ? { index: 1 } : null;
 
   renderLoading() {
     return (
@@ -154,27 +142,28 @@ export default class OverviewApp extends React.PureComponent {
       return this.renderLoading();
     }
 
-    const leakPeriod = getLeakPeriod(periods);
+    const leakPeriod =
+      component.qualifier === 'APP' ? this.getApplicationLeakPeriod() : getLeakPeriod(periods);
     const domainProps = { component, measures, leakPeriod, history, historyStartDate };
 
     return (
       <div className="page page-limited">
         <div className="overview page-with-sidebar">
           <div className="overview-main page-main">
-            <QualityGate component={component} measures={measures} />
+            {component.qualifier === 'APP'
+              ? <ApplicationQualityGate component={component} />
+              : <QualityGate component={component} measures={measures} />}
 
-            <TooltipsContainer>
-              <div className="overview-domains-list">
-                <BugsAndVulnerabilities {...domainProps} />
-                <CodeSmells {...domainProps} />
-                <Coverage {...domainProps} />
-                <Duplications {...domainProps} />
-              </div>
-            </TooltipsContainer>
+            <div className="overview-domains-list">
+              <BugsAndVulnerabilities {...domainProps} />
+              <CodeSmells {...domainProps} />
+              <Coverage {...domainProps} />
+              <Duplications {...domainProps} />
+            </div>
           </div>
 
           <div className="page-sidebar-fixed">
-            <Meta component={component} measures={measures} />
+            <Meta component={component} history={history} measures={measures} />
           </div>
         </div>
       </div>

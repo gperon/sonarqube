@@ -19,16 +19,18 @@
  */
 package org.sonar.server.user.index;
 
-import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import org.junit.Rule;
 import org.junit.Test;
-import org.sonar.api.config.MapSettings;
+import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.utils.System2;
 import org.sonar.db.DbTester;
 import org.sonar.db.user.UserDto;
+import org.sonar.db.user.UserTesting;
 import org.sonar.server.es.EsTester;
 
+import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class UserIndexerTest {
@@ -39,52 +41,40 @@ public class UserIndexerTest {
   public DbTester db = DbTester.create(system2);
 
   @Rule
-  public EsTester es = new EsTester(new UserIndexDefinition(new MapSettings()));
+  public EsTester es = new EsTester(new UserIndexDefinition(new MapSettings().asConfig()));
 
   private UserIndexer underTest = new UserIndexer(db.getDbClient(), es.client());
 
   @Test
   public void index_nothing_on_startup() {
-    underTest.indexOnStartup(null);
+    underTest.indexOnStartup(new HashSet<>());
 
     assertThat(es.countDocuments(UserIndexDefinition.INDEX_TYPE_USER)).isEqualTo(0L);
   }
 
   @Test
-  public void index_everything_on_startup() {
-    db.prepareDbUnit(getClass(), "index.xml");
+  public void indexOnStartup_adds_all_users_to_index() {
+    UserDto user = db.users().insertUser(u -> u
+      .setScmAccounts(asList("user_1", "u1")));
 
-    underTest.indexOnStartup(null);
+    underTest.indexOnStartup(new HashSet<>());
 
     List<UserDoc> docs = es.getDocuments(UserIndexDefinition.INDEX_TYPE_USER, UserDoc.class);
     assertThat(docs).hasSize(1);
     UserDoc doc = docs.get(0);
-    assertThat(doc.login()).isEqualTo("user1");
-    assertThat(doc.name()).isEqualTo("User1");
-    assertThat(doc.email()).isEqualTo("user1@mail.com");
-    assertThat(doc.active()).isTrue();
-    assertThat(doc.scmAccounts()).containsOnly("user_1", "u1");
-    assertThat(doc.createdAt()).isEqualTo(1500000000000L);
-    assertThat(doc.updatedAt()).isEqualTo(1500000000000L);
+    assertThat(doc.login()).isEqualTo(user.getLogin());
+    assertThat(doc.name()).isEqualTo(user.getName());
+    assertThat(doc.email()).isEqualTo(user.getEmail());
+    assertThat(doc.active()).isEqualTo(user.isActive());
+    assertThat(doc.scmAccounts()).isEqualTo(user.getScmAccountsAsList());
   }
 
   @Test
-  public void index_single_user_on_startup() {
-    UserDto user = db.users().insertUser();
-
-    underTest.indexOnStartup(null);
-
-    List<UserDoc> docs = es.getDocuments(UserIndexDefinition.INDEX_TYPE_USER, UserDoc.class);
-    assertThat(docs).hasSize(1);
-    assertThat(docs).extracting(UserDoc::login).containsExactly(user.getLogin());
-  }
-
-  @Test
-  public void index_single_user() {
+  public void commitAndIndex_single_user() {
     UserDto user = db.users().insertUser();
     UserDto anotherUser = db.users().insertUser();
 
-    underTest.index(user.getLogin());
+    underTest.commitAndIndex(db.getSession(), user);
 
     List<UserDoc> docs = es.getDocuments(UserIndexDefinition.INDEX_TYPE_USER, UserDoc.class);
     assertThat(docs).hasSize(1);
@@ -94,14 +84,14 @@ public class UserIndexerTest {
   }
 
   @Test
-  public void index_several_users() {
-    UserDto user = db.users().insertUser();
-    UserDto anotherUser = db.users().insertUser();
+  public void commitAndIndex_multiple_users() {
+    UserDto user1 = db.getDbClient().userDao().insert(db.getSession(), UserTesting.newUserDto());
+    UserDto user2 = db.getDbClient().userDao().insert(db.getSession(), UserTesting.newUserDto());
 
-    underTest.index(Arrays.asList(user.getLogin(), anotherUser.getLogin()));
+    underTest.commitAndIndex(db.getSession(), asList(user1, user2));
 
     List<UserDoc> docs = es.getDocuments(UserIndexDefinition.INDEX_TYPE_USER, UserDoc.class);
-    assertThat(docs).hasSize(2);
-    assertThat(docs).extracting(UserDoc::login).containsOnly(user.getLogin(), anotherUser.getLogin());
+    assertThat(docs).extracting(UserDoc::login).containsExactlyInAnyOrder(user1.getLogin(), user2.getLogin());
+    assertThat(db.countRowsOfTable(db.getSession(), "users")).isEqualTo(2);
   }
 }

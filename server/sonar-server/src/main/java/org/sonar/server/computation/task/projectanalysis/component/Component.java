@@ -58,7 +58,13 @@ public interface Component {
     }
   }
 
+  enum Status {
+    UNAVAILABLE, SAME, CHANGED, ADDED;
+  }
+
   Type getType();
+
+  Status getStatus();
 
   /**
    * Returns the component uuid
@@ -112,4 +118,11 @@ public interface Component {
    * @throws IllegalStateException if the Component's type is not {@link Type#SUBVIEW}
    */
   SubViewAttributes getSubViewAttributes();
+
+  /**
+   * The attributes of the Component if it's type is {@link Type#VIEW}.
+   *
+   * @throws IllegalStateException if the Component's type is not {@link Type#VIEW}
+   */
+  ViewAttributes getViewAttributes();
 }

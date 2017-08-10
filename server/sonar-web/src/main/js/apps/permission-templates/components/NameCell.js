@@ -18,13 +18,14 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 import React from 'react';
+import PropTypes from 'prop-types';
 import { Link } from 'react-router';
 import Defaults from './Defaults';
 import { PermissionTemplateType } from '../propTypes';
 
 export default class NameCell extends React.PureComponent {
   static propTypes = {
-    organization: React.PropTypes.object,
+    organization: PropTypes.object,
     permissionTemplate: PermissionTemplateType.isRequired
   };
 
@@ -38,7 +39,9 @@ export default class NameCell extends React.PureComponent {
     return (
       <td>
         <Link to={{ pathname, query: { id: t.id } }}>
-          <strong className="js-name">{t.name}</strong>
+          <strong className="js-name">
+            {t.name}
+          </strong>
         </Link>
 
         {t.defaultFor.length > 0 &&

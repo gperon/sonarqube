@@ -19,14 +19,14 @@
  */
 package org.sonar.server.user.ws;
 
+import java.util.HashSet;
 import java.util.Optional;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.mockito.ArgumentCaptor;
-import org.sonar.api.config.MapSettings;
-import org.sonar.api.config.Settings;
+import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.utils.System2;
 import org.sonar.api.utils.internal.AlwaysIncreasingSystem2;
 import org.sonar.core.config.CorePropertyDefinitions;
@@ -65,13 +65,13 @@ import static org.sonar.db.user.UserTesting.newUserDto;
 public class CreateActionTest {
 
   private static final String DEFAULT_GROUP_NAME = "sonar-users";
-  private Settings settings = new MapSettings();
+  private MapSettings settings = new MapSettings();
   private System2 system2 = new AlwaysIncreasingSystem2();
 
   @Rule
   public DbTester db = DbTester.create(system2);
   @Rule
-  public EsTester esTester = new EsTester(new UserIndexDefinition(settings));
+  public EsTester esTester = new EsTester(new UserIndexDefinition(settings.asConfig()));
   @Rule
   public UserSessionRule userSessionRule = UserSessionRule.standalone();
   @Rule
@@ -82,12 +82,11 @@ public class CreateActionTest {
   private GroupDto defaultGroupInDefaultOrg;
   private DefaultOrganizationProvider defaultOrganizationProvider = TestDefaultOrganizationProvider.from(db);
   private TestOrganizationFlags organizationFlags = TestOrganizationFlags.standalone();
-
   private OrganizationCreation organizationCreation = mock(OrganizationCreation.class);
   private WsActionTester tester = new WsActionTester(new CreateAction(
     db.getDbClient(),
-    new UserUpdater(mock(NewUserNotifier.class), db.getDbClient(), userIndexer, system2, organizationFlags, defaultOrganizationProvider,
-      organizationCreation, new DefaultGroupFinder(db.getDbClient())),
+    new UserUpdater(mock(NewUserNotifier.class), db.getDbClient(), userIndexer, organizationFlags, defaultOrganizationProvider,
+      organizationCreation, new DefaultGroupFinder(db.getDbClient()), settings.asConfig()),
     userSessionRule));
 
   @Before
@@ -235,7 +234,7 @@ public class CreateActionTest {
     logInAsSystemAdministrator();
 
     db.users().insertUser(newUserDto("john", "John", "john@email.com").setActive(false));
-    userIndexer.index("john");
+    userIndexer.indexOnStartup(new HashSet<>());
 
     call(CreateRequest.builder()
       .setLogin("john")

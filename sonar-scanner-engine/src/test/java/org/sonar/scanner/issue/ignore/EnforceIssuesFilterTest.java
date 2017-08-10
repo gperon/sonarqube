@@ -19,17 +19,15 @@
  */
 package org.sonar.scanner.issue.ignore;
 
-import org.sonar.api.scan.issue.filter.FilterableIssue;
-
 import com.google.common.collect.ImmutableList;
 import org.junit.Before;
 import org.junit.Test;
-import org.sonar.api.scan.issue.filter.IssueFilterChain;
 import org.sonar.api.batch.fs.InputComponent;
 import org.sonar.api.batch.fs.internal.TestInputFileBuilder;
 import org.sonar.api.rule.RuleKey;
+import org.sonar.api.scan.issue.filter.FilterableIssue;
+import org.sonar.api.scan.issue.filter.IssueFilterChain;
 import org.sonar.api.utils.WildcardPattern;
-import org.sonar.scanner.issue.ignore.EnforceIssuesFilter;
 import org.sonar.scanner.issue.ignore.pattern.IssueInclusionPatternInitializer;
 import org.sonar.scanner.issue.ignore.pattern.IssuePattern;
 import org.sonar.scanner.scan.filesystem.InputComponentStore;
@@ -55,12 +53,11 @@ public class EnforceIssuesFilterTest {
     issue = mock(FilterableIssue.class);
     chain = mock(IssueFilterChain.class);
     when(chain.accept(issue)).thenReturn(true);
-
-    ignoreFilter = new EnforceIssuesFilter(exclusionPatternInitializer, inputComponentStore);
   }
 
   @Test
   public void shouldPassToChainIfNoConfiguredPatterns() {
+    ignoreFilter = new EnforceIssuesFilter(exclusionPatternInitializer, inputComponentStore);
     assertThat(ignoreFilter.accept(issue, chain)).isTrue();
     verify(chain).accept(issue);
   }
@@ -78,6 +75,7 @@ public class EnforceIssuesFilterTest {
     when(rulePattern.match(rule)).thenReturn(false);
     when(exclusionPatternInitializer.getMulticriteriaPatterns()).thenReturn(ImmutableList.of(matching));
 
+    ignoreFilter = new EnforceIssuesFilter(exclusionPatternInitializer, inputComponentStore);
     assertThat(ignoreFilter.accept(issue, chain)).isTrue();
     verify(chain).accept(issue);
   }
@@ -102,6 +100,7 @@ public class EnforceIssuesFilterTest {
     when(exclusionPatternInitializer.getMulticriteriaPatterns()).thenReturn(ImmutableList.of(matching));
     when(inputComponentStore.getByKey(componentKey)).thenReturn(createComponentWithPath(path));
 
+    ignoreFilter = new EnforceIssuesFilter(exclusionPatternInitializer, inputComponentStore);
     assertThat(ignoreFilter.accept(issue, chain)).isTrue();
     verifyZeroInteractions(chain);
   }
@@ -130,6 +129,7 @@ public class EnforceIssuesFilterTest {
     when(exclusionPatternInitializer.getMulticriteriaPatterns()).thenReturn(ImmutableList.of(matching));
     when(inputComponentStore.getByKey(componentKey)).thenReturn(createComponentWithPath(path));
 
+    ignoreFilter = new EnforceIssuesFilter(exclusionPatternInitializer, inputComponentStore);
     assertThat(ignoreFilter.accept(issue, chain)).isFalse();
     verifyZeroInteractions(chain);
   }
@@ -154,6 +154,7 @@ public class EnforceIssuesFilterTest {
     when(exclusionPatternInitializer.getMulticriteriaPatterns()).thenReturn(ImmutableList.of(matching));
     when(inputComponentStore.getByKey(componentKey)).thenReturn(null);
 
+    ignoreFilter = new EnforceIssuesFilter(exclusionPatternInitializer, inputComponentStore);
     assertThat(ignoreFilter.accept(issue, chain)).isFalse();
     verifyZeroInteractions(chain);
   }

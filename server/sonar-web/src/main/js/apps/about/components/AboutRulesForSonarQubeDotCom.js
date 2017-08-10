@@ -34,7 +34,7 @@ export default function AboutRulesForSonarQubeDotCom(props: Props) {
 
   return (
     <div className="sqcom-about-rules">
-      <div className="about-page-container">
+      <div className="page-limited">
         <Link to={getRulesUrl(null, organization)} className="sqcom-about-rules-link">
           +3,000 rules
           <span className="spacer-left">
@@ -68,7 +68,9 @@ export default function AboutRulesForSonarQubeDotCom(props: Props) {
           className="sqcom-about-rules-link">
           C#
         </Link>
-        <Link to={getRulesUrl(null, organization)} className="button">And More</Link>
+        <Link to={getRulesUrl(null, organization)} className="button">
+          And More
+        </Link>
       </div>
     </div>
   );

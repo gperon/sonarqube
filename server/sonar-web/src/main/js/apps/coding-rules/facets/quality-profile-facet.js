@@ -33,6 +33,17 @@ export default BaseFacet.extend({
     };
   },
 
+  onRender() {
+    BaseFacet.prototype.onRender.apply(this, arguments);
+    const compareToProfile = this.options.app.state.get('query').compareToProfile;
+    if (typeof compareToProfile === 'string') {
+      const facet = this.$('.js-facet').filter(`[data-value="${compareToProfile}"]`);
+      if (facet.length > 0) {
+        facet.addClass('active compare');
+      }
+    }
+  },
+
   getValues() {
     const that = this;
     const languagesQuery = this.options.app.state.get('query').languages;
@@ -46,6 +57,15 @@ export default BaseFacet.extend({
         label: profile.name,
         val: profile.key
       }));
+    const compareProfile = this.options.app.state.get('query').compareToProfile;
+    if (compareProfile != null) {
+      const property = this.model.get('property');
+      const selectedProfile = this.options.app.state.get('query')[property];
+      return sortBy(values, [
+        profile => (profile.val === compareProfile || profile.val === selectedProfile ? 0 : 1),
+        'label'
+      ]);
+    }
     return sortBy(values, 'label');
   },
 
@@ -59,17 +79,30 @@ export default BaseFacet.extend({
       obj.activation = true;
       obj[property] = $(e.currentTarget).data('value');
     }
+    obj.compareToProfile = null;
     this.options.app.state.updateFilter(obj);
   },
 
   setActivation(e) {
     e.stopPropagation();
-    this.options.app.state.updateFilter({ activation: 'true' });
+    const compareProfile = this.options.app.state.get('query').compareToProfile;
+    const profile = $(e.currentTarget).parents('.js-facet').data('value');
+    if (compareProfile == null || compareProfile !== profile) {
+      this.options.app.state.updateFilter({ activation: 'true', compareToProfile: null });
+    }
   },
 
   unsetActivation(e) {
     e.stopPropagation();
-    this.options.app.state.updateFilter({ activation: 'false', active_severities: null });
+    const compareProfile = this.options.app.state.get('query').compareToProfile;
+    const profile = $(e.currentTarget).parents('.js-facet').data('value');
+    if (compareProfile == null || compareProfile !== profile) {
+      this.options.app.state.updateFilter({
+        activation: 'false',
+        active_severities: null,
+        compareToProfile: null
+      });
+    }
   },
 
   getToggled() {
@@ -81,6 +114,7 @@ export default BaseFacet.extend({
     const obj = { activation: null };
     const property = this.model.get('property');
     obj[property] = null;
+    obj.compareToProfile = null;
     this.options.app.state.updateFilter(obj);
   },
 

@@ -19,21 +19,25 @@
  */
 package org.sonar.api.scan.filesystem;
 
-import com.google.common.base.Joiner;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import javax.annotation.CheckForNull;
+import javax.annotation.concurrent.Immutable;
 import org.apache.commons.io.FilenameUtils;
 import org.sonar.api.batch.ScannerSide;
 import org.sonar.api.utils.PathUtils;
+
+import static java.util.stream.Collectors.joining;
 
 /**
  * @since 3.5
  */
 @ScannerSide
+@Immutable
 public class PathResolver {
 
   public File relativeFile(File dir, String path) {
@@ -59,7 +63,7 @@ public class PathResolver {
     while (cursor != null) {
       File parentDir = parentDir(dirs, cursor);
       if (parentDir != null) {
-        return new RelativePath(parentDir, Joiner.on("/").join(stack));
+        return new RelativePath(parentDir, stack.stream().collect(joining("/")));
       }
       stack.add(0, cursor.getName());
       cursor = cursor.getParentFile();
@@ -87,6 +91,28 @@ public class PathResolver {
       return FilenameUtils.separatorsToUnix(relativized.toString());
     } catch (IllegalArgumentException e) {
       return null;
+    }
+  }
+
+  /**
+   * Similar to {@link Path#relativize(Path)} except that:
+   *   <ul>
+   *   <li>Empty is returned if file is not a child of dir
+   *   <li>the resulting path is converted to use Unix separators
+   *   </ul> 
+   * @since 6.6
+   */
+  public static Optional<String> relativize(Path dir, Path file) {
+    Path baseDir = dir.normalize();
+    Path path = file.normalize();
+    if (!path.startsWith(baseDir)) {
+      return Optional.empty();
+    }
+    try {
+      Path relativized = baseDir.relativize(path);
+      return Optional.of(FilenameUtils.separatorsToUnix(relativized.toString()));
+    } catch (IllegalArgumentException e) {
+      return Optional.empty();
     }
   }
 

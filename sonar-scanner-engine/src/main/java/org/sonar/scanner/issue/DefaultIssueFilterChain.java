@@ -19,15 +19,17 @@
  */
 package org.sonar.scanner.issue;
 
-import org.sonar.api.scan.issue.filter.IssueFilter;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import javax.annotation.concurrent.ThreadSafe;
+
 import org.sonar.api.scan.issue.filter.FilterableIssue;
+import org.sonar.api.scan.issue.filter.IssueFilter;
 import org.sonar.api.scan.issue.filter.IssueFilterChain;
 
+@ThreadSafe
 public class DefaultIssueFilterChain implements IssueFilterChain {
   private final List<IssueFilter> filters;
 

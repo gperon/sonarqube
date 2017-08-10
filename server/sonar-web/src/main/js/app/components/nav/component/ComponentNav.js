@@ -23,9 +23,11 @@ import ComponentNavBreadcrumbs from './ComponentNavBreadcrumbs';
 import ComponentNavMeta from './ComponentNavMeta';
 import ComponentNavMenu from './ComponentNavMenu';
 import RecentHistory from '../../RecentHistory';
+import ContextNavBar from '../../../../components/nav/ContextNavBar';
 import { TooltipsContainer } from '../../../../components/mixins/tooltips-mixin';
 import { getTasksForComponent } from '../../../../api/ce';
 import { STATUSES } from '../../../../apps/background-tasks/constants';
+import './ComponentNav.css';
 
 export default class ComponentNav extends React.PureComponent {
   componentDidMount() {
@@ -40,7 +42,7 @@ export default class ComponentNav extends React.PureComponent {
   }
 
   loadStatus = () => {
-    getTasksForComponent(this.props.component.id).then(r => {
+    getTasksForComponent(this.props.component.key).then(r => {
       if (this.mounted) {
         this.setState({
           isPending: r.queue.some(task => task.status === STATUSES.PENDING),
@@ -54,7 +56,7 @@ export default class ComponentNav extends React.PureComponent {
   populateRecentHistory = () => {
     const { breadcrumbs } = this.props.component;
     const { qualifier } = breadcrumbs[breadcrumbs.length - 1];
-    if (['TRK', 'VW', 'DEV'].indexOf(qualifier) !== -1) {
+    if (['TRK', 'VW', 'APP', 'DEV'].indexOf(qualifier) !== -1) {
       RecentHistory.add(
         this.props.component.key,
         this.props.component.name,
@@ -66,36 +68,32 @@ export default class ComponentNav extends React.PureComponent {
 
   render() {
     return (
-      <nav className="navbar navbar-context page-container" id="context-navigation">
-        <div className="navbar-context-inner">
-          <div className="container">
-            <ComponentNavFavorite
-              component={this.props.component.key}
-              favorite={this.props.component.isFavorite}
-            />
+      <ContextNavBar id="context-navigation" height={65}>
+        <ComponentNavFavorite
+          component={this.props.component.key}
+          favorite={this.props.component.isFavorite}
+        />
 
-            <ComponentNavBreadcrumbs
-              component={this.props.component}
-              breadcrumbs={this.props.component.breadcrumbs}
-            />
+        <ComponentNavBreadcrumbs
+          component={this.props.component}
+          breadcrumbs={this.props.component.breadcrumbs}
+        />
 
-            <TooltipsContainer options={{ delay: { show: 0, hide: 2000 } }}>
-              <ComponentNavMeta
-                {...this.props}
-                {...this.state}
-                version={this.props.component.version}
-                analysisDate={this.props.component.analysisDate}
-              />
-            </TooltipsContainer>
+        <TooltipsContainer options={{ delay: { show: 0, hide: 2000 } }}>
+          <ComponentNavMeta
+            {...this.props}
+            {...this.state}
+            version={this.props.component.version}
+            analysisDate={this.props.component.analysisDate}
+          />
+        </TooltipsContainer>
 
-            <ComponentNavMenu
-              component={this.props.component}
-              conf={this.props.conf}
-              location={this.props.location}
-            />
-          </div>
-        </div>
-      </nav>
+        <ComponentNavMenu
+          component={this.props.component}
+          conf={this.props.conf}
+          location={this.props.location}
+        />
+      </ContextNavBar>
     );
   }
 }

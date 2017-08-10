@@ -26,11 +26,9 @@ import javax.annotation.concurrent.Immutable;
 @Immutable
 public class DeleteRequest {
 
-  private final String id;
   private final String key;
 
   private DeleteRequest(Builder builder) {
-    this.id = builder.id;
     this.key = builder.key;
   }
 
@@ -39,25 +37,14 @@ public class DeleteRequest {
     return key;
   }
 
-  @CheckForNull
-  public String getId() {
-    return id;
-  }
-
   public static Builder builder() {
     return new Builder();
   }
 
   public static class Builder {
-    private String id;
     private String key;
 
     private Builder() {
-    }
-
-    public Builder setId(@Nullable String id) {
-      this.id = id;
-      return this;
     }
 
     public Builder setKey(@Nullable String key) {

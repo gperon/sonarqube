@@ -19,21 +19,18 @@
  */
 package org.sonar.api.server.rule;
 
-import com.google.common.base.MoreObjects;
-import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedSet;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import java.io.IOException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
@@ -53,6 +50,11 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.unmodifiableList;
+import static java.util.Collections.unmodifiableMap;
+import static org.apache.commons.lang.StringUtils.defaultIfEmpty;
+import static org.apache.commons.lang.StringUtils.isEmpty;
 import static org.apache.commons.lang.StringUtils.trimToNull;
 
 /**
@@ -157,8 +159,9 @@ public interface RulesDefinition {
 
   /**
    * Default sub-characteristics of technical debt model. See http://www.sqale.org
+   *
    * @deprecated in 5.5. SQALE Quality Model is replaced by SonarQube Quality Model.
-   *             See https://jira.sonarsource.com/browse/MMF-184
+   * See https://jira.sonarsource.com/browse/MMF-184
    */
   @Deprecated
   final class SubCharacteristics {
@@ -381,7 +384,7 @@ public interface RulesDefinition {
    * Instantiated by core but not by plugins, except for their tests.
    */
   class Context {
-    private final Map<String, Repository> repositoriesByKey = Maps.newHashMap();
+    private final Map<String, Repository> repositoriesByKey = new HashMap<>();
 
     /**
      * New builder for {@link org.sonar.api.server.rule.RulesDefinition.Repository}.
@@ -408,7 +411,7 @@ public interface RulesDefinition {
     }
 
     public List<Repository> repositories() {
-      return ImmutableList.copyOf(repositoriesByKey.values());
+      return unmodifiableList(new ArrayList<>(repositoriesByKey.values()));
     }
 
     /**
@@ -417,7 +420,7 @@ public interface RulesDefinition {
      */
     @Deprecated
     public List<ExtendedRepository> extendedRepositories(String repositoryKey) {
-      return Collections.emptyList();
+      return emptyList();
     }
 
     /**
@@ -426,7 +429,7 @@ public interface RulesDefinition {
      */
     @Deprecated
     public List<ExtendedRepository> extendedRepositories() {
-      return Collections.emptyList();
+      return emptyList();
     }
 
     private void registerRepository(NewRepositoryImpl newRepository) {
@@ -445,6 +448,7 @@ public interface RulesDefinition {
     /**
      * Create a rule with specified key. Max length of key is 200 characters. Key must be unique
      * among the repository
+     *
      * @throws IllegalArgumentException is key is not unique. Note a warning was logged up to version 5.4 (included)
      */
     NewRule createRule(String ruleKey);
@@ -468,7 +472,7 @@ public interface RulesDefinition {
     private final String key;
     private String language;
     private String name;
-    private final Map<String, NewRule> newRules = Maps.newHashMap();
+    private final Map<String, NewRule> newRules = new HashMap<>();
 
     private NewRepositoryImpl(Context context, String key, String language) {
       this.context = context;
@@ -518,10 +522,11 @@ public interface RulesDefinition {
 
     @Override
     public String toString() {
-      return MoreObjects.toStringHelper(this)
-        .add("key", key)
-        .add("language", language)
-        .toString();
+      StringBuilder sb = new StringBuilder("NewRepository{");
+      sb.append("key='").append(key).append('\'');
+      sb.append(", language='").append(language).append('\'');
+      sb.append('}');
+      return sb.toString();
     }
   }
 
@@ -570,7 +575,7 @@ public interface RulesDefinition {
         newRule.validate();
         ruleBuilder.put(newRule.key, new Rule(this, newRule));
       }
-      this.rulesByKey = ImmutableMap.copyOf(ruleBuilder);
+      this.rulesByKey = unmodifiableMap(ruleBuilder);
     }
 
     @Override
@@ -596,7 +601,7 @@ public interface RulesDefinition {
 
     @Override
     public List<Rule> rules() {
-      return ImmutableList.copyOf(rulesByKey.values());
+      return unmodifiableList(new ArrayList<>(rulesByKey.values()));
     }
 
     @Override
@@ -618,10 +623,11 @@ public interface RulesDefinition {
 
     @Override
     public String toString() {
-      return MoreObjects.toStringHelper(this)
-        .add("language", language)
-        .add("key", key)
-        .toString();
+      StringBuilder sb = new StringBuilder("Repository{");
+      sb.append("key='").append(key).append('\'');
+      sb.append(", language='").append(language).append('\'');
+      sb.append('}');
+      return sb.toString();
     }
   }
 
@@ -632,6 +638,7 @@ public interface RulesDefinition {
 
     /**
      * Shortcut for {@code create(Type.LINEAR, gap multiplier, null)}.
+     *
      * @param gapMultiplier the duration to fix one issue. See {@link DebtRemediationFunction} for details about format.
      * @see org.sonar.api.server.debt.DebtRemediationFunction.Type#LINEAR
      */
@@ -639,14 +646,16 @@ public interface RulesDefinition {
 
     /**
      * Shortcut for {@code create(Type.LINEAR_OFFSET, gap multiplier, base effort)}.
+     *
      * @param gapMultiplier duration to fix one point of complexity. See {@link DebtRemediationFunction} for details and format.
-     * @param baseEffort duration to make basic analysis. See {@link DebtRemediationFunction} for details and format.
+     * @param baseEffort    duration to make basic analysis. See {@link DebtRemediationFunction} for details and format.
      * @see org.sonar.api.server.debt.DebtRemediationFunction.Type#LINEAR_OFFSET
      */
     DebtRemediationFunction linearWithOffset(String gapMultiplier, String baseEffort);
 
     /**
      * Shortcut for {@code create(Type.CONSTANT_ISSUE, null, base effort)}.
+     *
      * @param baseEffort cost per issue. See {@link DebtRemediationFunction} for details and format.
      * @see org.sonar.api.server.debt.DebtRemediationFunction.Type#CONSTANT_ISSUE
      */
@@ -655,6 +664,7 @@ public interface RulesDefinition {
     /**
      * Flexible way to create a {@link DebtRemediationFunction}. An unchecked exception is thrown if
      * coefficient and/or offset are not valid according to the given @{code type}.
+     *
      * @since 5.3
      */
     DebtRemediationFunction create(DebtRemediationFunction.Type type, @Nullable String gapMultiplier, @Nullable String baseEffort);
@@ -673,8 +683,8 @@ public interface RulesDefinition {
     private RuleStatus status = RuleStatus.defaultStatus();
     private DebtRemediationFunction debtRemediationFunction;
     private String gapDescription;
-    private final Set<String> tags = Sets.newTreeSet();
-    private final Map<String, NewParam> paramsByKey = Maps.newHashMap();
+    private final Set<String> tags = new TreeSet<>();
+    private final Map<String, NewParam> paramsByKey = new HashMap<>();
     private final DebtRemediationFunctions functions;
     private boolean activatedByDefault;
 
@@ -703,6 +713,7 @@ public interface RulesDefinition {
 
     /**
      * Should this rule be enabled by default. For example in SonarLint standalone.
+     *
      * @since 6.0
      */
     public NewRule setActivatedByDefault(boolean activatedByDefault) {
@@ -729,6 +740,7 @@ public interface RulesDefinition {
      * </ul>
      * Finally the "bug" and "security" tags are considered as reserved. They
      * are silently removed from the final state of definition.
+     *
      * @since 5.5
      */
     public NewRule setType(RuleType t) {
@@ -803,9 +815,9 @@ public interface RulesDefinition {
      * SQALE sub-characteristic. See http://www.sqale.org
      *
      * @see org.sonar.api.server.rule.RulesDefinition.SubCharacteristics for constant values
-     * @deprecated in 5.5. SQALE Quality Model is replaced by SonarQube Quality Model. This method does nothing.
-     *             See https://jira.sonarsource.com/browse/MMF-184
      * @see #setType(RuleType)
+     * @deprecated in 5.5. SQALE Quality Model is replaced by SonarQube Quality Model. This method does nothing.
+     * See https://jira.sonarsource.com/browse/MMF-184
      */
     public NewRule setDebtSubCharacteristic(@Nullable String s) {
       return this;
@@ -898,10 +910,10 @@ public interface RulesDefinition {
     }
 
     private void validate() {
-      if (Strings.isNullOrEmpty(name)) {
+      if (isEmpty(name)) {
         throw new IllegalStateException(format("Name of rule %s is empty", this));
       }
-      if (Strings.isNullOrEmpty(htmlDescription) && Strings.isNullOrEmpty(markdownDescription)) {
+      if (isEmpty(htmlDescription) && isEmpty(markdownDescription)) {
         throw new IllegalStateException(format("One of HTML description or Markdown description must be defined for rule %s", this));
       }
     }
@@ -946,11 +958,11 @@ public interface RulesDefinition {
       this.gapDescription = newRule.gapDescription;
       this.type = newRule.type == null ? RuleTagsToTypeConverter.convert(newRule.tags) : newRule.type;
       this.tags = ImmutableSortedSet.copyOf(Sets.difference(newRule.tags, RuleTagsToTypeConverter.RESERVED_TAGS));
-      ImmutableMap.Builder<String, Param> paramsBuilder = ImmutableMap.builder();
+      Map<String, Param> paramsBuilder = new HashMap<>();
       for (NewParam newParam : newRule.paramsByKey.values()) {
         paramsBuilder.put(newParam.key, new Param(newParam));
       }
-      this.params = paramsBuilder.build();
+      this.params = Collections.unmodifiableMap(paramsBuilder);
       this.activatedByDefault = newRule.activatedByDefault;
     }
 
@@ -967,8 +979,8 @@ public interface RulesDefinition {
     }
 
     /**
-     * @since 5.5
      * @see NewRule#setType(RuleType)
+     * @since 5.5
      */
     public RuleType type() {
       return type;
@@ -994,6 +1006,7 @@ public interface RulesDefinition {
 
     /**
      * Should this rule be enabled by default. For example in SonarLint standalone.
+     *
      * @since 6.0
      */
     public boolean activatedByDefault() {
@@ -1005,9 +1018,9 @@ public interface RulesDefinition {
     }
 
     /**
+     * @see #type()
      * @deprecated in 5.5. SQALE Quality Model is replaced by SonarQube Quality Model. {@code null} is
      * always returned. See https://jira.sonarsource.com/browse/MMF-184
-     * @see #type()
      */
     @CheckForNull
     @Deprecated
@@ -1040,7 +1053,7 @@ public interface RulesDefinition {
     }
 
     public List<Param> params() {
-      return ImmutableList.copyOf(params.values());
+      return unmodifiableList(new ArrayList<>(params.values()));
     }
 
     public Set<String> tags() {
@@ -1118,7 +1131,7 @@ public interface RulesDefinition {
      * Empty default value will be converted to null. Max length is 4000 characters.
      */
     public NewParam setDefaultValue(@Nullable String s) {
-      this.defaultValue = Strings.emptyToNull(s);
+      this.defaultValue = defaultIfEmpty(s, null);
       return this;
     }
   }

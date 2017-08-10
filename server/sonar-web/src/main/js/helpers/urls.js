@@ -69,6 +69,19 @@ export function getComponentDrilldownUrl(componentKey, metric) {
 }
 
 /**
+ * Generate URL for a component's measure history
+ * @param {string} componentKey
+ * @param {string} metric
+ * @returns {Object}
+ */
+export function getComponentMeasureHistory(componentKey, metric) {
+  return {
+    pathname: '/project/activity',
+    query: { id: componentKey, graph: 'custom', custom_metrics: metric }
+  };
+}
+
+/**
  * Generate URL for a component's permissions page
  * @param {string} componentKey
  * @returns {Object}
@@ -87,16 +100,14 @@ export function getQualityProfileUrl(name, language, organization) {
   return getProfilePath(name, language, organization);
 }
 
-/**
- * Generate URL for a quality gate
- * @param {string} key
- * @returns {Object}
- */
-export function getQualityGateUrl(key) {
-  return {
-    pathname: '/quality_gates/show/' + encodeURIComponent(key)
-  };
-}
+export const getQualityGateUrl = (key: string, organization?: string) => ({
+  pathname: getQualityGatesUrl(organization).pathname + '/show/' + encodeURIComponent(key)
+});
+
+export const getQualityGatesUrl = (organization?: string) => ({
+  pathname:
+    (organization ? '/organizations/' + encodeURIComponent(organization) : '') + '/quality_gates'
+});
 
 /**
  * Generate URL for the rules page

@@ -19,63 +19,102 @@
  */
 // @flow
 import React from 'react';
+import classNames from 'classnames';
 import Events from './Events';
-import AddVersionForm from './forms/AddVersionForm';
-import AddCustomEventForm from './forms/AddCustomEventForm';
+import AddEventForm from './forms/AddEventForm';
 import RemoveAnalysisForm from './forms/RemoveAnalysisForm';
 import FormattedDate from '../../../components/ui/FormattedDate';
-import type { Analysis } from '../../../store/projectActivity/duck';
 import { translate } from '../../../helpers/l10n';
+import type { Analysis } from '../types';
 
 type Props = {
+  addCustomEvent: (analysis: string, name: string, category?: string) => Promise<*>,
+  addVersion: (analysis: string, version: string) => Promise<*>,
   analysis: Analysis,
+  canAdmin: boolean,
+  canCreateVersion: boolean,
+  changeEvent: (event: string, name: string) => Promise<*>,
+  deleteAnalysis: (analysis: string) => Promise<*>,
+  deleteEvent: (analysis: string, event: string) => Promise<*>,
   isFirst: boolean,
-  project: string,
-  canAdmin: boolean
+  selected: boolean,
+  updateSelectedDate: Date => void
 };
 
-export default function ProjectActivityAnalysis(props: Props) {
-  const { date, events } = props.analysis;
-  const { isFirst, canAdmin } = props;
+export default class ProjectActivityAnalysis extends React.PureComponent {
+  props: Props;
 
-  const version = events.find(event => event.category === 'VERSION');
+  handleClick = () => this.props.updateSelectedDate(this.props.analysis.date);
 
-  return (
-    <li className="project-activity-analysis clearfix">
-      {canAdmin &&
-        <div className="project-activity-analysis-actions">
-          <div className="dropdown display-inline-block">
-            <button className="js-create button-small" data-toggle="dropdown">
-              {translate('create')} <i className="icon-dropdown" />
-            </button>
-            <ul className="dropdown-menu dropdown-menu-right">
-              {version == null &&
+  stopPropagation = (e: Event) => e.stopPropagation();
+
+  render() {
+    const { analysis, isFirst, canAdmin } = this.props;
+    const { date, events } = analysis;
+    const analysisTitle = translate('project_activity.analysis');
+    const hasVersion = events.find(event => event.category === 'VERSION') != null;
+    return (
+      <li
+        className={classNames('project-activity-analysis clearfix', {
+          selected: this.props.selected
+        })}
+        data-date={date.valueOf()}
+        onClick={this.handleClick}
+        role="listitem"
+        tabIndex="0">
+        <div className="project-activity-time spacer-right">
+          <FormattedDate className="text-middle" date={date} format="LT" tooltipFormat="LTS" />
+        </div>
+        <div className="project-activity-analysis-icon big-spacer-right" title={analysisTitle} />
+
+        {canAdmin &&
+          <div className="project-activity-analysis-actions spacer-left">
+            <div className="dropdown display-inline-block">
+              <button
+                className="js-analysis-actions button-small button-compact dropdown-toggle"
+                data-toggle="dropdown"
+                onClick={this.stopPropagation}>
+                <i className="icon-settings" /> <i className="icon-dropdown" />
+              </button>
+              <ul className="dropdown-menu dropdown-menu-right">
+                {!hasVersion &&
+                  this.props.canCreateVersion &&
+                  <li>
+                    <AddEventForm
+                      addEvent={this.props.addVersion}
+                      analysis={analysis}
+                      addEventButtonText="project_activity.add_version"
+                    />
+                  </li>}
                 <li>
-                  <AddVersionForm analysis={props.analysis} />
-                </li>}
-              <li>
-                <AddCustomEventForm analysis={props.analysis} />
-              </li>
-            </ul>
-          </div>
+                  <AddEventForm
+                    addEvent={this.props.addCustomEvent}
+                    analysis={analysis}
+                    addEventButtonText="project_activity.add_custom_event"
+                  />
+                </li>
+                {!isFirst && <li role="separator" className="divider" />}
+                {!isFirst &&
+                  <li>
+                    <RemoveAnalysisForm
+                      analysis={analysis}
+                      deleteAnalysis={this.props.deleteAnalysis}
+                    />
+                  </li>}
+              </ul>
+            </div>
+          </div>}
 
-          {!isFirst &&
-            <div className="display-inline-block little-spacer-left">
-              <RemoveAnalysisForm analysis={props.analysis} project={props.project} />
-            </div>}
-        </div>}
-
-      <div className="project-activity-time">
-        <FormattedDate date={date} format="LT" tooltipFormat="LTS" />
-      </div>
-
-      {events.length > 0 &&
-        <Events
-          analysis={props.analysis.key}
-          events={events}
-          isFirst={props.isFirst}
-          canAdmin={canAdmin}
-        />}
-    </li>
-  );
+        {events.length > 0 &&
+          <Events
+            analysis={analysis.key}
+            canAdmin={canAdmin}
+            changeEvent={this.props.changeEvent}
+            deleteEvent={this.props.deleteEvent}
+            events={events}
+            isFirst={this.props.isFirst}
+          />}
+      </li>
+    );
+  }
 }

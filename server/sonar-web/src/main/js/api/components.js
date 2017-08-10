@@ -19,6 +19,7 @@
  */
 // @flow
 import { getJSON, postJSON, post } from '../helpers/request';
+import throwGlobalError from '../app/utils/throwGlobalError';
 
 export function getComponents(data?: Object) {
   const url = '/api/projects/search';
@@ -46,16 +47,14 @@ export function deleteProject(project: string) {
   return post(url, data);
 }
 
-export function createProject(
-  data: {
-    branch?: string,
-    name: string,
-    project: string,
-    organization?: string
-  }
-) {
+export function createProject(data: {
+  branch?: string,
+  name: string,
+  project: string,
+  organization?: string
+}) {
   const url = '/api/projects/create';
-  return postJSON(url, data);
+  return postJSON(url, data).catch(throwGlobalError);
 }
 
 export function searchProjectTags(data?: { ps?: number, q?: string }) {
@@ -123,8 +122,8 @@ export function getBreadcrumbs(component: string) {
   });
 }
 
-export function getComponentTags(component: string) {
-  return getComponentShow(component).then(r => r.component.tags || []);
+export function getComponentData(component: string) {
+  return getComponentShow(component).then(r => r.component);
 }
 
 export function getMyProjects(data?: Object) {

@@ -22,6 +22,7 @@ package org.sonar.db.rule;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 import javax.annotation.Nullable;
 import org.apache.ibatis.session.ResultHandler;
 import org.sonar.api.rule.RuleKey;
@@ -29,11 +30,13 @@ import org.sonar.api.rules.RuleQuery;
 import org.sonar.db.Dao;
 import org.sonar.db.DbSession;
 import org.sonar.db.RowNotFoundException;
+import org.sonar.db.es.RuleExtensionId;
 import org.sonar.db.organization.OrganizationDto;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static java.util.Optional.*;
+import static java.util.Optional.ofNullable;
 import static org.sonar.db.DatabaseUtils.executeLargeInputs;
+import static org.sonar.db.DatabaseUtils.executeLargeInputsWithoutOutput;
 
 public class RuleDao implements Dao {
 
@@ -102,7 +105,7 @@ public class RuleDao implements Dao {
     return executeLargeInputs(keys, mapper(session)::selectDefinitionByKeys);
   }
 
-  public void selectEnabled(DbSession session, ResultHandler resultHandler) {
+  public void selectEnabled(DbSession session, ResultHandler<RuleDefinitionDto> resultHandler) {
     mapper(session).selectEnabled(resultHandler);
   }
 
@@ -147,6 +150,38 @@ public class RuleDao implements Dao {
     } else {
       mapper(session).insertMetadata(dto);
     }
+  }
+
+  public void scrollIndexingRuleExtensionsByIds(DbSession dbSession, Collection<RuleExtensionId> ruleExtensionIds, Consumer<RuleExtensionForIndexingDto> consumer) {
+    RuleMapper mapper = mapper(dbSession);
+
+    executeLargeInputsWithoutOutput(ruleExtensionIds,
+      pageOfRuleExtensionIds -> mapper
+        .selectIndexingRuleExtensionsByIds(pageOfRuleExtensionIds)
+        .forEach(consumer));
+  }
+
+  public void scrollIndexingRuleExtensions(DbSession dbSession, Consumer<RuleExtensionForIndexingDto> consumer) {
+    mapper(dbSession).scrollIndexingRuleExtensions(context -> {
+      RuleExtensionForIndexingDto dto = context.getResultObject();
+      consumer.accept(dto);
+    });
+  }
+
+  public void scrollIndexingRulesByKeys(DbSession dbSession, Collection<RuleKey> ruleKeys, Consumer<RuleForIndexingDto> consumer) {
+    RuleMapper mapper = mapper(dbSession);
+
+    executeLargeInputsWithoutOutput(ruleKeys,
+      pageOfRuleKeys -> mapper
+        .selectIndexingRulesByKeys(pageOfRuleKeys)
+        .forEach(consumer));
+  }
+
+  public void scrollIndexingRules(DbSession dbSession, Consumer<RuleForIndexingDto> consumer) {
+    mapper(dbSession).scrollIndexingRules(context -> {
+      RuleForIndexingDto dto = context.getResultObject();
+      consumer.accept(dto);
+    });
   }
 
   private static RuleMapper mapper(DbSession session) {

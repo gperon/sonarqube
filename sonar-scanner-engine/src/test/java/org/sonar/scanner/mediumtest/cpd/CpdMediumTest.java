@@ -26,7 +26,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import org.apache.commons.io.FileUtils;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -53,7 +52,7 @@ public class CpdMediumTest {
   @Parameters(name = "new api: {0}")
   public static Collection<Object[]> data() {
     return Arrays.asList(new Object[][] {
-      {true}, {false}
+      {true, false}, {true, true}, {false, false}
     });
   }
 
@@ -65,29 +64,30 @@ public class CpdMediumTest {
 
   private LogOutputRecorder logRecorder = new LogOutputRecorder();
 
-  public ScannerMediumTester tester = ScannerMediumTester.builder()
+  @Rule
+  public ScannerMediumTester tester = new ScannerMediumTester()
     .registerPlugin("xoo", new XooPlugin())
     .addDefaultQProfile("xoo", "Sonar Way")
     .addRules(new XooRulesDefinition())
     // active a rule just to be sure that xoo files are published
     .addActiveRule("xoo", "xoo:OneIssuePerFile", null, "One Issue Per File", null, null, null)
-    .setLogOutput(logRecorder)
-    .build();
+    .setLogOutput(logRecorder);
 
   private File baseDir;
 
   private ImmutableMap.Builder<String, String> builder;
 
   private boolean useNewSensorApi;
+  private boolean useDeprecatedProperty;
 
-  public CpdMediumTest(boolean useNewSensorApi) {
+  public CpdMediumTest(boolean useNewSensorApi, boolean useDeprecatedProperty) {
     this.useNewSensorApi = useNewSensorApi;
+    this.useDeprecatedProperty = useDeprecatedProperty;
   }
 
   @Before
   public void prepare() throws IOException {
     logRecorder.getAll().clear();
-    tester.start();
 
     baseDir = temp.getRoot();
 
@@ -99,13 +99,8 @@ public class CpdMediumTest {
       .put("sonar.projectVersion", "1.0-SNAPSHOT")
       .put("sonar.projectDescription", "Description of Foo Project");
     if (useNewSensorApi) {
-      builder.put(CpdTokenizerSensor.ENABLE_PROP, "true");
+      builder.put(CpdTokenizerSensor.ENABLE_PROP + (useDeprecatedProperty ? ".deprecated" : ""), "true");
     }
-  }
-
-  @After
-  public void stop() {
-    tester.stop();
   }
 
   @Test
@@ -143,12 +138,12 @@ public class CpdMediumTest {
     File xooFile2 = new File(module2Dir, "sample2.xoo");
     FileUtils.write(xooFile2, duplicatedStuff);
 
-    TaskResult result = tester.newTask().properties(builder.build()).start();
+    TaskResult result = tester.newTask().properties(builder.build()).execute();
 
     assertThat(result.inputFiles()).hasSize(2);
 
-    InputFile inputFile1 = result.inputFile("sample1.xoo");
-    InputFile inputFile2 = result.inputFile("sample2.xoo");
+    InputFile inputFile1 = result.inputFile("module1/sample1.xoo");
+    InputFile inputFile2 = result.inputFile("module2/sample2.xoo");
 
     // One clone group on each file
     List<org.sonar.scanner.protocol.output.ScannerReport.Duplication> duplicationGroupsFile1 = result.duplicationsFor(inputFile1);
@@ -195,7 +190,7 @@ public class CpdMediumTest {
         .put("sonar.cpd.xoo.minimumTokens", "10")
         .put("sonar.verbose", "true")
         .build())
-      .start();
+      .execute();
 
     assertThat(result.inputFiles()).hasSize(2);
 
@@ -249,7 +244,7 @@ public class CpdMediumTest {
         .put("sonar.cpd.xoo.minimumTokens", "10")
         .put("sonar.verbose", "true")
         .build())
-      .start();
+      .execute();
 
     assertThat(result.inputFiles()).hasSize(2);
 
@@ -281,7 +276,7 @@ public class CpdMediumTest {
         .put("sonar.cpd.xoo.minimumTokens", "10")
         .put("sonar.cpd.exclusions", "src/sample1.xoo")
         .build())
-      .start();
+      .execute();
 
     assertThat(result.inputFiles()).hasSize(2);
 
@@ -313,7 +308,7 @@ public class CpdMediumTest {
         .put("sonar.verbose", "true")
         .put("sonar.cpd.cross_project", "true")
         .build())
-      .start();
+      .execute();
 
     InputFile inputFile1 = result.inputFile("src/sample1.xoo");
 
@@ -355,7 +350,7 @@ public class CpdMediumTest {
         .put("sonar.cpd.xoo.minimumLines", "2")
         .put("sonar.verbose", "true")
         .build())
-      .start();
+      .execute();
 
     InputFile inputFile = result.inputFile("src/sample.xoo");
     // One clone group

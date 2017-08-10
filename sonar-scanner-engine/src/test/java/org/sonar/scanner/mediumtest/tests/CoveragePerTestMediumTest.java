@@ -19,24 +19,20 @@
  */
 package org.sonar.scanner.mediumtest.tests;
 
+import com.google.common.collect.ImmutableMap;
+import java.io.File;
+import java.io.IOException;
+import org.apache.commons.io.FileUtils;
 import org.hamcrest.Description;
-
 import org.hamcrest.TypeSafeMatcher;
 import org.junit.Rule;
-import org.junit.rules.ExpectedException;
-import com.google.common.collect.ImmutableMap;
-import org.apache.commons.io.FileUtils;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 import org.sonar.api.batch.fs.InputFile;
 import org.sonar.scanner.mediumtest.ScannerMediumTester;
 import org.sonar.scanner.mediumtest.TaskResult;
 import org.sonar.xoo.XooPlugin;
-
-import java.io.File;
-import java.io.IOException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -48,20 +44,10 @@ public class CoveragePerTestMediumTest {
   @Rule
   public ExpectedException exception = ExpectedException.none();
 
-  public ScannerMediumTester tester = ScannerMediumTester.builder()
+  @Rule
+  public ScannerMediumTester tester = new ScannerMediumTester()
     .registerPlugin("xoo", new XooPlugin())
-    .addDefaultQProfile("xoo", "Sonar Way")
-    .build();
-
-  @Before
-  public void prepare() {
-    tester.start();
-  }
-
-  @After
-  public void stop() {
-    tester.stop();
-  }
+    .addDefaultQProfile("xoo", "Sonar Way");
 
   @Test
   // SONAR-6183
@@ -132,7 +118,7 @@ public class CoveragePerTestMediumTest {
         .put("sonar.sources", "src")
         .put("sonar.tests", "test")
         .build())
-      .start();
+      .execute();
   }
 
   private File createTestFiles() throws IOException {

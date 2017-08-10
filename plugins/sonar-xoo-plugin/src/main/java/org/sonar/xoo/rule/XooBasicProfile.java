@@ -31,6 +31,7 @@ public class XooBasicProfile extends ProfileDefinition {
   @Override
   public RulesProfile createProfile(ValidationMessages validation) {
     final RulesProfile profile = RulesProfile.create("Basic", Xoo.KEY);
+    profile.setDefaultProfile(true);
 
     profile.activateRule(Rule.create(XooRulesDefinition.XOO_REPOSITORY, HasTagSensor.RULE_KEY), RulePriority.MAJOR);
 

@@ -21,6 +21,10 @@ import React from 'react';
 import { shallow } from 'enzyme';
 import OrganizationNavigation from '../OrganizationNavigation';
 
+jest.mock('../../../issues/utils', () => ({
+  isMySet: () => false
+}));
+
 it('regular user', () => {
   const organization = { key: 'foo', name: 'Foo', canAdmin: false, canDelete: false };
   expect(

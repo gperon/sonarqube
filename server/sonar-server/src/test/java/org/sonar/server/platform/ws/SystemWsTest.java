@@ -20,12 +20,13 @@
 package org.sonar.server.platform.ws;
 
 import org.junit.Test;
-import org.sonar.api.config.Settings;
+import org.sonar.api.config.Configuration;
 import org.sonar.api.server.ws.WebService;
+import org.sonar.ce.http.CeHttpClient;
+import org.sonar.ce.http.CeHttpClientImpl;
 import org.sonar.server.app.ProcessCommandWrapper;
 import org.sonar.server.app.RestartFlagHolder;
 import org.sonar.server.platform.Platform;
-import org.sonar.ce.http.CeHttpClient;
 import org.sonar.server.tester.AnonymousMockUserSession;
 import org.sonar.server.user.UserSession;
 
@@ -34,11 +35,12 @@ import static org.mockito.Mockito.mock;
 
 public class SystemWsTest {
 
-  CeHttpClient ceHttpClient = mock(CeHttpClient.class);
+  CeHttpClient ceHttpClient = mock(CeHttpClientImpl.class);
 
   @Test
   public void define() {
-    RestartAction action1 = new RestartAction(mock(UserSession.class), mock(Settings.class), mock(Platform.class), mock(ProcessCommandWrapper.class), mock(RestartFlagHolder.class));
+    RestartAction action1 = new RestartAction(mock(UserSession.class), mock(Configuration.class), mock(Platform.class), mock(ProcessCommandWrapper.class),
+      mock(RestartFlagHolder.class));
     InfoAction action2 = new InfoAction(new AnonymousMockUserSession(), ceHttpClient);
     SystemWs ws = new SystemWs(action1, action2);
     WebService.Context context = new WebService.Context();

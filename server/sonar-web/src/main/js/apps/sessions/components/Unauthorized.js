@@ -19,10 +19,11 @@
  */
 // @flow
 import React from 'react';
+import PropTypes from 'prop-types';
 
 export default class Unauthorized extends React.PureComponent {
   static propTypes = {
-    location: React.PropTypes.object.isRequired
+    location: PropTypes.object.isRequired
   };
 
   render() {
@@ -31,7 +32,7 @@ export default class Unauthorized extends React.PureComponent {
     return (
       <div className="text-center">
         <p id="unauthorized">
-          {'You\'re not authorized to access this page. Please contact the administrator.'}
+          {"You're not authorized to access this page. Please contact the administrator."}
         </p>
 
         {!!message &&

@@ -19,19 +19,15 @@
  */
 package org.sonar.scanner.repository;
 
-import java.util.Date;
-import com.google.common.collect.Table;
 import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Table;
+import java.util.Date;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.sonar.api.batch.bootstrap.ProjectKey;
 import org.sonar.scanner.analysis.DefaultAnalysisMode;
-import org.sonar.scanner.repository.FileData;
-import org.sonar.scanner.repository.ProjectRepositories;
-import org.sonar.scanner.repository.ProjectRepositoriesLoader;
-import org.sonar.scanner.repository.ProjectRepositoriesProvider;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Matchers.eq;
@@ -82,7 +78,7 @@ public class ProjectRepositoriesProviderTest {
     assertThat(repo.exists()).isEqualTo(true);
     assertThat(repo.lastAnalysisDate()).isNotNull();
 
-    verify(mode, times(2)).isIssues();
+    verify(mode, times(1)).isIssues();
     verify(projectKey).get();
     verify(loader).load(eq("key"), eq(false));
     verifyNoMoreInteractions(loader, projectKey, mode);

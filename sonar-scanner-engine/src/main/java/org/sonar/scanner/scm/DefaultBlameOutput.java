@@ -21,7 +21,7 @@ package org.sonar.scanner.scm;
 
 import com.google.common.base.Preconditions;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -36,15 +36,15 @@ import org.sonar.api.utils.log.Logger;
 import org.sonar.api.utils.log.Loggers;
 import org.sonar.scanner.protocol.output.ScannerReport;
 import org.sonar.scanner.protocol.output.ScannerReport.Changesets.Builder;
-import org.sonar.scanner.util.ProgressReport;
 import org.sonar.scanner.protocol.output.ScannerReportWriter;
+import org.sonar.scanner.util.ProgressReport;
 
 class DefaultBlameOutput implements BlameOutput {
 
   private static final Logger LOG = Loggers.get(DefaultBlameOutput.class);
 
   private final ScannerReportWriter writer;
-  private final Set<InputFile> allFilesToBlame = new HashSet<>();
+  private final Set<InputFile> allFilesToBlame = new LinkedHashSet<>();
   private ProgressReport progressReport;
   private int count;
   private int total;

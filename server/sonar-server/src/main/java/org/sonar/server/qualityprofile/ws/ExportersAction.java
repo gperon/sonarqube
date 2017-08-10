@@ -34,7 +34,7 @@ public class ExportersAction implements QProfileWsAction {
   }
 
   /**
-   * Used by Pico is no {@link ProfileExporter} is found
+   * Used by Pico if no {@link ProfileExporter} is found
    */
   public ExportersAction() {
     this(new ProfileExporter[0]);
@@ -45,24 +45,26 @@ public class ExportersAction implements QProfileWsAction {
     context.createAction("exporters")
       .setDescription("Lists available profile export formats.")
       .setHandler(this)
-      .setResponseExample(getClass().getResource("example-exporters.json"))
+      .setResponseExample(getClass().getResource("exporters-example.json"))
       .setSince("5.2");
   }
 
   @Override
   public void handle(Request request, Response response) throws Exception {
-    JsonWriter json = response.newJsonWriter().beginObject().name("exporters").beginArray();
-    for (ProfileExporter exporter : exporters) {
-      json.beginObject()
-        .prop("key", exporter.getKey())
-        .prop("name", exporter.getName());
-      json.name("languages").beginArray();
-      for (String language : exporter.getSupportedLanguages()) {
-        json.value(language);
+    try (JsonWriter json = response.newJsonWriter()) {
+      json.beginObject().name("exporters").beginArray();
+      for (ProfileExporter exporter : exporters) {
+        json.beginObject()
+          .prop("key", exporter.getKey())
+          .prop("name", exporter.getName());
+        json.name("languages").beginArray();
+        for (String language : exporter.getSupportedLanguages()) {
+          json.value(language);
+        }
+        json.endArray().endObject();
       }
       json.endArray().endObject();
     }
-    json.endArray().endObject().close();
   }
 
 }

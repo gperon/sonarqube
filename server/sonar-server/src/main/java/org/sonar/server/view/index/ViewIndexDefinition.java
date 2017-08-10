@@ -19,10 +19,12 @@
  */
 package org.sonar.server.view.index;
 
-import org.sonar.api.config.Settings;
+import org.sonar.api.config.Configuration;
 import org.sonar.server.es.IndexDefinition;
 import org.sonar.server.es.IndexType;
 import org.sonar.server.es.NewIndex;
+
+import static org.sonar.server.es.NewIndex.SettingsConfiguration.newBuilder;
 
 /**
  * Definition of ES index "views", including settings and fields.
@@ -33,21 +35,23 @@ public class ViewIndexDefinition implements IndexDefinition {
   public static final String FIELD_UUID = "uuid";
   public static final String FIELD_PROJECTS = "projects";
 
-  private final Settings settings;
+  private final Configuration config;
 
-  public ViewIndexDefinition(Settings settings) {
-    this.settings = settings;
+  public ViewIndexDefinition(Configuration config) {
+    this.config = config;
   }
 
   @Override
   public void define(IndexDefinitionContext context) {
-    NewIndex index = context.create(INDEX_TYPE_VIEW.getIndex());
-
-    index.configureShards(settings, 5);
+    NewIndex index = context.create(
+      INDEX_TYPE_VIEW.getIndex(),
+      newBuilder(config)
+        .setDefaultNbOfShards(5)
+        .build());
 
     // type "view"
     NewIndex.NewIndexType mapping = index.createType(INDEX_TYPE_VIEW.getType());
-    mapping.stringFieldBuilder(FIELD_UUID).disableNorms().build();
-    mapping.stringFieldBuilder(FIELD_PROJECTS).disableNorms().build();
+    mapping.keywordFieldBuilder(FIELD_UUID).disableNorms().build();
+    mapping.keywordFieldBuilder(FIELD_PROJECTS).disableNorms().build();
   }
 }

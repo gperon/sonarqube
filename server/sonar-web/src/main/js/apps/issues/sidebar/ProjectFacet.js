@@ -37,6 +37,7 @@ type Props = {|
   onChange: (changes: { [string]: Array<string> }) => void,
   onToggle: (property: string) => void,
   open: boolean,
+  organization?: { key: string },
   stats?: { [string]: number },
   referencedComponents: { [string]: ReferencedComponent },
   projects: Array<string>
@@ -68,26 +69,28 @@ export default class ProjectFacet extends React.PureComponent {
   };
 
   handleSearch = (query: string) => {
-    const { component } = this.props;
+    const { component, organization } = this.props;
+    if (component != null && ['VW', 'SVW', 'APP'].includes(component.qualifier)) {
+      return getTree(component.key, { ps: 50, q: query, qualifiers: 'TRK' }).then(response =>
+        response.components.map(component => ({
+          label: component.name,
+          organization: component.organization,
+          value: component.refId
+        }))
+      );
+    }
 
-    return component != null && ['VW', 'SVW'].includes(component.qualifier)
-      ? getTree(component.key, { ps: 50, q: query, qualifiers: 'TRK' }).then(response =>
-          response.components.map(component => ({
-            label: component.name,
-            organization: component.organization,
-            value: component.refId
-          }))
-        )
-      : searchProjects({
-          ps: 50,
-          filter: query ? `query = "${query}"` : ''
-        }).then(response =>
-          response.components.map(component => ({
-            label: component.name,
-            organization: component.organization,
-            value: component.id
-          }))
-        );
+    return searchProjects({
+      ps: 50,
+      filter: query ? `query = "${query}"` : '',
+      organization: organization && organization.key
+    }).then(response =>
+      response.components.map(component => ({
+        label: component.name,
+        organization: component.organization,
+        value: component.id
+      }))
+    );
   };
 
   handleSelect = (rule: string) => {
@@ -101,11 +104,15 @@ export default class ProjectFacet extends React.PureComponent {
   }
 
   renderName(project: string): React.Element<*> | string {
-    const { referencedComponents } = this.props;
+    const { organization, referencedComponents } = this.props;
     return referencedComponents[project]
       ? <span>
           <QualifierIcon className="little-spacer-right" qualifier="TRK" />
-          <Organization link={false} organizationKey={referencedComponents[project].organization} />
+          {!organization &&
+            <Organization
+              link={false}
+              organizationKey={referencedComponents[project].organization}
+            />}
           {referencedComponents[project].name}
         </span>
       : <span>
@@ -134,7 +141,7 @@ export default class ProjectFacet extends React.PureComponent {
 
     return (
       <FacetItemsList>
-        {projects.map(project => (
+        {projects.map(project =>
           <FacetItem
             active={this.props.projects.includes(project)}
             facetMode={this.props.facetMode}
@@ -144,7 +151,7 @@ export default class ProjectFacet extends React.PureComponent {
             stat={this.getStat(project)}
             value={project}
           />
-        ))}
+        )}
       </FacetItemsList>
     );
   }

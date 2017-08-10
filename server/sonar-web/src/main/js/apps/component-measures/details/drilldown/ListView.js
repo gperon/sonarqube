@@ -18,6 +18,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 import React from 'react';
+import PropTypes from 'prop-types';
 import classNames from 'classnames';
 import moment from 'moment';
 import ComponentsList from './ComponentsList';
@@ -28,7 +29,7 @@ import ListFooter from '../../../../components/controls/ListFooter';
 
 export default class ListView extends React.PureComponent {
   static contextTypes = {
-    router: React.PropTypes.object.isRequired
+    router: PropTypes.object.isRequired
   };
 
   componentDidMount() {
@@ -114,20 +115,20 @@ export default class ListView extends React.PureComponent {
     }
     const selectedIndex = components.indexOf(selected);
     const sourceViewerPeriod = metric.key.indexOf('new_') === 0 && !!leakPeriod ? leakPeriod : null;
-    const sourceViewerPeriodDate = sourceViewerPeriod != null
-      ? moment(sourceViewerPeriod.date).toDate()
-      : null;
+    const sourceViewerPeriodDate =
+      sourceViewerPeriod != null ? moment(sourceViewerPeriod.date).toDate() : null;
 
-    const filterLine = sourceViewerPeriodDate != null
-      ? line => {
-          if (line.scmDate) {
-            const scmDate = moment(line.scmDate).toDate();
-            return scmDate >= sourceViewerPeriodDate;
-          } else {
-            return false;
+    const filterLine =
+      sourceViewerPeriodDate != null
+        ? line => {
+            if (line.scmDate) {
+              const scmDate = moment(line.scmDate).toDate();
+              return scmDate >= sourceViewerPeriodDate;
+            } else {
+              return false;
+            }
           }
-        }
-      : undefined;
+        : undefined;
 
     return (
       <div ref="container" className="measure-details-plain-list">

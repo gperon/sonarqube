@@ -40,7 +40,7 @@ class ComponentDtoToWsComponent {
   /**
    * The concept of "visibility" will only be configured for these qualifiers.
    */
-  private static final Set<String> QUALIFIERS_WITH_VISIBILITY = ImmutableSet.of(Qualifiers.PROJECT, Qualifiers.VIEW);
+  private static final Set<String> QUALIFIERS_WITH_VISIBILITY = ImmutableSet.of(Qualifiers.PROJECT, Qualifiers.VIEW, Qualifiers.APP);
 
   private ComponentDtoToWsComponent() {
     // prevent instantiation
@@ -58,7 +58,7 @@ class ComponentDtoToWsComponent {
     WsComponents.Component.Builder wsComponent = WsComponents.Component.newBuilder()
       .setOrganization(organizationDtoKey)
       .setId(dto.uuid())
-      .setKey(dto.key())
+      .setKey(dto.getDbKey())
       .setName(dto.name())
       .setQualifier(dto.qualifier());
     setNullable(emptyToNull(dto.path()), wsComponent::setPath);

@@ -20,6 +20,7 @@
 package org.sonar.server.organization;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import org.apache.commons.lang.RandomStringUtils;
@@ -27,7 +28,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.sonar.api.config.MapSettings;
+import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.utils.System2;
 import org.sonar.api.utils.internal.TestSystem2;
 import org.sonar.api.web.UserRole;
@@ -89,7 +90,7 @@ public class OrganizationCreationImplTest {
   @Rule
   public DbTester db = DbTester.create(system2);
   @Rule
-  public EsTester es = new EsTester(new UserIndexDefinition(new MapSettings()));
+  public EsTester es = new EsTester(new UserIndexDefinition(new MapSettings().asConfig()));
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
   @Rule
@@ -105,7 +106,7 @@ public class OrganizationCreationImplTest {
   private UserIndexer userIndexer = new UserIndexer(dbClient, es.client());
   private UserIndex userIndex = new UserIndex(es.client());
   private DefaultGroupCreator defaultGroupCreator = new DefaultGroupCreatorImpl(dbClient);
-  private OrganizationCreationImpl underTest = new OrganizationCreationImpl(dbClient, system2, uuidFactory, organizationValidation, settings, userIndexer,
+  private OrganizationCreationImpl underTest = new OrganizationCreationImpl(dbClient, system2, uuidFactory, organizationValidation, settings.asConfig(), userIndexer,
     builtInQProfileRepositoryRule, defaultGroupCreator);
 
   private UserDto someUser;
@@ -113,7 +114,7 @@ public class OrganizationCreationImplTest {
   @Before
   public void setUp() {
     someUser = db.users().insertUser();
-    userIndexer.index(someUser.getLogin());
+    userIndexer.indexOnStartup(new HashSet<>());
   }
 
   @Test
@@ -263,10 +264,8 @@ public class OrganizationCreationImplTest {
   @Test
   public void create_add_current_user_as_member_of_organization() throws OrganizationCreation.KeyConflictException {
     UserDto user = db.users().insertUser();
-    userIndexer.index(user.getLogin());
-
     builtInQProfileRepositoryRule.initialize();
-    userIndexer.index(someUser.getLogin());
+    userIndexer.commitAndIndex(db.getSession(), someUser);
 
     OrganizationDto result = underTest.create(dbSession, someUser, FULL_POPULATED_NEW_ORGANIZATION);
 

@@ -37,11 +37,12 @@ import SecurityFilter from '../filters/SecurityFilter';
 import SizeFilter from '../filters/SizeFilter';
 import TagsFilterContainer from '../filters/TagsFilterContainer';
 import { translate } from '../../../helpers/l10n';
+import type { RawQuery } from '../../../helpers/query';
 
 type Props = {
   isFavorite: boolean,
   organization?: { key: string },
-  query: { [string]: string },
+  query: RawQuery,
   view: string,
   visualization: string
 };
@@ -82,7 +83,9 @@ export default function PageSidebar({
             </Link>
           </div>}
 
-        <h3>{translate('filters')}</h3>
+        <h3>
+          {translate('filters')}
+        </h3>
       </div>
       <QualityGateFilter {...facetProps} />
       {!isLeakView && [

@@ -19,6 +19,7 @@
  */
 package org.sonarqube.ws.client.project;
 
+import java.util.Arrays;
 import org.junit.Rule;
 import org.junit.Test;
 import org.sonarqube.ws.WsProjects;
@@ -115,19 +116,20 @@ public class ProjectsServiceTest {
   }
 
   @Test
-  public void deletes_project_by_id() {
-    underTest.delete(DeleteRequest.builder().setId("abc").build());
+  public void delete() {
+    underTest.delete(DeleteRequest.builder().setKey("P1").build());
 
     assertThat(serviceTester.getPostRequest().getPath()).isEqualTo("api/projects/delete");
-    assertThat(serviceTester.getPostRequest().getParams()).containsOnly(entry("id", "abc"));
+    assertThat(serviceTester.getPostRequest().getParams()).containsOnly(entry("project", "P1"));
   }
 
   @Test
-  public void deletes_project_by_key() {
-    underTest.delete(DeleteRequest.builder().setKey("project_key").build());
+  public void bulk_delete() {
+    BulkDeleteRequest request = BulkDeleteRequest.builder().setProjectKeys(Arrays.asList("p1", "p2")).setOrganization("my-org").build();
+    underTest.bulkDelete(request);
 
-    assertThat(serviceTester.getPostRequest().getPath()).isEqualTo("api/projects/delete");
-    assertThat(serviceTester.getPostRequest().getParams()).containsOnly(entry("key", "project_key"));
+    assertThat(serviceTester.getPostRequest().getPath()).isEqualTo("api/projects/bulk_delete");
+    assertThat(serviceTester.getPostRequest().getParams()).containsOnly(entry("organization", "my-org"), entry("projects", "p1,p2"));
   }
 
   @Test

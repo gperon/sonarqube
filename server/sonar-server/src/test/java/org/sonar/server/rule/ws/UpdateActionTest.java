@@ -24,7 +24,7 @@ import java.io.IOException;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.sonar.api.config.MapSettings;
+import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.resources.Languages;
 import org.sonar.api.rule.RuleKey;
 import org.sonar.api.rule.RuleStatus;
@@ -85,7 +85,7 @@ public class UpdateActionTest {
   public DbTester db = DbTester.create();
 
   @Rule
-  public EsTester esTester = new EsTester(new RuleIndexDefinition(new MapSettings()));
+  public EsTester esTester = new EsTester(new RuleIndexDefinition(new MapSettings().asConfig()));
 
   @Rule
   public UserSessionRule userSession = UserSessionRule.standalone();

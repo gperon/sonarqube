@@ -24,6 +24,7 @@ import org.sonar.api.SonarRuntime;
 import org.sonar.api.batch.fs.FileSystem;
 import org.sonar.api.batch.fs.InputFile;
 import org.sonar.api.batch.fs.InputModule;
+import org.sonar.api.batch.postjob.PostJobContext;
 import org.sonar.api.batch.rule.ActiveRules;
 import org.sonar.api.batch.sensor.coverage.NewCoverage;
 import org.sonar.api.batch.sensor.cpd.NewCpdTokens;
@@ -35,6 +36,7 @@ import org.sonar.api.batch.sensor.issue.NewIssue;
 import org.sonar.api.batch.sensor.measure.Measure;
 import org.sonar.api.batch.sensor.measure.NewMeasure;
 import org.sonar.api.batch.sensor.symbol.NewSymbolTable;
+import org.sonar.api.config.Configuration;
 import org.sonar.api.config.Settings;
 import org.sonar.api.utils.Version;
 
@@ -46,9 +48,16 @@ import org.sonar.api.utils.Version;
 public interface SensorContext {
 
   /**
-   * Get settings of the current module.
+   * @deprecated since 6.5 use {@link PostJobContext#config()}
    */
+  @Deprecated
   Settings settings();
+
+  /**
+   * Get settings of the current module, or of the project for a global Sensor.
+   * @since 6.5
+   */
+  Configuration config();
 
   /**
    * Get filesystem of the current module.

@@ -25,7 +25,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.mockito.ArgumentCaptor;
-import org.sonar.api.config.MapSettings;
+import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.server.ws.Request;
 import org.sonar.api.server.ws.Response;
 import org.sonar.api.utils.System2;
@@ -86,7 +86,7 @@ public class DoTransitionActionTest {
   public DbTester dbTester = DbTester.create(system2);
 
   @Rule
-  public EsTester esTester = new EsTester(new IssueIndexDefinition(new MapSettings()));
+  public EsTester esTester = new EsTester(new IssueIndexDefinition(new MapSettings().asConfig()));
 
   @Rule
   public UserSessionRule userSession = UserSessionRule.standalone();
@@ -102,7 +102,7 @@ public class DoTransitionActionTest {
   private IssueWorkflow workflow = new IssueWorkflow(new FunctionExecutor(updater), updater);
   private TransitionService transitionService = new TransitionService(userSession, workflow);
   private OperationResponseWriter responseWriter = mock(OperationResponseWriter.class);
-  private IssueIndexer issueIndexer = new IssueIndexer(esTester.client(), new IssueIteratorFactory(dbClient));
+  private IssueIndexer issueIndexer = new IssueIndexer(esTester.client(), dbClient, new IssueIteratorFactory(dbClient));
   private IssueUpdater issueUpdater = new IssueUpdater(dbClient,
     new ServerIssueStorage(system2, new DefaultRuleFinder(dbClient, defaultOrganizationProvider), dbClient, issueIndexer), mock(NotificationManager.class));
   private ComponentDto project;
@@ -201,14 +201,14 @@ public class DoTransitionActionTest {
   private void verifyContentOfPreloadedSearchResponseData(IssueDto issue) {
     SearchResponseData preloadedSearchResponseData = preloadedSearchResponseDataCaptor.getValue();
     assertThat(preloadedSearchResponseData.getIssues())
-        .extracting(IssueDto::getKey)
-        .containsOnly(issue.getKey());
+      .extracting(IssueDto::getKey)
+      .containsOnly(issue.getKey());
     assertThat(preloadedSearchResponseData.getRules())
-        .extracting(RuleDefinitionDto::getKey)
-        .containsOnly(issue.getRuleKey());
+      .extracting(RuleDefinitionDto::getKey)
+      .containsOnly(issue.getRuleKey());
     assertThat(preloadedSearchResponseData.getComponents())
-        .extracting(ComponentDto::uuid)
-        .containsOnly(issue.getComponentUuid(), issue.getProjectUuid());
+      .extracting(ComponentDto::uuid)
+      .containsOnly(issue.getComponentUuid(), issue.getProjectUuid());
   }
 
 }

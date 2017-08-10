@@ -19,7 +19,7 @@
  */
 package org.sonar.api.resources;
 
-import org.apache.commons.lang.StringUtils;
+import java.util.Objects;
 
 /**
  * The qualifier determines the exact type of a resource.
@@ -30,14 +30,19 @@ import org.apache.commons.lang.StringUtils;
 public final class Qualifiers {
 
   /**
-   * Root views. Scope of views is Scopes.PROJECT
+   * Root portfolios. Scope of portfolios is Scopes.PROJECT
    */
   public static final String VIEW = "VW";
 
   /**
-   * Sub-views, defined in root views. Scope of sub-views is Scopes.PROJECT
+   * Sub-portfolios, defined in root portfolios. Scope of sub-portfolios is Scopes.PROJECT
    */
   public static final String SUBVIEW = "SVW";
+
+  /**
+   * Application portfolios. Scope of application is Scopes.PROJECT
+   */
+  public static final String APP = "APP";
 
   /**
    * Library, for example a JAR dependency of Java projects.
@@ -73,9 +78,9 @@ public final class Qualifiers {
    * @param resource not nullable
    */
   public static boolean isView(final Resource resource, final boolean acceptSubViews) {
-    boolean isView = StringUtils.equals(VIEW, resource.getQualifier());
+    boolean isView = Objects.equals(VIEW, resource.getQualifier());
     if (!isView && acceptSubViews) {
-      isView = StringUtils.equals(SUBVIEW, resource.getQualifier());
+      isView = Objects.equals(SUBVIEW, resource.getQualifier());
     }
 
     return isView;
@@ -85,16 +90,16 @@ public final class Qualifiers {
    * @param resource not nullable
    */
   public static boolean isSubview(final Resource resource) {
-    return StringUtils.equals(SUBVIEW, resource.getScope());
+    return Objects.equals(SUBVIEW, resource.getScope());
   }
 
   /**
    * @param resource not nullable
    */
   public static boolean isProject(final Resource resource, final boolean acceptModules) {
-    boolean isProject = StringUtils.equals(PROJECT, resource.getQualifier());
+    boolean isProject = Objects.equals(PROJECT, resource.getQualifier());
     if (!isProject && acceptModules) {
-      isProject = StringUtils.equals(MODULE, resource.getQualifier());
+      isProject = Objects.equals(MODULE, resource.getQualifier());
     }
     return isProject;
   }
@@ -103,20 +108,20 @@ public final class Qualifiers {
    * @param resource not nullable
    */
   public static boolean isModule(final Resource resource) {
-    return StringUtils.equals(MODULE, resource.getQualifier());
+    return Objects.equals(MODULE, resource.getQualifier());
   }
 
   /**
    * @param resource not nullable
    */
   public static boolean isDirectory(final Resource resource) {
-    return StringUtils.equals(DIRECTORY, resource.getQualifier());
+    return Objects.equals(DIRECTORY, resource.getQualifier());
   }
 
   /**
    * @param resource not nullable
    */
   public static boolean isFile(final Resource resource) {
-    return StringUtils.equals(FILE, resource.getQualifier());
+    return Objects.equals(FILE, resource.getQualifier());
   }
 }

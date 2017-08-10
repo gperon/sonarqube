@@ -26,7 +26,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 import javax.annotation.Nullable;
-import org.sonar.api.config.Settings;
+import org.sonar.api.config.Configuration;
 import org.sonar.api.utils.System2;
 import org.sonar.core.config.CorePropertyDefinitions;
 import org.sonar.core.util.UuidFactory;
@@ -68,20 +68,20 @@ public class OrganizationCreationImpl implements OrganizationCreation {
   private final System2 system2;
   private final UuidFactory uuidFactory;
   private final OrganizationValidation organizationValidation;
-  private final Settings settings;
+  private final Configuration config;
   private final BuiltInQProfileRepository builtInQProfileRepository;
   private final DefaultGroupCreator defaultGroupCreator;
   private final UserIndexer userIndexer;
 
   public OrganizationCreationImpl(DbClient dbClient, System2 system2, UuidFactory uuidFactory,
-    OrganizationValidation organizationValidation, Settings settings, UserIndexer userIndexer,
+    OrganizationValidation organizationValidation, Configuration config, UserIndexer userIndexer,
     BuiltInQProfileRepository builtInQProfileRepository,
     DefaultGroupCreator defaultGroupCreator) {
     this.dbClient = dbClient;
     this.system2 = system2;
     this.uuidFactory = uuidFactory;
     this.organizationValidation = organizationValidation;
-    this.settings = settings;
+    this.config = config;
     this.userIndexer = userIndexer;
     this.builtInQProfileRepository = builtInQProfileRepository;
     this.defaultGroupCreator = defaultGroupCreator;
@@ -106,11 +106,10 @@ public class OrganizationCreationImpl implements OrganizationCreation {
       addCurrentUserToGroup(dbSession, ownerGroup, userCreator.getId());
       addCurrentUserToGroup(dbSession, defaultGroup, userCreator.getId());
 
-      dbSession.commit();
       batchDbSession.commit();
 
       // Elasticsearch is updated when DB session is committed
-      userIndexer.index(userCreator.getLogin());
+      userIndexer.commitAndIndex(dbSession, userCreator);
 
       return organization;
     }
@@ -144,11 +143,10 @@ public class OrganizationCreationImpl implements OrganizationCreation {
       insertQualityProfiles(dbSession, batchDbSession, organization);
       addCurrentUserToGroup(dbSession, defaultGroup, newUser.getId());
 
-      dbSession.commit();
       batchDbSession.commit();
 
       // Elasticsearch is updated when DB session is committed
-      userIndexer.index(newUser.getLogin());
+      userIndexer.commitAndIndex(dbSession, newUser);
 
       return Optional.of(organization);
     }
@@ -170,7 +168,7 @@ public class OrganizationCreationImpl implements OrganizationCreation {
   }
 
   private boolean isCreatePersonalOrgEnabled() {
-    return settings.getBoolean(CorePropertyDefinitions.ORGANIZATIONS_CREATE_PERSONAL_ORG);
+    return config.getBoolean(CorePropertyDefinitions.ORGANIZATIONS_CREATE_PERSONAL_ORG).orElse(false);
   }
 
   private void validate(NewOrganization newOrganization) {

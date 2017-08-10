@@ -18,11 +18,12 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 import React from 'react';
+import PropTypes from 'prop-types';
 import Avatar from '../../../components/ui/Avatar';
 
 export default class UserCard extends React.PureComponent {
   static propTypes = {
-    user: React.PropTypes.object.isRequired
+    user: PropTypes.object.isRequired
   };
 
   render() {
@@ -33,7 +34,9 @@ export default class UserCard extends React.PureComponent {
         <div id="avatar" className="pull-left account-user-avatar">
           <Avatar email={user.email} name={user.name} size={60} />
         </div>
-        <h1 id="name" className="pull-left">{user.name}</h1>
+        <h1 id="name" className="pull-left">
+          {user.name}
+        </h1>
       </div>
     );
   }

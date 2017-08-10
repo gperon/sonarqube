@@ -18,20 +18,22 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 import React from 'react';
+import PropTypes from 'prop-types';
 import { sortBy } from 'lodash';
 import { translate } from '../../../helpers/l10n';
 import { PermissionTemplateType } from '../propTypes';
 
 export default class Defaults extends React.PureComponent {
   static propTypes = {
-    organization: React.PropTypes.object,
+    organization: PropTypes.object,
     permissionTemplate: PermissionTemplateType.isRequired
   };
 
   render() {
-    const qualifiersToDisplay = this.props.organization && !this.props.organization.isDefault
-      ? ['TRK']
-      : this.props.permissionTemplate.defaultFor;
+    const qualifiersToDisplay =
+      this.props.organization && !this.props.organization.isDefault
+        ? ['TRK']
+        : this.props.permissionTemplate.defaultFor;
 
     const qualifiers = sortBy(qualifiersToDisplay)
       .map(qualifier => translate('qualifiers', qualifier))

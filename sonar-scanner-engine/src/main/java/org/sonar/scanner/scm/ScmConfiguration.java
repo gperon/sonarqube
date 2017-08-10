@@ -29,13 +29,13 @@ import org.sonar.api.Properties;
 import org.sonar.api.Property;
 import org.sonar.api.PropertyType;
 import org.sonar.api.batch.AnalysisMode;
-import org.sonar.api.batch.ScannerSide;
 import org.sonar.api.batch.InstantiationStrategy;
+import org.sonar.api.batch.ScannerSide;
+import org.sonar.api.batch.fs.internal.InputModuleHierarchy;
 import org.sonar.api.batch.scm.ScmProvider;
-import org.sonar.api.config.Settings;
+import org.sonar.api.config.Configuration;
 import org.sonar.api.utils.log.Logger;
 import org.sonar.api.utils.log.Loggers;
-import org.sonar.scanner.scan.ImmutableProjectReactor;
 
 @Properties({
   @Property(
@@ -56,15 +56,15 @@ public final class ScmConfiguration implements Startable {
 
   public static final String FORCE_RELOAD_KEY = "sonar.scm.forceReloadAll";
 
-  private final ImmutableProjectReactor projectReactor;
-  private final Settings settings;
+  private final Configuration settings;
   private final Map<String, ScmProvider> providerPerKey = new LinkedHashMap<>();
   private final AnalysisMode analysisMode;
+  private final InputModuleHierarchy moduleHierarchy;
 
   private ScmProvider provider;
 
-  public ScmConfiguration(ImmutableProjectReactor projectReactor, AnalysisMode analysisMode, Settings settings, ScmProvider... providers) {
-    this.projectReactor = projectReactor;
+  public ScmConfiguration(InputModuleHierarchy moduleHierarchy, AnalysisMode analysisMode, Configuration settings, ScmProvider... providers) {
+    this.moduleHierarchy = moduleHierarchy;
     this.analysisMode = analysisMode;
     this.settings = settings;
     for (ScmProvider scmProvider : providers) {
@@ -72,8 +72,8 @@ public final class ScmConfiguration implements Startable {
     }
   }
 
-  public ScmConfiguration(ImmutableProjectReactor projectReactor, AnalysisMode analysisMode, Settings settings) {
-    this(projectReactor, analysisMode, settings, new ScmProvider[0]);
+  public ScmConfiguration(InputModuleHierarchy moduleHierarchy, AnalysisMode analysisMode, Configuration settings) {
+    this(moduleHierarchy, analysisMode, settings, new ScmProvider[0]);
   }
 
   @Override
@@ -86,8 +86,7 @@ public final class ScmConfiguration implements Startable {
       return;
     }
     if (settings.hasKey(CoreProperties.SCM_PROVIDER_KEY)) {
-      String forcedProviderKey = settings.getString(CoreProperties.SCM_PROVIDER_KEY);
-      setProviderIfSupported(forcedProviderKey);
+      settings.get(CoreProperties.SCM_PROVIDER_KEY).ifPresent(this::setProviderIfSupported);
     } else {
       autodetection();
       if (this.provider == null) {
@@ -110,21 +109,19 @@ public final class ScmConfiguration implements Startable {
   }
 
   private void considerOldScmUrl() {
-    if (settings.hasKey(CoreProperties.LINKS_SOURCES_DEV)) {
-      String url = settings.getString(CoreProperties.LINKS_SOURCES_DEV);
+    settings.get(CoreProperties.LINKS_SOURCES_DEV).ifPresent(url -> {
       if (StringUtils.startsWith(url, "scm:")) {
         String[] split = url.split(":");
         if (split.length > 1) {
           setProviderIfSupported(split[1]);
         }
       }
-    }
-
+    });
   }
 
   private void autodetection() {
     for (ScmProvider installedProvider : providerPerKey.values()) {
-      if (installedProvider.supports(projectReactor.getRoot().getBaseDir())) {
+      if (installedProvider.supports(moduleHierarchy.root().getBaseDir().toFile())) {
         if (this.provider == null) {
           this.provider = installedProvider;
         } else {
@@ -140,11 +137,11 @@ public final class ScmConfiguration implements Startable {
   }
 
   public boolean isDisabled() {
-    return settings.getBoolean(CoreProperties.SCM_DISABLED_KEY);
+    return settings.getBoolean(CoreProperties.SCM_DISABLED_KEY).orElse(false);
   }
 
   public boolean forceReloadAll() {
-    return settings.getBoolean(FORCE_RELOAD_KEY);
+    return settings.getBoolean(FORCE_RELOAD_KEY).orElse(false);
   }
 
   @Override

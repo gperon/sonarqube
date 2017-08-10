@@ -20,8 +20,8 @@
 // @flow
 import React from 'react';
 import Modal from 'react-modal';
-import type { Analysis } from '../../../../store/projectActivity/duck';
 import { translate } from '../../../../helpers/l10n';
+import type { Analysis } from '../../types';
 
 type Props = {
   addEvent: (analysis: string, name: string, category?: string) => Promise<*>,
@@ -38,7 +38,6 @@ type State = {
 export default class AddEventForm extends React.PureComponent {
   mounted: boolean;
   props: Props;
-
   state: State = {
     open: false,
     processing: false,
@@ -53,8 +52,9 @@ export default class AddEventForm extends React.PureComponent {
     this.mounted = false;
   }
 
-  openForm = (e: Object) => {
+  openForm = (e: Event) => {
     e.preventDefault();
+    e.stopPropagation();
     if (this.mounted) {
       this.setState({ open: true });
     }
@@ -100,15 +100,18 @@ export default class AddEventForm extends React.PureComponent {
         className="modal"
         overlayClassName="modal-overlay"
         onRequestClose={this.closeForm}>
-
         <header className="modal-head">
-          <h2>{translate(this.props.addEventButtonText)}</h2>
+          <h2>
+            {translate(this.props.addEventButtonText)}
+          </h2>
         </header>
 
         <form onSubmit={this.handleSubmit}>
           <div className="modal-body">
             <div className="modal-field">
-              <label>{translate('name')}</label>
+              <label>
+                {translate('name')}
+              </label>
               <input
                 value={this.state.name}
                 autoFocus={true}
@@ -124,21 +127,22 @@ export default class AddEventForm extends React.PureComponent {
             {this.state.processing
               ? <i className="spinner" />
               : <div>
-                  <button type="submit">{translate('save')}</button>
+                  <button type="submit">
+                    {translate('save')}
+                  </button>
                   <button type="reset" className="button-link" onClick={this.closeForm}>
                     {translate('cancel')}
                   </button>
                 </div>}
           </footer>
         </form>
-
       </Modal>
     );
   }
 
   render() {
     return (
-      <a className="js-add-event button-small" href="#" onClick={this.openForm}>
+      <a className="js-add-event" href="#" onClick={this.openForm}>
         {translate(this.props.addEventButtonText)}
         {this.state.open && this.renderModal()}
       </a>

@@ -5,7 +5,8 @@
   margin-bottom: 20px;
 }
 
-.measures-domains {}
+.measures-domains {
+}
 
 .measures-domains > li {
   margin-bottom: 20px;
@@ -140,19 +141,20 @@
 }
 
 .measure-details-metric,
-.measure-details-value {}
+.measure-details-value {
+}
 
 .measure-details-metric {
   display: inline-block;
   margin-bottom: 10px;
 }
 
-.measure-details-metric > a {
+.measure-details-metric > a:not(.button) {
   border: none;
   color: #444;
 }
 
-.measure-details-metric > a:hover {
+.measure-details-metric > a:not(.button):hover {
   color: #236a97;
 }
 
@@ -221,7 +223,8 @@
   fill: #4b9fd5;
 }
 
-.measure-details-plain-list {}
+.measure-details-plain-list {
+}
 
 .measure-details-components {
   width: 300px;
@@ -373,4 +376,29 @@
 .home-measures-list {
   border: 1px solid #e6e6e6;
   background-color: #fff;
+}
+
+.nav-pills > ul {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.nav-pills > ul > li > a {
+  display: inline-block;
+  vertical-align: middle;
+  padding: 3px 10px;
+  border: 1px solid transparent;
+  border-radius: 24px;
+  color: #236a97;
+  transition: none;
+}
+
+.nav-pills > ul > li > a:hover {
+  border-color: #236a97;
+}
+
+.nav-pills > ul > li.active > a,
+.nav-pills > ul > li > a.active {
+  background-color: #236a97;
+  color: #fff;
 }

@@ -196,7 +196,11 @@ export default class Condition extends Component {
     }
 
     if (metric.type === 'RATING') {
-      return <span className="note">{translate('quality_gates.operator.GT.rating')}</span>;
+      return (
+        <span className="note">
+          {translate('quality_gates.operator.GT.rating')}
+        </span>
+      );
     }
 
     const operators = ['LT', 'GT', 'EQ', 'NE'];
@@ -223,7 +227,7 @@ export default class Condition extends Component {
     const { condition, edit, metric } = this.props;
     return (
       <tr>
-        <td className="text-middle nowrap">
+        <td className="text-middle">
           {getLocalizedMetricName(metric)}
           {metric.hidden &&
             <span className="text-danger little-spacer-left">
@@ -289,7 +293,6 @@ export default class Condition extends Component {
                   </a>
                 </div>}
           </td>}
-
       </tr>
     );
   }

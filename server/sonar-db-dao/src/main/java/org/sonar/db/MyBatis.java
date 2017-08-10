@@ -32,6 +32,8 @@ import org.sonar.api.Startable;
 import org.sonar.db.ce.CeActivityMapper;
 import org.sonar.db.ce.CeQueueMapper;
 import org.sonar.db.ce.CeScannerContextMapper;
+import org.sonar.db.ce.CeTaskCharacteristicDto;
+import org.sonar.db.ce.CeTaskCharacteristicMapper;
 import org.sonar.db.ce.CeTaskInputMapper;
 import org.sonar.db.component.ComponentDto;
 import org.sonar.db.component.ComponentDtoWithSnapshotId;
@@ -41,7 +43,6 @@ import org.sonar.db.component.ComponentLinkMapper;
 import org.sonar.db.component.ComponentMapper;
 import org.sonar.db.component.FilePathWithHashDto;
 import org.sonar.db.component.ResourceDto;
-import org.sonar.db.component.ResourceMapper;
 import org.sonar.db.component.SnapshotDto;
 import org.sonar.db.component.SnapshotMapper;
 import org.sonar.db.component.UuidWithProjectUuidDto;
@@ -49,6 +50,7 @@ import org.sonar.db.component.ViewsSnapshotDto;
 import org.sonar.db.debt.RequirementMigrationDto;
 import org.sonar.db.duplication.DuplicationMapper;
 import org.sonar.db.duplication.DuplicationUnitDto;
+import org.sonar.db.es.EsQueueMapper;
 import org.sonar.db.event.EventDto;
 import org.sonar.db.event.EventMapper;
 import org.sonar.db.issue.IssueChangeDto;
@@ -137,6 +139,7 @@ public class MyBatis implements Startable {
     // DTO aliases, keep them sorted alphabetically
     confBuilder.loadAlias("ActiveRule", ActiveRuleDto.class);
     confBuilder.loadAlias("ActiveRuleParam", ActiveRuleParamDto.class);
+    confBuilder.loadAlias("CeTaskCharacteristic", CeTaskCharacteristicDto.class);
     confBuilder.loadAlias("Component", ComponentDto.class);
     confBuilder.loadAlias("ComponentLink", ComponentLinkDto.class);
     confBuilder.loadAlias("ComponentWithSnapshot", ComponentDtoWithSnapshotId.class);
@@ -180,9 +183,6 @@ public class MyBatis implements Startable {
     confBuilder.loadAlias("UuidWithProjectUuid", UuidWithProjectUuidDto.class);
     confBuilder.loadAlias("ViewsSnapshot", ViewsSnapshotDto.class);
 
-    // ResourceMapper has to be loaded before IssueMapper because this last one used it
-    confBuilder.loadMapper(ResourceMapper.class);
-
     // keep them sorted alphabetically
     Class<?>[] mappers = {
       ActiveRuleMapper.class,
@@ -191,12 +191,14 @@ public class MyBatis implements Startable {
       CeQueueMapper.class,
       CeScannerContextMapper.class,
       CeTaskInputMapper.class,
+      CeTaskCharacteristicMapper.class,
       ComponentKeyUpdaterMapper.class,
       ComponentLinkMapper.class,
       ComponentMapper.class,
       CustomMeasureMapper.class,
       DefaultQProfileMapper.class,
       DuplicationMapper.class,
+      EsQueueMapper.class,
       EventMapper.class,
       FileSourceMapper.class,
       GroupMapper.class,
@@ -253,7 +255,7 @@ public class MyBatis implements Startable {
       return new BatchSession(session);
     }
     SqlSession session = sessionFactory.openSession(ExecutorType.REUSE);
-    return new DbSession(session);
+    return new DbSessionImpl(session);
   }
 
   /**

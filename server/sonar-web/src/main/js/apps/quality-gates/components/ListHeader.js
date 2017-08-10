@@ -28,8 +28,10 @@ export default function ListHeader({ canEdit, onAdd }) {
   }
 
   return (
-    <div>
-      <h1 className="page-title">{translate('quality_gates.page')}</h1>
+    <header className="page-header">
+      <h1 className="page-title">
+        {translate('quality_gates.page')}
+      </h1>
       {canEdit &&
         <div className="page-actions">
           <div className="button-group">
@@ -38,6 +40,6 @@ export default function ListHeader({ canEdit, onAdd }) {
             </button>
           </div>
         </div>}
-    </div>
+    </header>
   );
 }

@@ -60,7 +60,7 @@ public class QProfilesWsTest {
     controller = new WsTester(new QProfilesWs(
       new CreateAction(null, null, null, languages, wsSupport, userSessionRule, null, importers),
       new ImportersAction(importers),
-      new SearchAction(null, languages, dbClient, wsSupport),
+      new SearchAction(languages, dbClient, wsSupport, null),
       new SetDefaultAction(languages, null, null, wsSupport),
       new ProjectsAction(null, userSessionRule, wsSupport),
       new ChangelogAction(null, wsSupport, languages, dbClient),
@@ -68,7 +68,7 @@ public class QProfilesWsTest {
       new CompareAction(null, null, languages),
       new DeleteAction(languages, null, null, userSessionRule, wsSupport),
       new ExportersAction(),
-      new InheritanceAction(null, null, null, languages),
+      new InheritanceAction(null, null, languages),
       new RenameAction(dbClient, userSessionRule, wsSupport))).controller(QProfilesWs.API_ENDPOINT);
   }
 
@@ -95,24 +95,6 @@ public class QProfilesWsTest {
     assertThat(controller.path()).isEqualTo(QProfilesWs.API_ENDPOINT);
     assertThat(controller.description()).isNotEmpty();
     assertThat(controller.actions()).isNotEmpty();
-  }
-
-  @Test
-  public void define_set_default_action() {
-    WebService.Action setDefault = controller.action("set_default");
-    assertThat(setDefault).isNotNull();
-    assertThat(setDefault.isPost()).isTrue();
-    assertThat(setDefault.params()).hasSize(4);
-    assertThat(setDefault.param("organization").since()).isEqualTo("6.4");
-  }
-
-  @Test
-  public void define_projects_action() {
-    WebService.Action projects = controller.action("projects");
-    assertThat(projects).isNotNull();
-    assertThat(projects.isPost()).isFalse();
-    assertThat(projects.params()).hasSize(5);
-    assertThat(projects.responseExampleAsString()).isNotEmpty();
   }
 
   @Test
@@ -171,7 +153,7 @@ public class QProfilesWsTest {
     assertThat(delete).isNotNull();
     assertThat(delete.isPost()).isTrue();
     assertThat(delete.params()).hasSize(4).extracting("key").containsOnly(
-      "organization", "profileKey", "language", "profileName");
+      "organization", "profile", "language", "profileName");
   }
 
   @Test
@@ -189,16 +171,7 @@ public class QProfilesWsTest {
     assertThat(inheritance).isNotNull();
     assertThat(inheritance.isPost()).isFalse();
     assertThat(inheritance.params()).hasSize(4).extracting("key").containsExactlyInAnyOrder(
-      "organization", "profileKey", "language", "profileName");
+      "organization", "profile", "language", "profileName");
     assertThat(inheritance.responseExampleAsString()).isNotEmpty();
-  }
-
-  @Test
-  public void define_rename_action() {
-    WebService.Action rename = controller.action("rename");
-    assertThat(rename).isNotNull();
-    assertThat(rename.isPost()).isTrue();
-    assertThat(rename.params()).hasSize(2).extracting("key").containsOnly(
-      "key", "name");
   }
 }

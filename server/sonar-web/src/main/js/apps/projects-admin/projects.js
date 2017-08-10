@@ -19,6 +19,7 @@
  */
 import classNames from 'classnames';
 import React from 'react';
+import PropTypes from 'prop-types';
 import { Link } from 'react-router';
 import { getComponentPermissionsUrl } from '../../helpers/urls';
 import ApplyTemplateView from '../permissions/project/views/ApplyTemplateView';
@@ -29,9 +30,9 @@ import { translate } from '../../helpers/l10n';
 
 export default class Projects extends React.PureComponent {
   static propTypes = {
-    projects: React.PropTypes.array.isRequired,
-    selection: React.PropTypes.array.isRequired,
-    organization: React.PropTypes.object.isRequired
+    projects: PropTypes.array.isRequired,
+    selection: PropTypes.array.isRequired,
+    organization: PropTypes.object.isRequired
   };
 
   componentWillMount() {
@@ -74,13 +75,13 @@ export default class Projects extends React.PureComponent {
           <Link
             to={{ pathname: '/dashboard', query: { id: project.key } }}
             className="link-with-icon">
-            <QualifierIcon qualifier={project.qualifier} />
-            {' '}
-            <span>{project.name}</span>
+            <QualifierIcon qualifier={project.qualifier} /> <span>{project.name}</span>
           </Link>
         </td>
         <td className="nowrap">
-          <span className="note">{project.key}</span>
+          <span className="note">
+            {project.key}
+          </span>
         </td>
         <td className="width-20">
           {project.visibility === 'private' && <PrivateBadge />}
@@ -88,9 +89,7 @@ export default class Projects extends React.PureComponent {
         <td className="thin nowrap">
           <div className="dropdown">
             <button className="dropdown-toggle" data-toggle="dropdown">
-              {translate('actions')}
-              {' '}
-              <i className="icon-dropdown" />
+              {translate('actions')} <i className="icon-dropdown" />
             </button>
             <ul className="dropdown-menu dropdown-menu-right">
               <li>
@@ -115,7 +114,9 @@ export default class Projects extends React.PureComponent {
 
     return (
       <table className={className} id="projects-management-page-projects">
-        <tbody>{this.props.projects.map(this.renderProject)}</tbody>
+        <tbody>
+          {this.props.projects.map(this.renderProject)}
+        </tbody>
       </table>
     );
   }

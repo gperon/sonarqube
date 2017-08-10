@@ -18,15 +18,17 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 import React from 'react';
+import PropTypes from 'prop-types';
 import classNames from 'classnames';
 import { formatMeasure } from '../../helpers/measures';
 import './Level.css';
 
 export default class Level extends React.PureComponent {
   static propTypes = {
-    level: React.PropTypes.oneOf(['ERROR', 'WARN', 'OK']).isRequired,
-    small: React.PropTypes.bool,
-    muted: React.PropTypes.bool
+    className: PropTypes.string,
+    level: PropTypes.oneOf(['ERROR', 'WARN', 'OK', 'NONE']).isRequired,
+    small: PropTypes.bool,
+    muted: PropTypes.bool
   };
 
   static defaultProps = {
@@ -36,10 +38,14 @@ export default class Level extends React.PureComponent {
 
   render() {
     const formatted = formatMeasure(this.props.level, 'LEVEL');
-    const className = classNames('level', 'level-' + this.props.level, {
+    const className = classNames(this.props.className, 'level', 'level-' + this.props.level, {
       'level-small': this.props.small,
       'level-muted': this.props.muted
     });
-    return <span className={className}>{formatted}</span>;
+    return (
+      <span className={className}>
+        {formatted}
+      </span>
+    );
   }
 }

@@ -20,10 +20,15 @@
 package org.sonar.server.test.index;
 
 import com.google.common.collect.ImmutableMap;
-import org.sonar.api.config.Settings;
+import org.sonar.api.config.Configuration;
 import org.sonar.server.es.IndexDefinition;
 import org.sonar.server.es.IndexType;
 import org.sonar.server.es.NewIndex;
+
+import static org.sonar.server.es.DefaultIndexSettings.FIELD_TYPE_KEYWORD;
+import static org.sonar.server.es.DefaultIndexSettings.INDEX_SEARCHABLE;
+import static org.sonar.server.es.NewIndex.SettingsConfiguration.MANUAL_REFRESH_INTERVAL;
+import static org.sonar.server.es.NewIndex.SettingsConfiguration.newBuilder;
 
 public class TestIndexDefinition implements IndexDefinition {
 
@@ -41,33 +46,34 @@ public class TestIndexDefinition implements IndexDefinition {
   public static final String FIELD_COVERED_FILE_LINES = "coveredLines";
   public static final String FIELD_UPDATED_AT = "updatedAt";
 
-  private final Settings settings;
+  private final Configuration config;
 
-  public TestIndexDefinition(Settings settings) {
-    this.settings = settings;
+  public TestIndexDefinition(Configuration config) {
+    this.config = config;
   }
 
   @Override
   public void define(IndexDefinitionContext context) {
-    NewIndex index = context.create(INDEX_TYPE_TEST.getIndex());
-
-    index.refreshHandledByIndexer();
-    index.configureShards(settings, 5);
+    NewIndex index = context.create(
+      INDEX_TYPE_TEST.getIndex(),
+      newBuilder(config)
+        .setRefreshInterval(MANUAL_REFRESH_INTERVAL)
+        .setDefaultNbOfShards(5)
+        .build());
 
     NewIndex.NewIndexType mapping = index.createType(INDEX_TYPE_TEST.getType());
     mapping.setAttribute("_routing", ImmutableMap.of("required", true));
-    mapping.stringFieldBuilder(FIELD_PROJECT_UUID).disableNorms().build();
-    mapping.stringFieldBuilder(FIELD_FILE_UUID).disableNorms().build();
-    mapping.stringFieldBuilder(FIELD_TEST_UUID).disableNorms().build();
-    mapping.stringFieldBuilder(FIELD_NAME).disableNorms().disableSearch().build();
-    mapping.stringFieldBuilder(FIELD_STATUS).disableNorms().disableSearch().build();
+    mapping.keywordFieldBuilder(FIELD_PROJECT_UUID).disableNorms().build();
+    mapping.keywordFieldBuilder(FIELD_FILE_UUID).disableNorms().build();
+    mapping.keywordFieldBuilder(FIELD_TEST_UUID).disableNorms().build();
+    mapping.keywordFieldBuilder(FIELD_NAME).disableNorms().disableSearch().build();
+    mapping.keywordFieldBuilder(FIELD_STATUS).disableNorms().disableSearch().build();
     mapping.createLongField(FIELD_DURATION_IN_MS);
-    mapping.stringFieldBuilder(FIELD_MESSAGE).disableNorms().disableSearch().build();
-    mapping.stringFieldBuilder(FIELD_STACKTRACE).disableNorms().disableSearch().build();
+    mapping.keywordFieldBuilder(FIELD_MESSAGE).disableNorms().disableSearch().build();
+    mapping.keywordFieldBuilder(FIELD_STACKTRACE).disableNorms().disableSearch().build();
     mapping.setProperty(FIELD_COVERED_FILES, ImmutableMap.of("type", "nested", "properties", ImmutableMap.of(
-      FIELD_COVERED_FILE_UUID, ImmutableMap.of("type", "string", "index", "not_analyzed"),
-      FIELD_COVERED_FILE_LINES, ImmutableMap.of("type", "integer")
-      )));
+      FIELD_COVERED_FILE_UUID, ImmutableMap.of("type", FIELD_TYPE_KEYWORD, "index", INDEX_SEARCHABLE),
+      FIELD_COVERED_FILE_LINES, ImmutableMap.of("type", "integer"))));
     mapping.createDateTimeField(FIELD_UPDATED_AT);
   }
 }

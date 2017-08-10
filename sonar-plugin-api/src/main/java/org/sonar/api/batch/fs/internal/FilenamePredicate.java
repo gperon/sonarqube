@@ -34,7 +34,7 @@ public class FilenamePredicate extends AbstractFilePredicate {
 
   @Override
   public boolean apply(InputFile inputFile) {
-    return filename.equals(getFilename(inputFile));
+    return filename.equals(inputFile.filename());
   }
 
   @Override
@@ -42,7 +42,4 @@ public class FilenamePredicate extends AbstractFilePredicate {
     return index.getFilesByName(filename);
   }
 
-  public static String getFilename(InputFile inputFile) {
-    return inputFile.file().getName();
-  }
 }

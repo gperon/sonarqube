@@ -19,15 +19,16 @@
  */
 package org.sonar.scanner.source;
 
+import com.google.common.collect.Sets;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.StreamSupport;
-
+import org.sonar.api.batch.AnalysisMode;
 import org.sonar.api.batch.Phase;
 import org.sonar.api.batch.fs.FileSystem;
 import org.sonar.api.batch.fs.InputFile;
 import org.sonar.api.batch.fs.InputFile.Type;
+import org.sonar.api.batch.fs.internal.DefaultInputFile;
 import org.sonar.api.batch.measure.Metric;
 import org.sonar.api.batch.sensor.Sensor;
 import org.sonar.api.batch.sensor.SensorContext;
@@ -37,35 +38,23 @@ import org.sonar.api.batch.sensor.coverage.NewCoverage;
 import org.sonar.api.batch.sensor.measure.internal.DefaultMeasure;
 import org.sonar.api.measures.CoreMetrics;
 import org.sonar.api.utils.KeyValueFormat;
-import org.sonar.core.util.stream.MoreCollectors;
+import org.sonar.api.utils.log.Logger;
+import org.sonar.api.utils.log.Loggers;
 import org.sonar.scanner.scan.measure.MeasureCache;
-import org.sonar.scanner.sensor.coverage.CoverageExclusions;
 
-import com.google.common.collect.Sets;
+import static org.sonar.core.util.stream.MoreCollectors.toSet;
 
 @Phase(name = Phase.Name.POST)
 public final class ZeroCoverageSensor implements Sensor {
 
-  private static final class MeasureToMetricKey implements Function<DefaultMeasure<?>, String> {
-    @Override
-    public String apply(DefaultMeasure<?> input) {
-      return input.metric().key();
-    }
-  }
-
-  private static final class MetricToKey implements Function<Metric, String> {
-    @Override
-    public String apply(Metric input) {
-      return input.key();
-    }
-  }
+  private static final Logger LOG = Loggers.get(ZeroCoverageSensor.class);
 
   private final MeasureCache measureCache;
-  private final CoverageExclusions coverageExclusions;
+  private final AnalysisMode mode;
 
-  public ZeroCoverageSensor(MeasureCache measureCache, CoverageExclusions exclusions) {
+  public ZeroCoverageSensor(MeasureCache measureCache, AnalysisMode mode) {
     this.measureCache = measureCache;
-    this.coverageExclusions = exclusions;
+    this.mode = mode;
   }
 
   @Override
@@ -76,9 +65,13 @@ public final class ZeroCoverageSensor implements Sensor {
 
   @Override
   public void execute(final SensorContext context) {
+    if (mode.isIncremental()) {
+      LOG.debug("Incremental mode: not forcing coverage to zero");
+      return;
+    }
     FileSystem fs = context.fileSystem();
     for (InputFile f : fs.inputFiles(fs.predicates().hasType(Type.MAIN))) {
-      if (coverageExclusions.isExcluded(f)) {
+      if (((DefaultInputFile) f).isExcludedForCoverage()) {
         continue;
       }
       if (!isCoverageMeasuresAlreadyDefined(f)) {
@@ -104,9 +97,8 @@ public final class ZeroCoverageSensor implements Sensor {
 
   private boolean isCoverageMeasuresAlreadyDefined(InputFile f) {
     Set<String> metricKeys = StreamSupport.stream(measureCache.byComponentKey(f.key()).spliterator(), false)
-      .map(new MeasureToMetricKey()).collect(MoreCollectors.toSet());
-    Function<Metric, String> metricToKey = new MetricToKey();
-    Set<String> allCoverageMetricKeys = CoverageType.UNIT.allMetrics().stream().map(metricToKey).collect(MoreCollectors.toSet());
+      .map(m -> m.metric().key()).collect(toSet());
+    Set<String> allCoverageMetricKeys = CoverageType.UNIT.allMetrics().stream().map(Metric::key).collect(toSet());
     return !Sets.intersection(metricKeys, allCoverageMetricKeys).isEmpty();
   }
 

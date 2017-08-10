@@ -19,7 +19,6 @@
  */
 package org.sonar.server.es;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Maps;
@@ -32,15 +31,23 @@ import javax.annotation.CheckForNull;
 import org.apache.commons.lang.StringUtils;
 import org.elasticsearch.cluster.metadata.IndexMetaData;
 import org.elasticsearch.common.settings.Settings;
+import org.sonar.api.config.Configuration;
 import org.sonar.process.ProcessProperties;
 import org.sonar.server.permission.index.AuthorizationTypeSupport;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.lang.String.format;
-import static org.sonar.server.es.DefaultIndexSettings.ANALYZED;
+import static java.lang.String.valueOf;
+import static java.util.Objects.requireNonNull;
 import static org.sonar.server.es.DefaultIndexSettings.ANALYZER;
+import static org.sonar.server.es.DefaultIndexSettings.FIELDDATA_ENABLED;
+import static org.sonar.server.es.DefaultIndexSettings.FIELD_FIELDDATA;
+import static org.sonar.server.es.DefaultIndexSettings.FIELD_TERM_VECTOR;
+import static org.sonar.server.es.DefaultIndexSettings.FIELD_TYPE_KEYWORD;
+import static org.sonar.server.es.DefaultIndexSettings.FIELD_TYPE_TEXT;
 import static org.sonar.server.es.DefaultIndexSettings.INDEX;
-import static org.sonar.server.es.DefaultIndexSettings.STRING;
+import static org.sonar.server.es.DefaultIndexSettings.INDEX_NOT_SEARCHABLE;
+import static org.sonar.server.es.DefaultIndexSettings.INDEX_SEARCHABLE;
 import static org.sonar.server.es.DefaultIndexSettings.TYPE;
 import static org.sonar.server.es.DefaultIndexSettingsElement.UUID_MODULE_ANALYZER;
 
@@ -50,13 +57,90 @@ public class NewIndex {
   private final Settings.Builder settings = DefaultIndexSettings.defaults();
   private final Map<String, NewIndexType> types = new LinkedHashMap<>();
 
-  NewIndex(String indexName) {
-    Preconditions.checkArgument(StringUtils.isAllLowerCase(indexName), "Index name must be lower-case: " + indexName);
+  NewIndex(String indexName, SettingsConfiguration settingsConfiguration) {
+    checkArgument(StringUtils.isAllLowerCase(indexName), "Index name must be lower-case: " + indexName);
     this.indexName = indexName;
+    applySettingsConfiguration(settingsConfiguration);
   }
 
-  public void refreshHandledByIndexer() {
-    getSettings().put("index.refresh_interval", "-1");
+  private void applySettingsConfiguration(SettingsConfiguration settingsConfiguration) {
+    settings.put("index.mapper.dynamic", valueOf(false));
+    settings.put("index.refresh_interval", refreshInterval(settingsConfiguration));
+
+    Configuration config = settingsConfiguration.getConfiguration();
+    boolean clusterMode = config.getBoolean(ProcessProperties.CLUSTER_ENABLED).orElse(false);
+    int shards = config.getInt(format("sonar.search.%s.shards", indexName))
+      .orElse(settingsConfiguration.getDefaultNbOfShards());
+    int replicas = clusterMode ? config.getInt(ProcessProperties.SEARCH_REPLICAS).orElse(1) : 0;
+
+    settings.put(IndexMetaData.SETTING_NUMBER_OF_SHARDS, shards);
+    settings.put(IndexMetaData.SETTING_NUMBER_OF_REPLICAS, replicas);
+  }
+
+  private static String refreshInterval(SettingsConfiguration settingsConfiguration) {
+    int refreshInterval = settingsConfiguration.getRefreshInterval();
+    if (refreshInterval == -1) {
+      return "-1";
+    }
+    return refreshInterval + "s";
+  }
+
+  public static class SettingsConfiguration {
+    public static final int MANUAL_REFRESH_INTERVAL = -1;
+
+    private final Configuration configuration;
+    private final int defaultNbOfShards;
+    private final int refreshInterval;
+
+    private SettingsConfiguration(Builder builder) {
+      this.configuration = builder.configuration;
+      this.defaultNbOfShards = builder.defaultNbOfShards;
+      this.refreshInterval = builder.refreshInterval;
+    }
+
+    public static Builder newBuilder(Configuration configuration) {
+      return new Builder(configuration);
+    }
+
+    public Configuration getConfiguration() {
+      return configuration;
+    }
+
+    public int getDefaultNbOfShards() {
+      return defaultNbOfShards;
+    }
+
+    public int getRefreshInterval() {
+      return refreshInterval;
+    }
+
+    public static class Builder {
+      private final Configuration configuration;
+      private int defaultNbOfShards = 1;
+      private int refreshInterval = 30;
+
+      public Builder(Configuration configuration) {
+        this.configuration = requireNonNull(configuration, "configuration can't be null");
+      }
+
+      public Builder setDefaultNbOfShards(int defaultNbOfShards) {
+        checkArgument(defaultNbOfShards >= 1, "defaultNbOfShards must be >= 1");
+        this.defaultNbOfShards = defaultNbOfShards;
+        return this;
+      }
+
+      public Builder setRefreshInterval(int refreshInterval) {
+        checkArgument(refreshInterval == -1 || refreshInterval > 0,
+          "refreshInterval must be either -1 or strictly positive");
+        this.refreshInterval = refreshInterval;
+        return this;
+      }
+
+      public SettingsConfiguration build() {
+        return new SettingsConfiguration(this);
+      }
+    }
+
   }
 
   public String getName() {
@@ -75,21 +159,6 @@ public class NewIndex {
 
   public Map<String, NewIndexType> getTypes() {
     return types;
-  }
-
-  public void configureShards(org.sonar.api.config.Settings settings, int defaultNbOfShards) {
-    boolean clusterMode = settings.getBoolean(ProcessProperties.CLUSTER_ENABLED);
-    int shards = settings.getInt(format("sonar.search.%s.shards", indexName));
-    if (shards == 0) {
-      shards = defaultNbOfShards;
-    }
-
-    int replicas = settings.getInt(ProcessProperties.SEARCH_REPLICAS);
-    if (replicas == 0 && settings.getString(ProcessProperties.SEARCH_REPLICAS) == null) {
-      replicas = clusterMode ? 1 : 0;
-    }
-    getSettings().put(IndexMetaData.SETTING_NUMBER_OF_SHARDS, shards);
-    getSettings().put(IndexMetaData.SETTING_NUMBER_OF_REPLICAS, replicas);
   }
 
   public static class NewIndexType {
@@ -142,8 +211,12 @@ public class NewIndex {
       return this;
     }
 
-    public StringFieldBuilder stringFieldBuilder(String fieldName) {
-      return new StringFieldBuilder(this, fieldName);
+    public KeywordFieldBuilder keywordFieldBuilder(String fieldName) {
+      return new KeywordFieldBuilder(this, fieldName);
+    }
+
+    public TextFieldBuilder textFieldBuilder(String fieldName) {
+      return new TextFieldBuilder(this, fieldName);
     }
 
     public NestedFieldBuilder nestedFieldBuilder(String fieldName) {
@@ -159,7 +232,7 @@ public class NewIndex {
     }
 
     public NewIndexType createDateTimeField(String fieldName) {
-      return setProperty(fieldName, ImmutableMap.of("type", "date", "format", "date_time"));
+      return setProperty(fieldName, ImmutableMap.of("type", "date", "format", "date_time||epoch_second"));
     }
 
     public NewIndexType createDoubleField(String fieldName) {
@@ -180,8 +253,8 @@ public class NewIndex {
 
     public NewIndexType createUuidPathField(String fieldName) {
       return setProperty(fieldName, ImmutableSortedMap.of(
-        TYPE, STRING,
-        INDEX, ANALYZED,
+        TYPE, FIELD_TYPE_TEXT,
+        INDEX, DefaultIndexSettings.INDEX_SEARCHABLE,
         ANALYZER, UUID_MODULE_ANALYZER.getName()));
     }
 
@@ -198,13 +271,14 @@ public class NewIndex {
   /**
    * Helper to define a string field in mapping of index type
    */
-  public static class StringFieldBuilder {
+  public abstract static class StringFieldBuilder {
     private final NewIndexType indexType;
     private final String fieldName;
     private boolean disableSearch = false;
     private boolean disableNorms = false;
     private boolean termVectorWithPositionOffsets = false;
     private SortedMap<String, Object> subFields = Maps.newTreeMap();
+    private boolean store = false;
 
     private StringFieldBuilder(NewIndexType indexType, String fieldName) {
       this.indexType = indexType;
@@ -249,8 +323,8 @@ public class NewIndex {
     }
 
     /**
-     * "index: no" -> Don’t index this field at all. This field will not be searchable.
-     * By default field is "not_analyzed": it is searchable, but index the value exactly
+     * "index: false" -> Make this field not searchable.
+     * By default field is "true": it is searchable, but index the value exactly
      * as specified.
      */
     public StringFieldBuilder disableSearch() {
@@ -258,46 +332,123 @@ public class NewIndex {
       return this;
     }
 
+    public StringFieldBuilder store() {
+      this.store = true;
+      return this;
+    }
+
     public NewIndexType build() {
-      Map<String, Object> hash = new TreeMap<>();
       if (subFields.isEmpty()) {
-        hash.putAll(ImmutableMap.of(
-          "type", "string",
-          "index", disableSearch ? "no" : "not_analyzed",
-          "norms", ImmutableMap.of("enabled", String.valueOf(!disableNorms))));
-      } else {
-        hash.put("type", "multi_field");
-
-        Map<String, Object> multiFields = new TreeMap<>(subFields);
-
-        if (termVectorWithPositionOffsets) {
-          multiFields.entrySet().forEach(entry -> {
-            Object subFieldMapping = entry.getValue();
-            if (subFieldMapping instanceof Map) {
-              entry.setValue(
-                addFieldToMapping(
-                  (Map<String, String>) subFieldMapping,
-                  "term_vector", "with_positions_offsets"));
-            }
-          });
-        }
-
-        multiFields.put(fieldName, ImmutableMap.of(
-          "type", "string",
-          "index", "not_analyzed",
-          "term_vector", termVectorWithPositionOffsets ? "with_positions_offsets" : "no",
-          "norms", ImmutableMap.of("enabled", "false")));
-
-        hash.put("fields", multiFields);
+        return buildWithoutSubfields();
       }
+      return buildWithSubfields();
+    }
+
+    private NewIndexType buildWithoutSubfields() {
+      Map<String, Object> hash = new TreeMap<>();
+      hash.putAll(ImmutableMap.of(
+        "type", getFieldType(),
+        INDEX, disableSearch ? INDEX_NOT_SEARCHABLE : INDEX_SEARCHABLE,
+        "norms", valueOf(!disableNorms),
+        "store", valueOf(store)));
+      if (getFieldData()) {
+        hash.put(FIELD_FIELDDATA, FIELDDATA_ENABLED);
+      }
+      return indexType.setProperty(fieldName, hash);
+    }
+
+    private NewIndexType buildWithSubfields() {
+      Map<String, Object> hash = new TreeMap<>();
+      hash.put("type", getFieldType());
+
+      Map<String, Object> multiFields = new TreeMap<>(subFields);
+
+      if (termVectorWithPositionOffsets) {
+        multiFields.entrySet().forEach(entry -> {
+          Object subFieldMapping = entry.getValue();
+          if (subFieldMapping instanceof Map) {
+            entry.setValue(
+              addFieldToMapping(
+                (Map<String, String>) subFieldMapping,
+                FIELD_TERM_VECTOR, "with_positions_offsets"));
+          }
+        });
+        hash.put(FIELD_TERM_VECTOR, "with_positions_offsets");
+      }
+      if (getFieldData()) {
+        multiFields.entrySet().forEach(entry -> {
+          Object subFieldMapping = entry.getValue();
+          if (subFieldMapping instanceof Map) {
+            entry.setValue(
+              addFieldToMapping(
+                (Map<String, String>) subFieldMapping,
+                FIELD_FIELDDATA, FIELDDATA_ENABLED));
+          }
+        });
+        hash.put(FIELD_FIELDDATA, FIELDDATA_ENABLED);
+      }
+
+      multiFields.put(fieldName, ImmutableMap.of(
+        "type", getFieldType(),
+        INDEX, INDEX_SEARCHABLE,
+        "norms", "false",
+        "store", valueOf(store)));
+      hash.put("fields", multiFields);
 
       return indexType.setProperty(fieldName, hash);
     }
+
+    protected abstract boolean getFieldData();
+
+    protected abstract String getFieldType();
 
     private static SortedMap<String, String> addFieldToMapping(Map<String, String> source, String key, String value) {
       SortedMap<String, String> mutable = new TreeMap<>(source);
       mutable.put(key, value);
       return ImmutableSortedMap.copyOf(mutable);
+    }
+  }
+
+  public static class KeywordFieldBuilder extends StringFieldBuilder {
+
+    private KeywordFieldBuilder(NewIndexType indexType, String fieldName) {
+      super(indexType, fieldName);
+    }
+
+    @Override
+    protected boolean getFieldData() {
+      return false;
+    }
+
+    protected String getFieldType() {
+      return FIELD_TYPE_KEYWORD;
+    }
+  }
+
+  public static class TextFieldBuilder extends StringFieldBuilder {
+
+    private boolean fieldData = false;
+
+    private TextFieldBuilder(NewIndexType indexType, String fieldName) {
+      super(indexType, fieldName);
+    }
+
+    protected String getFieldType() {
+      return FIELD_TYPE_TEXT;
+    }
+
+    /**
+     * Required to enable sorting, aggregation and access to field data on fields of type "text".
+     * <p>Disabled by default as this can have significant memory cost</p>
+     */
+    public StringFieldBuilder withFieldData() {
+      this.fieldData = true;
+      return this;
+    }
+
+    @Override
+    protected boolean getFieldData() {
+      return fieldData;
     }
   }
 
@@ -317,10 +468,10 @@ public class NewIndex {
       return this;
     }
 
-    public NestedFieldBuilder addStringField(String fieldName) {
+    public NestedFieldBuilder addKeywordField(String fieldName) {
       return setProperty(fieldName, ImmutableMap.of(
-        "type", "string",
-        "index", "not_analyzed"));
+        "type", FIELD_TYPE_KEYWORD,
+        INDEX, INDEX_SEARCHABLE));
     }
 
     public NestedFieldBuilder addDoubleField(String fieldName) {

@@ -26,8 +26,7 @@ import java.io.InputStream;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.sonar.api.config.MapSettings;
-import org.sonar.api.config.Settings;
+import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.utils.MessageException;
 import org.sonar.scanner.WsTestUtil;
 import org.sonar.scanner.bootstrap.ScannerWsClient;
@@ -42,14 +41,16 @@ public class DefaultQualityProfileLoaderTest {
   public ExpectedException exception = ExpectedException.none();
 
   private ScannerWsClient wsClient = mock(ScannerWsClient.class);
-  private Settings settings = new MapSettings();
-  private DefaultQualityProfileLoader underTest = new DefaultQualityProfileLoader(settings, wsClient);
+  private MapSettings settings = new MapSettings();
+  private DefaultQualityProfileLoader underTest = new DefaultQualityProfileLoader(settings.asConfig(), wsClient);
 
   @Test
   public void load_gets_profiles_for_specified_project_and_profile_name() throws IOException {
-    prepareCallWithResults();
+    WsTestUtil.mockStream(wsClient, "/api/qualityprofiles/search.protobuf?projectKey=foo", createStreamOfProfiles("qp"));
+    WsTestUtil.mockStream(wsClient, "/api/qualityprofiles/search.protobuf?profileName=bar", createStreamOfProfiles("qp"));
     underTest.load("foo", "bar");
-    verifyCalledPath("/api/qualityprofiles/search.protobuf?projectKey=foo&profileName=bar");
+    verifyCalledPath("/api/qualityprofiles/search.protobuf?projectKey=foo");
+    verifyCalledPath("/api/qualityprofiles/search.protobuf?profileName=bar");
   }
 
   @Test
@@ -61,9 +62,11 @@ public class DefaultQualityProfileLoaderTest {
 
   @Test
   public void load_encodes_url_parameters() throws IOException {
-    prepareCallWithResults();
+    WsTestUtil.mockStream(wsClient, "/api/qualityprofiles/search.protobuf?projectKey=foo%232", createStreamOfProfiles("qp"));
+    WsTestUtil.mockStream(wsClient, "/api/qualityprofiles/search.protobuf?profileName=bar%232", createStreamOfProfiles("qp"));
     underTest.load("foo#2", "bar#2");
-    verifyCalledPath("/api/qualityprofiles/search.protobuf?projectKey=foo%232&profileName=bar%232");
+    verifyCalledPath("/api/qualityprofiles/search.protobuf?projectKey=foo%232");
+    verifyCalledPath("/api/qualityprofiles/search.protobuf?profileName=bar%232");
   }
 
   @Test
@@ -76,9 +79,11 @@ public class DefaultQualityProfileLoaderTest {
 
   @Test
   public void loadDefault_gets_profiles_with_specified_name() throws IOException {
-    prepareCallWithResults();
+    WsTestUtil.mockStream(wsClient, "/api/qualityprofiles/search.protobuf?defaults=true", createStreamOfProfiles("qp"));
+    WsTestUtil.mockStream(wsClient, "/api/qualityprofiles/search.protobuf?profileName=foo", createStreamOfProfiles("qp"));
     underTest.loadDefault("foo");
-    verifyCalledPath("/api/qualityprofiles/search.protobuf?defaults=true&profileName=foo");
+    verifyCalledPath("/api/qualityprofiles/search.protobuf?defaults=true");
+    verifyCalledPath("/api/qualityprofiles/search.protobuf?profileName=foo");
   }
 
   @Test
@@ -89,18 +94,13 @@ public class DefaultQualityProfileLoaderTest {
   }
 
   @Test
-  public void loadDefault_encodes_url_parameters() throws IOException {
-    prepareCallWithResults();
-    underTest.loadDefault("foo#2");
-    verifyCalledPath("/api/qualityprofiles/search.protobuf?defaults=true&profileName=foo%232");
-  }
-
-  @Test
   public void loadDefault_sets_organization_parameter_if_defined_in_settings() throws IOException {
     settings.setProperty("sonar.organization", "my-org");
-    prepareCallWithResults();
+    WsTestUtil.mockStream(wsClient, "/api/qualityprofiles/search.protobuf?defaults=true&organization=my-org", createStreamOfProfiles("qp"));
+    WsTestUtil.mockStream(wsClient, "/api/qualityprofiles/search.protobuf?profileName=foo&organization=my-org", createStreamOfProfiles("qp"));
     underTest.loadDefault("foo");
-    verifyCalledPath("/api/qualityprofiles/search.protobuf?defaults=true&profileName=foo&organization=my-org");
+    verifyCalledPath("/api/qualityprofiles/search.protobuf?defaults=true&organization=my-org");
+    verifyCalledPath("/api/qualityprofiles/search.protobuf?profileName=foo&organization=my-org");
   }
 
   @Test

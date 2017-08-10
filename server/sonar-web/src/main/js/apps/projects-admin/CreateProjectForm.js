@@ -103,10 +103,9 @@ export default class CreateProjectForm extends React.PureComponent {
           this.props.onProjectCreated();
         }
       },
-      error => {
+      () => {
         if (this.mounted) {
           this.setState({ loading: false });
-          this.props.onRequestFail(error);
         }
       }
     );
@@ -123,19 +122,19 @@ export default class CreateProjectForm extends React.PureComponent {
         className="modal"
         overlayClassName="modal-overlay"
         onRequestClose={this.props.onClose}>
-
         {createdProject
           ? <div>
               <header className="modal-head">
-                <h2>{translate('qualifiers.create.TRK')}</h2>
+                <h2>
+                  {translate('qualifiers.create.TRK')}
+                </h2>
               </header>
 
               <div className="modal-body">
                 <div className="alert alert-success">
-                  Project
-                  {' '}
-                  <Link to={getProjectUrl(createdProject.key)}>{createdProject.name}</Link>
-                  {' '}
+                  Project <Link to={getProjectUrl(createdProject.key)}>
+                    {createdProject.name}
+                  </Link>{' '}
                   has been successfully created.
                 </div>
               </div>
@@ -148,7 +147,9 @@ export default class CreateProjectForm extends React.PureComponent {
             </div>
           : <form id="create-project-form" onSubmit={this.handleFormSubmit}>
               <header className="modal-head">
-                <h2>{translate('qualifiers.create.TRK')}</h2>
+                <h2>
+                  {translate('qualifiers.create.TRK')}
+                </h2>
               </header>
 
               <div className="modal-body">
@@ -197,7 +198,9 @@ export default class CreateProjectForm extends React.PureComponent {
                   />
                 </div>
                 <div className="modal-field">
-                  <label> {translate('visibility')} </label>
+                  <label>
+                    {' '}{translate('visibility')}{' '}
+                  </label>
                   <VisibilitySelector
                     canTurnToPrivate={
                       organization == null || organization.canUpdateProjectsVisibilityToPrivate
@@ -224,7 +227,6 @@ export default class CreateProjectForm extends React.PureComponent {
                 </a>
               </footer>
             </form>}
-
       </Modal>
     );
   }

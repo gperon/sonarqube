@@ -33,17 +33,16 @@ import java.util.function.Function;
 import java.util.regex.Pattern;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nullable;
-import org.elasticsearch.action.bulk.BulkRequestBuilder;
-import org.elasticsearch.action.bulk.BulkResponse;
+import org.elasticsearch.action.search.SearchRequestBuilder;
+import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchScrollRequestBuilder;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
+import org.elasticsearch.search.sort.SortOrder;
 import org.joda.time.format.ISODateTimeFormat;
 import org.sonar.core.util.stream.MoreCollectors;
-
-import static java.lang.String.format;
 
 public class EsUtils {
 
@@ -66,9 +65,9 @@ public class EsUtils {
     return docs;
   }
 
-  public static LinkedHashMap<String, Long> termsToMap(Terms terms) {
+  public static Map<String, Long> termsToMap(Terms terms) {
     LinkedHashMap<String, Long> map = new LinkedHashMap<>();
-    List<Terms.Bucket> buckets = terms.getBuckets();
+    List<? extends Terms.Bucket> buckets = terms.getBuckets();
     for (Terms.Bucket bucket : buckets) {
       map.put(bucket.getKeyAsString(), bucket.getDocCount());
     }
@@ -99,17 +98,12 @@ public class EsUtils {
     return null;
   }
 
-  public static BulkResponse executeBulkRequest(BulkRequestBuilder builder, String errorMessage, Object... errorMessageArgs) {
-    BulkResponse bulkResponse = builder.get();
-    if (bulkResponse.hasFailures()) {
-      // do not use Preconditions as the message is expensive to generate (see buildFailureMessage())
-      throw new IllegalStateException(format(errorMessage, errorMessageArgs) + ": " + bulkResponse.buildFailureMessage());
-    }
-    return bulkResponse;
-  }
-
-  public static <D extends BaseDoc> Iterator<D> scroll(EsClient esClient, String scrollId, Function<Map<String, Object>, D> docConverter) {
-    return new DocScrollIterator<>(esClient, scrollId, docConverter);
+  /**
+   * Optimize scolling, by specifying document sorting.
+   * See https://www.elastic.co/guide/en/elasticsearch/reference/2.4/search-request-scroll.html#search-request-scroll
+   */
+  public static void optimizeScrollRequest(SearchRequestBuilder esSearch) {
+    esSearch.addSort("_doc", SortOrder.ASC);
   }
 
   /**
@@ -121,60 +115,23 @@ public class EsUtils {
     return SPECIAL_REGEX_CHARS.matcher(str).replaceAll("\\\\$0");
   }
 
-  private static class DocScrollIterator<D extends BaseDoc> implements Iterator<D> {
+  public static <I> Iterator<I> scrollIds(EsClient esClient, SearchResponse scrollResponse, Function<String, I> idConverter) {
+    return new IdScrollIterator<>(esClient, scrollResponse, idConverter);
+  }
+
+  private static class IdScrollIterator<I> implements Iterator<I> {
 
     private final EsClient esClient;
     private final String scrollId;
-    private final Function<Map<String, Object>, D> docConverter;
+    private final Function<String, I> idConverter;
 
     private final Queue<SearchHit> hits = new ArrayDeque<>();
 
-    private DocScrollIterator(EsClient esClient, String scrollId, Function<Map<String, Object>, D> docConverter) {
+    private IdScrollIterator(EsClient esClient, SearchResponse scrollResponse, Function<String, I> idConverter) {
       this.esClient = esClient;
-      this.scrollId = scrollId;
-      this.docConverter = docConverter;
-    }
-
-    @Override
-    public boolean hasNext() {
-      if (hits.isEmpty()) {
-        SearchScrollRequestBuilder esRequest = esClient.prepareSearchScroll(scrollId)
-          .setScroll(TimeValue.timeValueMinutes(SCROLL_TIME_IN_MINUTES));
-        Collections.addAll(hits, esRequest.get().getHits().getHits());
-      }
-      return !hits.isEmpty();
-    }
-
-    @Override
-    public D next() {
-      if (!hasNext()) {
-        throw new NoSuchElementException();
-      }
-      return docConverter.apply(hits.poll().getSource());
-    }
-
-    @Override
-    public void remove() {
-      throw new UnsupportedOperationException("Cannot remove item when scrolling");
-    }
-  }
-
-  public static <ID> Iterator<ID> scrollIds(EsClient esClient, String scrollId, Function<String, ID> idConverter) {
-    return new IdScrollIterator<>(esClient, scrollId, idConverter);
-  }
-
-  private static class IdScrollIterator<ID> implements Iterator<ID> {
-
-    private final EsClient esClient;
-    private final String scrollId;
-    private final Function<String, ID> idConverter;
-
-    private final Queue<SearchHit> hits = new ArrayDeque<>();
-
-    private IdScrollIterator(EsClient esClient, String scrollId, Function<String, ID> idConverter) {
-      this.esClient = esClient;
-      this.scrollId = scrollId;
+      this.scrollId = scrollResponse.getScrollId();
       this.idConverter = idConverter;
+      Collections.addAll(hits, scrollResponse.getHits().getHits());
     }
 
     @Override
@@ -188,7 +145,7 @@ public class EsUtils {
     }
 
     @Override
-    public ID next() {
+    public I next() {
       if (!hasNext()) {
         throw new NoSuchElementException();
       }

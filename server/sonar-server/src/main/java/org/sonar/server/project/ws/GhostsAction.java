@@ -100,10 +100,12 @@ public class GhostsAction implements ProjectsWsAction {
       long nbOfProjects = dbClient.componentDao().countGhostProjects(dbSession, organization.getUuid(), query);
       List<ComponentDto> projects = dbClient.componentDao().selectGhostProjects(dbSession, organization.getUuid(), query,
         searchOptions.getOffset(), searchOptions.getLimit());
-      JsonWriter json = response.newJsonWriter().beginObject();
-      writeProjects(json, projects, desiredFields);
-      searchOptions.writeJson(json, nbOfProjects);
-      json.endObject().close();
+      try (JsonWriter json = response.newJsonWriter()) {
+        json.beginObject();
+        writeProjects(json, projects, desiredFields);
+        searchOptions.writeJson(json, nbOfProjects);
+        json.endObject();
+      }
     }
   }
 
@@ -121,7 +123,7 @@ public class GhostsAction implements ProjectsWsAction {
     for (ComponentDto project : projects) {
       json.beginObject();
       json.prop("uuid", project.uuid());
-      writeIfWished(json, "key", project.key(), fieldsToReturn);
+      writeIfWished(json, "key", project.getDbKey(), fieldsToReturn);
       writeIfWished(json, "name", project.name(), fieldsToReturn);
       writeIfWished(json, "creationDate", project.getCreatedAt(), fieldsToReturn);
       writeIfWished(json, "visibility", project.isPrivate() ? PRIVATE.getLabel() : PUBLIC.getLabel(), fieldsToReturn);

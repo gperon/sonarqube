@@ -19,18 +19,17 @@
  */
 package org.sonar.api.batch.debt;
 
-import org.apache.commons.lang.builder.EqualsBuilder;
-import org.apache.commons.lang.builder.HashCodeBuilder;
-import org.apache.commons.lang.builder.ReflectionToStringBuilder;
-import org.apache.commons.lang.builder.ToStringStyle;
-import org.sonar.api.utils.Duration;
-
 import javax.annotation.CheckForNull;
 import javax.annotation.Nullable;
+import org.sonar.api.utils.Duration;
+import javax.annotation.concurrent.Immutable;
 
 /**
  * @since 4.3
+ * @deprecated since 6.5 debt model will soon be unavailable on batch side
  */
+@Deprecated
+@Immutable
 public class DebtRemediationFunction {
 
   public enum Type {
@@ -85,25 +84,32 @@ public class DebtRemediationFunction {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
+
     DebtRemediationFunction that = (DebtRemediationFunction) o;
-    return new EqualsBuilder()
-      .append(type, that.type())
-      .append(coefficient, that.coefficient())
-      .append(offset, that.offset())
-      .isEquals();
+    if (type != that.type) {
+      return false;
+    }
+    if ((coefficient != null) ? !coefficient.equals(that.coefficient) : (that.coefficient != null)) {
+      return false;
+    }
+    return (offset != null) ? offset.equals(that.offset) : (that.offset == null);
   }
 
   @Override
   public int hashCode() {
-    return new HashCodeBuilder(15, 31)
-      .append(type)
-      .append(coefficient)
-      .append(offset)
-      .toHashCode();
+    int result = type.hashCode();
+    result = 31 * result + (coefficient != null ? coefficient.hashCode() : 0);
+    result = 31 * result + (offset != null ? offset.hashCode() : 0);
+    return result;
   }
 
   @Override
   public String toString() {
-    return new ReflectionToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE).toString();
+    StringBuilder sb = new StringBuilder("DebtRemediationFunction{");
+    sb.append("type=").append(type);
+    sb.append(", coefficient=").append(coefficient);
+    sb.append(", offset=").append(offset);
+    sb.append('}');
+    return sb.toString();
   }
 }

@@ -19,12 +19,12 @@
  */
 package org.sonar.server.user.ws;
 
-import com.google.common.collect.Lists;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import org.junit.Rule;
 import org.junit.Test;
-import org.sonar.api.config.MapSettings;
+import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.server.ws.WebService.Param;
 import org.sonar.api.utils.System2;
 import org.sonar.db.DbClient;
@@ -37,7 +37,6 @@ import org.sonar.db.user.UserTesting;
 import org.sonar.server.es.EsTester;
 import org.sonar.server.issue.ws.AvatarResolverImpl;
 import org.sonar.server.tester.UserSessionRule;
-import org.sonar.server.user.index.UserDoc;
 import org.sonar.server.user.index.UserIndex;
 import org.sonar.server.user.index.UserIndexDefinition;
 import org.sonar.server.user.index.UserIndexer;
@@ -57,7 +56,7 @@ public class SearchActionTest {
   private System2 system2 = System2.INSTANCE;
 
   @Rule
-  public EsTester esTester = new EsTester(new UserIndexDefinition(new MapSettings()));
+  public EsTester esTester = new EsTester(new UserIndexDefinition(new MapSettings().asConfig()));
 
   @Rule
   public UserSessionRule userSession = UserSessionRule.standalone();
@@ -72,11 +71,13 @@ public class SearchActionTest {
   private WsTester ws = new WsTester(new UsersWs(new SearchAction(userSession, index, dbClient, new AvatarResolverImpl())));
 
   @Test
-  public void search_json_example() throws Exception {
+  public void test_json_example() throws Exception {
     UserDto fmallet = db.users().insertUser(newUserDto("fmallet", "Freddy Mallet", "f@m.com")
       .setActive(true)
       .setLocal(true)
-      .setScmAccounts(emptyList()));
+      .setScmAccounts(emptyList())
+      .setExternalIdentity("fmallet")
+      .setExternalIdentityProvider("sonarqube"));
     UserDto simon = db.users().insertUser(newUserDto("sbrandhof", "Simon", "s.brandhof@company.tld")
       .setActive(true)
       .setLocal(false)
@@ -127,16 +128,13 @@ public class SearchActionTest {
   public void search_with_query() throws Exception {
     loginAsSimpleUser();
     injectUsers(5);
-    UserDto user = db.users().insertUser(newUserDto("user-%_%-login", "user-name", "user@mail.com").setScmAccounts(singletonList("user1")));
-    esTester.putDocuments(UserIndexDefinition.INDEX_TYPE_USER.getIndex(), UserIndexDefinition.INDEX_TYPE_USER.getType(),
-      new UserDoc()
-        .setActive(true)
-        .setEmail(user.getEmail())
-        .setLogin(user.getLogin())
-        .setName(user.getName())
-        .setCreatedAt(user.getCreatedAt())
-        .setUpdatedAt(user.getUpdatedAt())
-        .setScmAccounts(user.getScmAccountsAsList()));
+    UserDto user = db.users().insertUser(u -> u
+      .setLogin("user-%_%-login")
+      .setName("user-name")
+      .setEmail("user@mail.com")
+      .setLocal(true)
+      .setScmAccounts(singletonList("user1")));
+    userIndexer.indexOnStartup(null);
 
     ws.newGetRequest("api/users", "search").setParam("q", "user-%_%-").execute().assertJson(getClass(), "user_one.json");
     ws.newGetRequest("api/users", "search").setParam("q", "user@MAIL.com").execute().assertJson(getClass(), "user_one.json");
@@ -283,8 +281,7 @@ public class SearchActionTest {
   }
 
   private List<UserDto> injectUsers(int numberOfUsers) throws Exception {
-    List<UserDto> userDtos = Lists.newArrayList();
-    long createdAt = System.currentTimeMillis();
+    List<UserDto> userDtos = new ArrayList<>();
     GroupDto group1 = db.users().insertGroup(newGroupDto().setName("sonar-users"));
     GroupDto group2 = db.users().insertGroup(newGroupDto().setName("sonar-admins"));
     for (int index = 0; index < numberOfUsers; index++) {
@@ -295,15 +292,13 @@ public class SearchActionTest {
 
       UserDto userDto = dbClient.userDao().insert(dbSession, new UserDto()
         .setActive(true)
-        .setCreatedAt(createdAt)
         .setEmail(email)
         .setLogin(login)
         .setName(name)
         .setScmAccounts(scmAccounts)
         .setLocal(true)
         .setExternalIdentity(login)
-        .setExternalIdentityProvider("sonarqube")
-        .setUpdatedAt(createdAt));
+        .setExternalIdentityProvider("sonarqube"));
       userDtos.add(userDto);
 
       for (int tokenIndex = 0; tokenIndex < index; tokenIndex++) {

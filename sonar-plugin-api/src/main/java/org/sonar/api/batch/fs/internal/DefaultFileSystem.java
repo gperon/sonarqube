@@ -19,13 +19,11 @@
  */
 package org.sonar.api.batch.fs.internal;
 
-import com.google.common.collect.Iterables;
 import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.SetMultimap;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
-import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -33,10 +31,10 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
-
 import javax.annotation.Nullable;
 import org.sonar.api.batch.fs.FilePredicate;
 import org.sonar.api.batch.fs.FilePredicates;
@@ -56,29 +54,24 @@ public class DefaultFileSystem implements FileSystem {
   private Path workDir;
   private Charset encoding;
   protected final FilePredicates predicates;
-  private Predicate<InputFile> defaultPredicate;
+  private Function<FilePredicate, Predicate<InputFile>> defaultPredicateFactory;
 
   /**
    * Only for testing
    */
   public DefaultFileSystem(Path baseDir) {
-    this(baseDir.toFile(), new MapCache());
+    this(baseDir, new MapCache());
   }
 
   /**
    * Only for testing
    */
   public DefaultFileSystem(File baseDir) {
-    this(baseDir, new MapCache());
+    this(baseDir.toPath(), new MapCache());
   }
 
-  protected DefaultFileSystem(@Nullable File baseDir, Cache cache) {
-    // Basedir can be null with views
-    try {
-      this.baseDir = baseDir != null ? baseDir.toPath().toRealPath(LinkOption.NOFOLLOW_LINKS) : new File(".").toPath().toAbsolutePath().normalize();
-    } catch (IOException e) {
-      throw new IllegalStateException(e);
-    }
+  protected DefaultFileSystem(Path baseDir, Cache cache) {
+    this.baseDir = baseDir;
     this.cache = cache;
     this.predicates = new DefaultFilePredicates(this.baseDir);
   }
@@ -92,27 +85,23 @@ public class DefaultFileSystem implements FileSystem {
     return baseDir.toFile();
   }
 
-  public DefaultFileSystem setEncoding(@Nullable Charset e) {
+  public DefaultFileSystem setEncoding(Charset e) {
     this.encoding = e;
     return this;
   }
 
   @Override
   public Charset encoding() {
-    return encoding == null ? Charset.defaultCharset() : encoding;
+    return encoding;
   }
 
-  public boolean isDefaultJvmEncoding() {
-    return encoding == null;
-  }
-
-  public DefaultFileSystem setWorkDir(File d) {
-    this.workDir = d.getAbsoluteFile().toPath().normalize();
+  public DefaultFileSystem setWorkDir(Path d) {
+    this.workDir = d;
     return this;
   }
 
-  public DefaultFileSystem setDefaultPredicate(@Nullable Predicate<InputFile> predicate) {
-    this.defaultPredicate = predicate;
+  public DefaultFileSystem setDefaultPredicate(@Nullable Function<FilePredicate, Predicate<InputFile>> defaultPredicateFactory) {
+    this.defaultPredicateFactory = defaultPredicateFactory;
     return this;
   }
 
@@ -152,17 +141,15 @@ public class DefaultFileSystem implements FileSystem {
    * Default predicate is used when some files/dirs should not be processed by sensors.
    */
   public Iterable<InputFile> inputFiles() {
-    doPreloadFiles();
     return OptimizedFilePredicateAdapter.create(predicates.all()).get(cache);
   }
 
   @Override
   public Iterable<InputFile> inputFiles(FilePredicate predicate) {
-    doPreloadFiles();
     Iterable<InputFile> iterable = OptimizedFilePredicateAdapter.create(predicate).get(cache);
-    if (defaultPredicate != null) {
+    if (defaultPredicateFactory != null) {
       return StreamSupport.stream(iterable.spliterator(), false)
-        .filter(defaultPredicate::test).collect(Collectors.toList());
+        .filter(defaultPredicateFactory.apply(predicate)).collect(Collectors.toList());
     }
     return iterable;
   }
@@ -174,13 +161,13 @@ public class DefaultFileSystem implements FileSystem {
 
   @Override
   public Iterable<File> files(FilePredicate predicate) {
-    doPreloadFiles();
-    return Iterables.transform(inputFiles(predicate), InputFile::file);
+    return () -> StreamSupport.stream(inputFiles(predicate).spliterator(), false)
+      .map(InputFile::file)
+      .iterator();
   }
 
   @Override
   public InputDir inputDir(File dir) {
-    doPreloadFiles();
     String relativePath = PathUtils.sanitize(new PathResolver().relativePath(baseDir.toFile(), dir));
     if (relativePath == null) {
       return null;
@@ -200,20 +187,12 @@ public class DefaultFileSystem implements FileSystem {
 
   @Override
   public SortedSet<String> languages() {
-    doPreloadFiles();
     return cache.languages();
   }
 
   @Override
   public FilePredicates predicates() {
     return predicates;
-  }
-
-  /**
-   * This method is called before each search of files.
-   */
-  protected void doPreloadFiles() {
-    // nothing to do by default
   }
 
   public abstract static class Cache implements Index {
@@ -274,7 +253,7 @@ public class DefaultFileSystem implements FileSystem {
         languages.add(inputFile.language());
       }
       fileMap.put(inputFile.relativePath(), inputFile);
-      filesByNameCache.put(FilenamePredicate.getFilename(inputFile), inputFile);
+      filesByNameCache.put(inputFile.filename(), inputFile);
       filesByExtensionCache.put(FileExtensionPredicate.getExtension(inputFile), inputFile);
     }
 

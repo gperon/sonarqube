@@ -19,14 +19,15 @@
  */
 // @flow
 import React from 'react';
+import PropTypes from 'prop-types';
 import { getSettingValue, isEmptyValue, getDefaultValue } from '../utils';
 import { translate } from '../../../helpers/l10n';
 
 export default class DefinitionDefaults extends React.PureComponent {
   static propTypes = {
-    setting: React.PropTypes.object.isRequired,
-    isDefault: React.PropTypes.bool.isRequired,
-    onReset: React.PropTypes.func.isRequired
+    setting: PropTypes.object.isRequired,
+    isDefault: PropTypes.bool.isRequired,
+    onReset: PropTypes.func.isRequired
   };
 
   handleReset(e: Object) {
@@ -50,9 +51,13 @@ export default class DefinitionDefaults extends React.PureComponent {
 
         {isExplicitlySet &&
           <div className="spacer-top nowrap">
-            <button onClick={e => this.handleReset(e)}>{translate('reset_verb')}</button>
+            <button onClick={e => this.handleReset(e)}>
+              {translate('reset_verb')}
+            </button>
             <span className="spacer-left note">
-              {translate('default')}{': '}{getDefaultValue(setting)}
+              {translate('default')}
+              {': '}
+              {getDefaultValue(setting)}
             </span>
           </div>}
       </div>

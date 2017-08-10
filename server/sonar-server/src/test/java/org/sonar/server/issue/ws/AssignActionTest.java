@@ -24,7 +24,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.mockito.ArgumentCaptor;
-import org.sonar.api.config.MapSettings;
+import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.server.ws.Request;
 import org.sonar.api.server.ws.Response;
 import org.sonar.api.utils.internal.TestSystem2;
@@ -75,12 +75,12 @@ public class AssignActionTest {
   @Rule
   public UserSessionRule userSession = UserSessionRule.standalone();
   @Rule
-  public EsTester es = new EsTester(new IssueIndexDefinition(new MapSettings()));
+  public EsTester es = new EsTester(new IssueIndexDefinition(new MapSettings().asConfig()));
   @Rule
   public DbTester db = DbTester.create(system2);
 
   private DefaultOrganizationProvider defaultOrganizationProvider = TestDefaultOrganizationProvider.from(db);
-  private IssueIndexer issueIndexer = new IssueIndexer(es.client(), new IssueIteratorFactory(db.getDbClient()));
+  private IssueIndexer issueIndexer = new IssueIndexer(es.client(), db.getDbClient(), new IssueIteratorFactory(db.getDbClient()));
   private OperationResponseWriter responseWriter = mock(OperationResponseWriter.class);
   private AssignAction underTest = new AssignAction(system2, userSession, db.getDbClient(), new IssueFinder(db.getDbClient(), userSession), new IssueFieldsSetter(),
     new IssueUpdater(db.getDbClient(),
@@ -248,14 +248,14 @@ public class AssignActionTest {
   private void verifyContentOfPreloadedSearchResponseData(IssueDto issue) {
     SearchResponseData preloadedSearchResponseData = preloadedSearchResponseDataCaptor.getValue();
     assertThat(preloadedSearchResponseData.getIssues())
-        .extracting(IssueDto::getKey)
-        .containsOnly(issue.getKey());
+      .extracting(IssueDto::getKey)
+      .containsOnly(issue.getKey());
     assertThat(preloadedSearchResponseData.getRules())
-        .extracting(RuleDefinitionDto::getKey)
-        .containsOnly(issue.getRuleKey());
+      .extracting(RuleDefinitionDto::getKey)
+      .containsOnly(issue.getRuleKey());
     assertThat(preloadedSearchResponseData.getComponents())
-        .extracting(ComponentDto::uuid)
-        .containsOnly(issue.getComponentUuid(), issue.getProjectUuid());
+      .extracting(ComponentDto::uuid)
+      .containsOnly(issue.getComponentUuid(), issue.getProjectUuid());
   }
 
   private UserDto insertUser(String login) {

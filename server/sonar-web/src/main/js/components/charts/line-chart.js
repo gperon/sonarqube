@@ -18,23 +18,27 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 import React from 'react';
+import createReactClass from 'create-react-class';
+import PropTypes from 'prop-types';
 import { extent, max } from 'd3-array';
 import { scaleLinear } from 'd3-scale';
 import { area as d3Area, line as d3Line, curveBasis } from 'd3-shape';
 import { ResizeMixin } from './../mixins/resize-mixin';
 import { TooltipsMixin } from './../mixins/tooltips-mixin';
 
-export const LineChart = React.createClass({
+export const LineChart = createReactClass({
+  displayName: 'LineChart',
+
   propTypes: {
-    data: React.PropTypes.arrayOf(React.PropTypes.object).isRequired,
-    xTicks: React.PropTypes.arrayOf(React.PropTypes.any),
-    xValues: React.PropTypes.arrayOf(React.PropTypes.any),
-    padding: React.PropTypes.arrayOf(React.PropTypes.number),
-    backdropConstraints: React.PropTypes.arrayOf(React.PropTypes.number),
-    displayBackdrop: React.PropTypes.bool,
-    displayPoints: React.PropTypes.bool,
-    displayVerticalGrid: React.PropTypes.bool,
-    height: React.PropTypes.number
+    data: PropTypes.arrayOf(PropTypes.object).isRequired,
+    xTicks: PropTypes.arrayOf(PropTypes.any),
+    xValues: PropTypes.arrayOf(PropTypes.any),
+    padding: PropTypes.arrayOf(PropTypes.number),
+    backdropConstraints: PropTypes.arrayOf(PropTypes.number),
+    displayBackdrop: PropTypes.bool,
+    displayPoints: PropTypes.bool,
+    displayVerticalGrid: PropTypes.bool,
+    height: PropTypes.number
   },
 
   mixins: [ResizeMixin, TooltipsMixin],
@@ -63,6 +67,7 @@ export const LineChart = React.createClass({
       .x(d => xScale(d.x))
       .y0(yScale.range()[0])
       .y1(d => yScale(d.y))
+      .defined(d => d.y != null)
       .curve(curveBasis);
 
     let data = this.props.data;
@@ -77,12 +82,16 @@ export const LineChart = React.createClass({
     if (!this.props.displayPoints) {
       return null;
     }
-    const points = this.props.data.map((point, index) => {
+    const points = this.props.data.filter(point => point.y != null).map((point, index) => {
       const x = xScale(point.x);
       const y = yScale(point.y);
       return <circle key={index} className="line-chart-point" r="3" cx={x} cy={y} />;
     });
-    return <g>{points}</g>;
+    return (
+      <g>
+        {points}
+      </g>
+    );
   },
 
   renderVerticalGrid(xScale, yScale) {
@@ -95,7 +104,11 @@ export const LineChart = React.createClass({
       const y2 = yScale(point.y);
       return <line key={index} className="line-chart-grid" x1={x} x2={x} y1={y1} y2={y2} />;
     });
-    return <g>{lines}</g>;
+    return (
+      <g>
+        {lines}
+      </g>
+    );
   },
 
   renderXTicks(xScale, yScale) {
@@ -106,9 +119,17 @@ export const LineChart = React.createClass({
       const point = this.props.data[index];
       const x = xScale(point.x);
       const y = yScale.range()[0];
-      return <text key={index} className="line-chart-tick" x={x} y={y} dy="1.5em">{tick}</text>;
+      return (
+        <text key={index} className="line-chart-tick" x={x} y={y} dy="1.5em">
+          {tick}
+        </text>
+      );
     });
-    return <g>{ticks}</g>;
+    return (
+      <g>
+        {ticks}
+      </g>
+    );
   },
 
   renderXValues(xScale, yScale) {
@@ -119,13 +140,25 @@ export const LineChart = React.createClass({
       const point = this.props.data[index];
       const x = xScale(point.x);
       const y = yScale(point.y);
-      return <text key={index} className="line-chart-tick" x={x} y={y} dy="-1em">{value}</text>;
+      return (
+        <text key={index} className="line-chart-tick" x={x} y={y} dy="-1em">
+          {value}
+        </text>
+      );
     });
-    return <g>{ticks}</g>;
+    return (
+      <g>
+        {ticks}
+      </g>
+    );
   },
 
   renderLine(xScale, yScale) {
-    const p = d3Line().x(d => xScale(d.x)).y(d => yScale(d.y)).curve(curveBasis);
+    const p = d3Line()
+      .x(d => xScale(d.x))
+      .y(d => yScale(d.y))
+      .defined(d => d.y != null)
+      .curve(curveBasis);
     return <path className="line-chart-path" d={p(this.props.data)} />;
   },
 

@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -54,7 +55,6 @@ import org.sonarqube.ws.WsComponents.TreeWsResponse;
 import org.sonarqube.ws.client.component.TreeWsRequest;
 
 import static com.google.common.collect.FluentIterable.from;
-import static com.google.common.collect.Sets.newHashSet;
 import static java.lang.String.CASE_INSENSITIVE_ORDER;
 import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
@@ -223,7 +223,7 @@ public class TreeAction implements ComponentsWsAction {
     ComponentDto referenceComponent = referenceComponentsByUuid.get(component.getCopyResourceUuid());
     if (referenceComponent != null) {
       wsComponent.setRefId(referenceComponent.uuid());
-      wsComponent.setRefKey(referenceComponent.key());
+      wsComponent.setRefKey(referenceComponent.getDbKey());
     }
 
     return wsComponent;
@@ -261,7 +261,7 @@ public class TreeAction implements ComponentsWsAction {
       return requestQualifiers;
     }
 
-    Sets.SetView<String> qualifiersIntersection = Sets.intersection(newHashSet(childrenQualifiers), newHashSet(requestQualifiers));
+    Sets.SetView<String> qualifiersIntersection = Sets.intersection(new HashSet<>(childrenQualifiers), new HashSet<>(requestQualifiers));
 
     return new ArrayList<>(qualifiersIntersection);
   }

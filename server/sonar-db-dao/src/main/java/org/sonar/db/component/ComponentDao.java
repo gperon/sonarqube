@@ -44,8 +44,8 @@ import static java.util.Collections.emptyList;
 import static java.util.Objects.requireNonNull;
 import static org.apache.commons.lang.StringUtils.isBlank;
 import static org.sonar.db.DaoDatabaseUtils.buildLikeValue;
-import static org.sonar.db.DaoDatabaseUtils.executeLargeInputs;
-import static org.sonar.db.DaoDatabaseUtils.executeLargeUpdates;
+import static org.sonar.db.DatabaseUtils.executeLargeInputs;
+import static org.sonar.db.DatabaseUtils.executeLargeUpdates;
 import static org.sonar.db.WildcardPosition.BEFORE_AND_AFTER;
 
 public class ComponentDao implements Dao {
@@ -216,7 +216,7 @@ public class ComponentDao implements Dao {
   }
 
   public List<UuidWithProjectUuidDto> selectAllViewsAndSubViews(DbSession session) {
-    return mapper(session).selectUuidsForQualifiers(Qualifiers.VIEW, Qualifiers.SUBVIEW);
+    return mapper(session).selectUuidsForQualifiers(Qualifiers.APP, Qualifiers.VIEW, Qualifiers.SUBVIEW);
   }
 
   public List<String> selectProjectsFromView(DbSession session, String viewUuid, String projectViewUuid) {
@@ -279,9 +279,8 @@ public class ComponentDao implements Dao {
    * @param projectUuid the project uuid, which is selected with all of its children
    * @param handler the action to be applied to every result
    */
-  public void selectForIndexing(DbSession session, @Nullable String projectUuid, ResultHandler handler) {
-    requireNonNull(handler);
-    mapper(session).selectForIndexing(projectUuid, handler);
+  public void scrollForIndexing(DbSession session, @Nullable String projectUuid, ResultHandler<ComponentDto> handler) {
+    mapper(session).scrollForIndexing(projectUuid, handler);
   }
 
   /**

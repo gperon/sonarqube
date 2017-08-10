@@ -137,7 +137,7 @@ public class PersistComponentsStep implements ComputationStep {
   private Map<String, ComponentDto> indexExistingDtosByKey(DbSession session) {
     return dbClient.componentDao().selectAllComponentsFromProjectKey(session, treeRootHolder.getRoot().getKey())
       .stream()
-      .collect(java.util.stream.Collectors.toMap(ComponentDto::key, Function.identity()));
+      .collect(java.util.stream.Collectors.toMap(ComponentDto::getDbKey, Function.identity()));
   }
 
   private class PersistComponentStepsVisitor extends PathAwareVisitorAdapter<ComponentDtoHolder> {
@@ -220,7 +220,7 @@ public class PersistComponentsStep implements ComputationStep {
     }
 
     private ComponentDto persistComponent(ComponentDto componentDto) {
-      ComponentDto existingComponent = existingComponentDtosByKey.remove(componentDto.getKey());
+      ComponentDto existingComponent = existingComponentDtosByKey.remove(componentDto.getDbKey());
       if (existingComponent == null) {
         dbClient.componentDao().insert(dbSession, componentDto);
         return componentDto;
@@ -317,7 +317,7 @@ public class PersistComponentsStep implements ComputationStep {
     ComponentDto res = createBase(view);
 
     res.setScope(Scopes.PROJECT);
-    res.setQualifier(Qualifiers.VIEW);
+    res.setQualifier(view.getViewAttributes().getType().getQualifier());
     res.setName(view.getName());
     res.setDescription(view.getDescription());
     res.setLongName(res.name());
@@ -366,7 +366,7 @@ public class PersistComponentsStep implements ComputationStep {
     ComponentDto componentDto = new ComponentDto();
     componentDto.setOrganizationUuid(analysisMetadataHolder.getOrganization().getUuid());
     componentDto.setUuid(componentUuid);
-    componentDto.setKey(componentKey);
+    componentDto.setDbKey(componentKey);
     componentDto.setDeprecatedKey(componentKey);
     componentDto.setEnabled(true);
     componentDto.setCreatedAt(new Date(system2.now()));

@@ -19,12 +19,9 @@
  */
 package org.sonar.api.profiles;
 
-import com.google.common.base.Function;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nullable;
 import org.apache.commons.lang.StringUtils;
@@ -306,7 +303,7 @@ public class RulesProfile implements Cloneable {
    * @param optionalSeverity if null, then the default rule severity is used
    */
   public ActiveRule activateRule(final Rule rule, @Nullable RulePriority optionalSeverity) {
-    if (Iterables.any(activeRules, new MatchRule(rule))) {
+    if (activeRules.stream().anyMatch(ar -> ar.getRule().equals(rule))) {
       throw MessageException.of(String.format(
         "The definition of the profile '%s' (language '%s') contains multiple occurrences of the '%s:%s' rule. The plugin which declares this profile should fix this.",
         getName(), getLanguage(), rule.getRepositoryKey(), rule.getKey()));
@@ -341,7 +338,9 @@ public class RulesProfile implements Cloneable {
     RulesProfile clone = RulesProfile.create(getName(), getLanguage());
     clone.setDefaultProfile(getDefaultProfile());
     if (activeRules != null && !activeRules.isEmpty()) {
-      clone.setActiveRules(Lists.transform(activeRules, CloneFunction.INSTANCE));
+      clone.setActiveRules(activeRules.stream()
+        .map(ar -> (ActiveRule) ar.clone())
+        .collect(Collectors.toList()));
     }
     return clone;
   }
@@ -359,24 +358,4 @@ public class RulesProfile implements Cloneable {
     return new RulesProfile();
   }
 
-  private static class MatchRule implements Predicate<ActiveRule> {
-    private final Rule rule;
-
-    public MatchRule(Rule rule) {
-      this.rule = rule;
-    }
-
-    @Override
-    public boolean apply(ActiveRule input) {
-      return input.getRule().equals(rule);
-    }
-  }
-
-  private enum CloneFunction implements Function<ActiveRule, ActiveRule> {
-    INSTANCE;
-    @Override
-    public ActiveRule apply(ActiveRule input) {
-      return (ActiveRule) input.clone();
-    }
-  }
 }

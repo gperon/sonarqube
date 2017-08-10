@@ -19,6 +19,7 @@
  */
 // @flow
 import React from 'react';
+import PropTypes from 'prop-types';
 import classNames from 'classnames';
 import key from 'keymaster';
 import { debounce, keyBy, uniqBy } from 'lodash';
@@ -33,6 +34,7 @@ import { getSuggestions } from '../../../api/components';
 import { translate, translateWithParameters } from '../../../helpers/l10n';
 import { scrollToElement } from '../../../helpers/scrolling';
 import { getProjectUrl } from '../../../helpers/urls';
+import './Search.css';
 
 type Props = {|
   appState: { organizationsEnabled: boolean },
@@ -61,7 +63,7 @@ export default class Search extends React.PureComponent {
   state: State;
 
   static contextTypes = {
-    router: React.PropTypes.object
+    router: PropTypes.object
   };
 
   constructor(props: Props) {
@@ -294,7 +296,7 @@ export default class Search extends React.PureComponent {
     this.nodes[component] = node;
   };
 
-  renderResult = (component: Component) => (
+  renderResult = (component: Component) =>
     <SearchResult
       appState={this.props.appState}
       component={component}
@@ -305,14 +307,12 @@ export default class Search extends React.PureComponent {
       organizations={this.state.organizations}
       projects={this.state.projects}
       selected={this.state.selected === component.key}
-    />
-  );
+    />;
 
-  renderNoResults = () => (
+  renderNoResults = () =>
     <div className="navbar-search-no-results">
       {translateWithParameters('no_results_for_x', this.state.query)}
-    </div>
-  );
+    </div>;
 
   render() {
     const dropdownClassName = classNames('dropdown', 'navbar-search', { open: this.state.open });

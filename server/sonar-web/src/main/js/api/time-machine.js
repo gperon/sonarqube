@@ -38,11 +38,39 @@ type Response = {
 export const getTimeMachineData = (
   component: string,
   metrics: Array<string>,
-  other?: {}
+  other?: { p?: number, ps?: number, from?: string, to?: string }
 ): Promise<Response> =>
   getJSON('/api/measures/search_history', {
     component,
     metrics: metrics.join(),
     ps: 1000,
     ...other
+  });
+
+export const getAllTimeMachineData = (
+  component: string,
+  metrics: Array<string>,
+  other?: { p?: number, from?: string, to?: string },
+  prev?: Response
+): Promise<Response> =>
+  getTimeMachineData(component, metrics, { ...other, ps: 1000 }).then((r: Response) => {
+    const result = prev
+      ? {
+          measures: prev.measures.map((measure, idx) => ({
+            ...measure,
+            history: measure.history.concat(r.measures[idx].history)
+          })),
+          paging: r.paging
+        }
+      : r;
+
+    if (result.paging.pageIndex * result.paging.pageSize >= result.paging.total) {
+      return result;
+    }
+    return getAllTimeMachineData(
+      component,
+      metrics,
+      { ...other, p: result.paging.pageIndex + 1 },
+      result
+    );
   });

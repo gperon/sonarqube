@@ -23,7 +23,7 @@ import java.util.Collections;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.sonar.api.config.MapSettings;
+import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.server.ws.WebService.Action;
 import org.sonar.api.server.ws.WebService.Param;
 import org.sonar.api.utils.System2;
@@ -56,25 +56,26 @@ import static org.sonar.test.JsonAssert.assertJson;
 
 public class TagsActionTest {
 
+  private MapSettings settings = new MapSettings();
   @Rule
   public UserSessionRule userSession = UserSessionRule.standalone();
   @Rule
-  public DbTester db = DbTester.create();
+  public DbTester dbTester = DbTester.create();
   @Rule
-  public EsTester es = new EsTester(new IssueIndexDefinition(new MapSettings()), new RuleIndexDefinition(new MapSettings()));
+  public EsTester esTester = new EsTester(new IssueIndexDefinition(settings.asConfig()), new RuleIndexDefinition(settings.asConfig()));
 
-  private IssueIndexer issueIndexer = new IssueIndexer(es.client(), new IssueIteratorFactory(db.getDbClient()));
-  private RuleIndexer ruleIndexer = new RuleIndexer(es.client(), db.getDbClient());
-  private PermissionIndexerTester permissionIndexerTester = new PermissionIndexerTester(es, issueIndexer);
-  private IssueIndex issueIndex = new IssueIndex(es.client(), System2.INSTANCE, userSession, new AuthorizationTypeSupport(userSession));
-  private RuleIndex ruleIndex = new RuleIndex(es.client());
+  private IssueIndexer issueIndexer = new IssueIndexer(esTester.client(), dbTester.getDbClient(), new IssueIteratorFactory(dbTester.getDbClient()));
+  private RuleIndexer ruleIndexer = new RuleIndexer(esTester.client(), dbTester.getDbClient());
+  private PermissionIndexerTester permissionIndexerTester = new PermissionIndexerTester(esTester, issueIndexer);
+  private IssueIndex issueIndex = new IssueIndex(esTester.client(), System2.INSTANCE, userSession, new AuthorizationTypeSupport(userSession));
+  private RuleIndex ruleIndex = new RuleIndex(esTester.client());
 
-  private WsActionTester tester = new WsActionTester(new TagsAction(issueIndex, ruleIndex, db.getDbClient(), TestDefaultOrganizationProvider.from(db)));
+  private WsActionTester ws = new WsActionTester(new TagsAction(issueIndex, ruleIndex, dbTester.getDbClient(), TestDefaultOrganizationProvider.from(dbTester)));
   private OrganizationDto organization;
 
   @Before
   public void before() {
-    organization = db.organizations().insert();
+    organization = dbTester.organizations().insert();
   }
 
   @Test
@@ -83,7 +84,7 @@ public class TagsActionTest {
     insertIssueWithBrowsePermission(insertRuleWithoutTags(), "tag1", "tag2");
     insertIssueWithBrowsePermission(insertRuleWithoutTags(), "tag3", "tag4", "tag5");
 
-    String result = tester.newRequest()
+    String result = ws.newRequest()
       .setParam("organization", organization.getKey())
       .execute().getInput();
     assertJson(result).isSimilarTo("{\"tags\":[\"tag1\", \"tag2\", \"tag3\", \"tag4\", \"tag5\"]}");
@@ -92,17 +93,17 @@ public class TagsActionTest {
   @Test
   public void return_tags_from_rules() throws Exception {
     userSession.logIn();
-    RuleDefinitionDto r = db.rules().insert(setSystemTags("tag1"));
-    ruleIndexer.indexRuleDefinition(r.getKey());
-    db.rules().insertOrUpdateMetadata(r, organization, setTags("tag2"));
-    ruleIndexer.indexRuleExtension(organization, r.getKey());
+    RuleDefinitionDto r = dbTester.rules().insert(setSystemTags("tag1"));
+    ruleIndexer.commitAndIndex(dbTester.getSession(), r.getKey());
+    dbTester.rules().insertOrUpdateMetadata(r, organization, setTags("tag2"));
+    ruleIndexer.commitAndIndex(dbTester.getSession(), r.getKey(), organization);
 
-    RuleDefinitionDto r2 = db.rules().insert(setSystemTags("tag3"));
-    ruleIndexer.indexRuleDefinition(r2.getKey());
-    db.rules().insertOrUpdateMetadata(r2, organization, setTags("tag4", "tag5"));
-    ruleIndexer.indexRuleExtension(organization, r2.getKey());
+    RuleDefinitionDto r2 = dbTester.rules().insert(setSystemTags("tag3"));
+    ruleIndexer.commitAndIndex(dbTester.getSession(), r2.getKey());
+    dbTester.rules().insertOrUpdateMetadata(r2, organization, setTags("tag4", "tag5"));
+    ruleIndexer.commitAndIndex(dbTester.getSession(), r2.getKey(), organization);
 
-    String result = tester.newRequest()
+    String result = ws.newRequest()
       .setParam("organization", organization.getKey())
       .execute().getInput();
     assertJson(result).isSimilarTo("{\"tags\":[\"tag1\", \"tag2\", \"tag3\", \"tag4\", \"tag5\"]}");
@@ -114,12 +115,12 @@ public class TagsActionTest {
     insertIssueWithBrowsePermission(insertRuleWithoutTags(), "tag1", "tag2");
     insertIssueWithBrowsePermission(insertRuleWithoutTags(), "tag3", "tag4", "tag5");
 
-    RuleDefinitionDto r = db.rules().insert(setSystemTags("tag6"));
-    ruleIndexer.indexRuleDefinition(r.getKey());
-    db.rules().insertOrUpdateMetadata(r, organization, setTags("tag7"));
-    ruleIndexer.indexRuleExtension(organization, r.getKey());
+    RuleDefinitionDto r = dbTester.rules().insert(setSystemTags("tag6"));
+    ruleIndexer.commitAndIndex(dbTester.getSession(), r.getKey());
+    dbTester.rules().insertOrUpdateMetadata(r, organization, setTags("tag7"));
+    ruleIndexer.commitAndIndex(dbTester.getSession(), r.getKey(), organization);
 
-    String result = tester.newRequest()
+    String result = ws.newRequest()
       .setParam("organization", organization.getKey())
       .execute().getInput();
     assertJson(result).isSimilarTo("{\"tags\":[\"tag1\", \"tag2\", \"tag3\", \"tag4\", \"tag5\", \"tag6\", \"tag7\"]}");
@@ -131,7 +132,7 @@ public class TagsActionTest {
     insertIssueWithBrowsePermission(insertRuleWithoutTags(), "tag1", "tag2");
     insertIssueWithBrowsePermission(insertRuleWithoutTags(), "tag3", "tag4", "tag5");
 
-    String result = tester.newRequest()
+    String result = ws.newRequest()
       .setParam("ps", "2")
       .setParam("organization", organization.getKey())
       .execute().getInput();
@@ -144,7 +145,7 @@ public class TagsActionTest {
     insertIssueWithBrowsePermission(insertRuleWithoutTags(), "tag1", "tag2");
     insertIssueWithBrowsePermission(insertRuleWithoutTags(), "tag12", "tag4", "tag5");
 
-    String result = tester.newRequest()
+    String result = ws.newRequest()
       .setParam("q", "ag1")
       .setParam("organization", organization.getKey())
       .execute().getInput();
@@ -157,7 +158,7 @@ public class TagsActionTest {
     insertIssueWithBrowsePermission(insertRuleWithoutTags(), "tag1", "tag2");
     insertIssueWithoutBrowsePermission(insertRuleWithoutTags(), "tag3", "tag4");
 
-    String result = tester.newRequest()
+    String result = ws.newRequest()
       .setParam("organization", organization.getKey())
       .execute().getInput();
     assertJson(result).isSimilarTo("{\"tags\":[\"tag1\", \"tag2\"]}");
@@ -165,32 +166,33 @@ public class TagsActionTest {
   }
 
   @Test
-  public void return_empty_list() throws Exception {
+  public void empty_list() throws Exception {
     userSession.logIn();
-    String result = tester.newRequest().execute().getInput();
+    String result = ws.newRequest().execute().getInput();
     assertJson(result).isSimilarTo("{\"tags\":[]}");
   }
 
   @Test
-  public void test_example() throws Exception {
+  public void json_example() throws Exception {
     userSession.logIn();
     insertIssueWithBrowsePermission(insertRuleWithoutTags(), "convention");
 
-    RuleDefinitionDto r = db.rules().insert(setSystemTags("cwe"));
-    ruleIndexer.indexRuleDefinition(r.getKey());
-    db.rules().insertOrUpdateMetadata(r, organization, setTags("security"));
-    ruleIndexer.indexRuleExtension(organization, r.getKey());
+    RuleDefinitionDto r = dbTester.rules().insert(setSystemTags("cwe"));
+    ruleIndexer.commitAndIndex(dbTester.getSession(), r.getKey());
+    dbTester.rules().insertOrUpdateMetadata(r, organization, setTags("security"));
+    ruleIndexer.commitAndIndex(dbTester.getSession(), r.getKey(), organization);
 
-    String result = tester.newRequest()
+    String result = ws.newRequest()
       .setParam("organization", organization.getKey())
       .execute().getInput();
-    assertJson(result).isSimilarTo(tester.getDef().responseExampleAsString());
+
+    assertJson(result).isSimilarTo(ws.getDef().responseExampleAsString());
   }
 
   @Test
-  public void test_definition() {
+  public void definition() {
     userSession.logIn();
-    Action action = tester.getDef();
+    Action action = ws.getDef();
     assertThat(action.description()).isNotEmpty();
     assertThat(action.responseExampleAsString()).isNotEmpty();
     assertThat(action.isPost()).isFalse();
@@ -198,13 +200,11 @@ public class TagsActionTest {
     assertThat(action.params()).extracting(Param::key).containsExactlyInAnyOrder("q", "ps", "organization");
 
     Param query = action.param("q");
-    assertThat(query).isNotNull();
     assertThat(query.isRequired()).isFalse();
     assertThat(query.description()).isNotEmpty();
     assertThat(query.exampleValue()).isNotEmpty();
 
     Param pageSize = action.param("ps");
-    assertThat(pageSize).isNotNull();
     assertThat(pageSize.isRequired()).isFalse();
     assertThat(pageSize.defaultValue()).isEqualTo("10");
     assertThat(pageSize.description()).isNotEmpty();
@@ -220,7 +220,7 @@ public class TagsActionTest {
   }
 
   private RuleDefinitionDto insertRuleWithoutTags() {
-    return db.rules().insert(setSystemTags());
+    return dbTester.rules().insert(setSystemTags());
   }
 
   private void insertIssueWithBrowsePermission(RuleDefinitionDto rule, String... tags) {
@@ -229,15 +229,15 @@ public class TagsActionTest {
   }
 
   private IssueDto insertIssueWithoutBrowsePermission(RuleDefinitionDto rule, String... tags) {
-    IssueDto issue = db.issues().insertIssue(organization, i -> i.setRule(rule).setTags(asList(tags)));
-    ComponentDto project = db.getDbClient().componentDao().selectByUuid(db.getSession(), issue.getProjectUuid()).get();
+    IssueDto issue = dbTester.issues().insertIssue(organization, i -> i.setRule(rule).setTags(asList(tags)));
+    ComponentDto project = dbTester.getDbClient().componentDao().selectByUuid(dbTester.getSession(), issue.getProjectUuid()).get();
     userSession.addProjectPermission(USER, project);
-    issueIndexer.index(Collections.singletonList(issue.getKey()));
+    issueIndexer.commitAndIndexIssues(dbTester.getSession(), Collections.singletonList(issue));
     return issue;
   }
 
   private void grantAccess(IssueDto issue) {
-    PermissionIndexerDao.Dto access = new PermissionIndexerDao.Dto(issue.getProjectUuid(), System2.INSTANCE.now(), "TRK");
+    PermissionIndexerDao.Dto access = new PermissionIndexerDao.Dto(issue.getProjectUuid(), "TRK");
     access.addUserId(userSession.getUserId());
     permissionIndexerTester.allow(access);
   }

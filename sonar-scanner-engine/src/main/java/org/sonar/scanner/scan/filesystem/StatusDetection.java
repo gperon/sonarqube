@@ -19,21 +19,24 @@
  */
 package org.sonar.scanner.scan.filesystem;
 
+import javax.annotation.concurrent.Immutable;
+
 import org.apache.commons.lang.StringUtils;
 import org.sonar.api.batch.fs.InputFile;
 import org.sonar.scanner.repository.FileData;
 import org.sonar.scanner.repository.ProjectRepositories;
 
+@Immutable
 class StatusDetection {
 
-  private final ProjectRepositories projectSettings;
+  private final ProjectRepositories projectRepositories;
 
   StatusDetection(ProjectRepositories projectSettings) {
-    this.projectSettings = projectSettings;
+    this.projectRepositories = projectSettings;
   }
 
   InputFile.Status status(String projectKeyWithBranch, String relativePath, String hash) {
-    FileData fileDataPerPath = projectSettings.fileData(projectKeyWithBranch, relativePath);
+    FileData fileDataPerPath = projectRepositories.fileData(projectKeyWithBranch, relativePath);
     if (fileDataPerPath == null) {
       return InputFile.Status.ADDED;
     }

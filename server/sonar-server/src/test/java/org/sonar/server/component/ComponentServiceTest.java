@@ -29,11 +29,10 @@ import org.sonar.db.DbTester;
 import org.sonar.db.component.ComponentDbTester;
 import org.sonar.db.component.ComponentDto;
 import org.sonar.db.component.ComponentTesting;
-import org.sonar.server.es.ProjectIndexer;
+import org.sonar.server.es.TestProjectIndexers;
 import org.sonar.server.tester.UserSessionRule;
 
 import static org.assertj.guava.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
 import static org.sonar.db.component.ComponentTesting.newFileDto;
 import static org.sonar.db.component.ComponentTesting.newModuleDto;
 
@@ -49,25 +48,25 @@ public class ComponentServiceTest {
   private ComponentDbTester componentDb = new ComponentDbTester(dbTester);
   private DbClient dbClient = dbTester.getDbClient();
   private DbSession dbSession = dbTester.getSession();
-  private ProjectIndexer projectIndexer = mock(ProjectIndexer.class);
+  private TestProjectIndexers projectIndexers = new TestProjectIndexers();
 
-  private ComponentService underTest = new ComponentService(dbClient, userSession, projectIndexer);
+  private ComponentService underTest = new ComponentService(dbClient, userSession, projectIndexers);
 
   @Test
   public void bulk_update() {
-    ComponentDto project = componentDb.insertComponent(ComponentTesting.newPrivateProjectDto(dbTester.organizations().insert()).setKey("my_project"));
-    ComponentDto module = componentDb.insertComponent(newModuleDto(project).setKey("my_project:root:module"));
-    ComponentDto inactiveModule = componentDb.insertComponent(newModuleDto(project).setKey("my_project:root:inactive_module").setEnabled(false));
-    ComponentDto file = componentDb.insertComponent(newFileDto(module, null).setKey("my_project:root:module:src/File.xoo"));
-    ComponentDto inactiveFile = componentDb.insertComponent(newFileDto(module, null).setKey("my_project:root:module:src/InactiveFile.xoo").setEnabled(false));
+    ComponentDto project = componentDb.insertComponent(ComponentTesting.newPrivateProjectDto(dbTester.organizations().insert()).setDbKey("my_project"));
+    ComponentDto module = componentDb.insertComponent(newModuleDto(project).setDbKey("my_project:root:module"));
+    ComponentDto inactiveModule = componentDb.insertComponent(newModuleDto(project).setDbKey("my_project:root:inactive_module").setEnabled(false));
+    ComponentDto file = componentDb.insertComponent(newFileDto(module, null).setDbKey("my_project:root:module:src/File.xoo"));
+    ComponentDto inactiveFile = componentDb.insertComponent(newFileDto(module, null).setDbKey("my_project:root:module:src/InactiveFile.xoo").setEnabled(false));
 
-    underTest.bulkUpdateKey(dbSession, project.uuid(), "my_", "your_");
+    underTest.bulkUpdateKey(dbSession, project, "my_", "your_");
 
-    assertComponentKeyUpdated(project.key(), "your_project");
-    assertComponentKeyUpdated(module.key(), "your_project:root:module");
-    assertComponentKeyUpdated(file.key(), "your_project:root:module:src/File.xoo");
-    assertComponentKeyNotUpdated(inactiveModule.key());
-    assertComponentKeyNotUpdated(inactiveFile.key());
+    assertComponentKeyUpdated(project.getDbKey(), "your_project");
+    assertComponentKeyUpdated(module.getDbKey(), "your_project:root:module");
+    assertComponentKeyUpdated(file.getDbKey(), "your_project:root:module:src/File.xoo");
+    assertComponentKeyNotUpdated(inactiveModule.getDbKey());
+    assertComponentKeyNotUpdated(inactiveFile.getDbKey());
   }
 
   private void assertComponentKeyUpdated(String oldKey, String newKey) {

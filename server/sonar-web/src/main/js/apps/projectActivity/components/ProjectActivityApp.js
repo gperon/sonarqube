@@ -20,79 +20,82 @@
 // @flow
 import React from 'react';
 import Helmet from 'react-helmet';
-import { connect } from 'react-redux';
+import moment from 'moment';
 import ProjectActivityPageHeader from './ProjectActivityPageHeader';
 import ProjectActivityAnalysesList from './ProjectActivityAnalysesList';
-import ProjectActivityPageFooter from './ProjectActivityPageFooter';
-import { fetchProjectActivity } from '../actions';
-import { getComponent } from '../../../store/rootReducer';
+import ProjectActivityGraphs from './ProjectActivityGraphs';
 import { translate } from '../../../helpers/l10n';
 import './projectActivity.css';
+import type { Analysis, MeasureHistory, Metric, Query } from '../types';
 
 type Props = {
-  location: { query: { id: string } },
-  fetchProjectActivity: (project: string, filter: ?string) => void,
-  project: { configuration?: { showHistory: boolean } }
+  addCustomEvent: (analysis: string, name: string, category?: string) => Promise<*>,
+  addVersion: (analysis: string, version: string) => Promise<*>,
+  analyses: Array<Analysis>,
+  analysesLoading: boolean,
+  changeEvent: (event: string, name: string) => Promise<*>,
+  deleteAnalysis: (analysis: string) => Promise<*>,
+  deleteEvent: (analysis: string, event: string) => Promise<*>,
+  graphLoading: boolean,
+  loading: boolean,
+  project: {
+    configuration?: { showHistory: boolean },
+    key: string,
+    leakPeriodDate: string,
+    qualifier: string
+  },
+  metrics: Array<Metric>,
+  measuresHistory: Array<MeasureHistory>,
+  query: Query,
+  updateQuery: (newQuery: Query) => void
 };
 
-type State = {
-  filter: ?string
-};
+export default function ProjectActivityApp(props: Props) {
+  const { analyses, measuresHistory, query } = props;
+  const { configuration } = props.project;
+  const canAdmin = configuration ? configuration.showHistory : false;
+  return (
+    <div id="project-activity" className="page page-limited">
+      <Helmet title={translate('project_activity.page')} />
 
-class ProjectActivityApp extends React.PureComponent {
-  props: Props;
+      <ProjectActivityPageHeader
+        category={query.category}
+        from={query.from}
+        project={props.project}
+        to={query.to}
+        updateQuery={props.updateQuery}
+      />
 
-  state: State = {
-    filter: null
-  };
-
-  componentDidMount() {
-    const html = document.querySelector('html');
-    if (html) {
-      html.classList.add('dashboard-page');
-    }
-    this.props.fetchProjectActivity(this.props.location.query.id);
-  }
-
-  componentWillUnmount() {
-    const html = document.querySelector('html');
-    if (html) {
-      html.classList.remove('dashboard-page');
-    }
-  }
-
-  handleFilter = (filter: ?string) => {
-    this.setState({ filter });
-    this.props.fetchProjectActivity(this.props.location.query.id, filter);
-  };
-
-  render() {
-    const project = this.props.location.query.id;
-    const { configuration } = this.props.project;
-    const canAdmin = configuration ? configuration.showHistory : false;
-
-    return (
-      <div id="project-activity" className="page page-limited">
-        <Helmet title={translate('project_activity.page')} />
-
-        <ProjectActivityPageHeader
-          project={project}
-          filter={this.state.filter}
-          changeFilter={this.handleFilter}
-        />
-
-        <ProjectActivityAnalysesList project={project} canAdmin={canAdmin} />
-
-        <ProjectActivityPageFooter project={project} />
+      <div className="layout-page project-activity-page">
+        <div className="layout-page-side-outer project-activity-page-side-outer boxed-group">
+          <ProjectActivityAnalysesList
+            addCustomEvent={props.addCustomEvent}
+            addVersion={props.addVersion}
+            analysesLoading={props.analysesLoading}
+            analyses={analyses}
+            canAdmin={canAdmin}
+            className="boxed-group-inner"
+            changeEvent={props.changeEvent}
+            deleteAnalysis={props.deleteAnalysis}
+            deleteEvent={props.deleteEvent}
+            loading={props.loading}
+            project={props.project}
+            query={props.query}
+            updateQuery={props.updateQuery}
+          />
+        </div>
+        <div className="project-activity-layout-page-main">
+          <ProjectActivityGraphs
+            analyses={analyses}
+            leakPeriodDate={moment(props.project.leakPeriodDate).toDate()}
+            loading={props.graphLoading}
+            measuresHistory={measuresHistory}
+            metrics={props.metrics}
+            query={query}
+            updateQuery={props.updateQuery}
+          />
+        </div>
       </div>
-    );
-  }
+    </div>
+  );
 }
-
-const mapStateToProps = (state, ownProps: Props) => ({
-  project: getComponent(state, ownProps.location.query.id)
-});
-
-const mapDispatchToProps = { fetchProjectActivity };
-
-export default connect(mapStateToProps, mapDispatchToProps)(ProjectActivityApp);

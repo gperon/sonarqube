@@ -26,12 +26,12 @@ import { VIEWS, VISUALIZATIONS } from '../utils';
 
 export type Option = { label: string, type: string, value: string };
 
-type Props = {
+type Props = {|
   className?: string,
   onChange: ({ view: string, visualization?: string }) => void,
   view: string,
   visualization?: string
-};
+|};
 
 export default class PerspectiveSelect extends React.PureComponent {
   options: Array<Option>;
@@ -66,7 +66,9 @@ export default class PerspectiveSelect extends React.PureComponent {
     const perspective = view === 'visualizations' ? visualization : view;
     return (
       <div className={this.props.className}>
-        <label>{translate('projects.perspective')}:</label>
+        <label>
+          {translate('projects.perspective')}:
+        </label>
         <Select
           className="little-spacer-left input-medium"
           clearable={false}

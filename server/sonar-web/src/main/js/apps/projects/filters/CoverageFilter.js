@@ -18,6 +18,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 import React from 'react';
+import PropTypes from 'prop-types';
 import FilterContainer from './FilterContainer';
 import FilterHeader from './FilterHeader';
 import CoverageRating from '../../../components/ui/CoverageRating';
@@ -26,11 +27,11 @@ import { translate } from '../../../helpers/l10n';
 
 export default class CoverageFilter extends React.PureComponent {
   static propTypes = {
-    className: React.PropTypes.string,
-    query: React.PropTypes.object.isRequired,
-    isFavorite: React.PropTypes.bool,
-    organization: React.PropTypes.object,
-    property: React.PropTypes.string
+    className: PropTypes.string,
+    query: PropTypes.object.isRequired,
+    isFavorite: PropTypes.bool,
+    organization: PropTypes.object,
+    property: PropTypes.string
   };
 
   static defaultProps = {
@@ -54,7 +55,9 @@ export default class CoverageFilter extends React.PureComponent {
         <span className="spacer-left">
           {option < 6
             ? getCoverageRatingLabel(option)
-            : <span className="big-spacer-left">{translate('no_data')}</span>}
+            : <span className="big-spacer-left">
+                {translate('no_data')}
+              </span>}
         </span>
       </span>
     );

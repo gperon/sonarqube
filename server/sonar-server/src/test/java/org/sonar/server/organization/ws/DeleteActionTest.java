@@ -20,13 +20,12 @@
 
 package org.sonar.server.organization.ws;
 
-import java.util.Arrays;
 import java.util.List;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.mockito.ArgumentCaptor;
-import org.sonar.api.config.MapSettings;
+import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.server.ws.WebService;
 import org.sonar.api.utils.System2;
 import org.sonar.core.util.UuidFactory;
@@ -59,6 +58,7 @@ import org.sonar.server.user.index.UserQuery;
 import org.sonar.server.ws.WsActionTester;
 
 import static com.google.common.collect.ImmutableList.of;
+import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
@@ -71,7 +71,7 @@ public class DeleteActionTest {
   @Rule
   public DbTester db = DbTester.create(System2.INSTANCE);
   @Rule
-  public EsTester es = new EsTester(new UserIndexDefinition(new MapSettings()));
+  public EsTester es = new EsTester(new UserIndexDefinition(new MapSettings().asConfig()));
   @Rule
   public UserSessionRule userSession = UserSessionRule.standalone();
   @Rule
@@ -229,11 +229,12 @@ public class DeleteActionTest {
     ComponentDto module = db.components().insertComponent(ComponentTesting.newModuleDto(project));
     ComponentDto directory = db.components().insertComponent(ComponentTesting.newDirectory(module, "a/b"));
     ComponentDto file = db.components().insertComponent(ComponentTesting.newFileDto(module, directory));
-    ComponentDto view = db.components().insertView(organization, (dto) -> {
-    });
+    ComponentDto view = db.components().insertView(organization);
     ComponentDto subview1 = db.components().insertComponent(ComponentTesting.newSubView(view, "v1", "ksv1"));
     ComponentDto subview2 = db.components().insertComponent(ComponentTesting.newSubView(subview1, "v2", "ksv2"));
+    ComponentDto application = db.components().insertApplication(organization);
     ComponentDto projectCopy = db.components().insertComponent(ComponentTesting.newProjectCopy("pc1", project, subview1));
+    ComponentDto projectCopyForApplication = db.components().insertComponent(ComponentTesting.newProjectCopy("pc2", project, application));
     logInAsAdministrator(organization);
 
     sendRequest(organization);
@@ -241,7 +242,7 @@ public class DeleteActionTest {
     verifyOrganizationDoesNotExist(organization);
     ArgumentCaptor<List<ComponentDto>> arg = (ArgumentCaptor<List<ComponentDto>>) ((ArgumentCaptor) ArgumentCaptor.forClass(List.class));
     verify(componentCleanerService).delete(any(DbSession.class), arg.capture());
-    assertThat(arg.getValue()).containsOnly(project, view);
+    assertThat(arg.getValue()).containsOnly(project, view, application);
   }
 
   @Test
@@ -305,7 +306,7 @@ public class DeleteActionTest {
     db.organizations().addMember(org, user1);
     db.organizations().addMember(otherOrg, user1);
     db.organizations().addMember(org, user2);
-    userIndexer.index(Arrays.asList(user1.getLogin(), user2.getLogin()));
+    userIndexer.commitAndIndex(db.getSession(), asList(user1, user2));
     logInAsAdministrator(org);
 
     sendRequest(org);

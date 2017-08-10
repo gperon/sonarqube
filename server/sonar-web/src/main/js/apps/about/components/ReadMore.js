@@ -18,18 +18,21 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 import React from 'react';
+import PropTypes from 'prop-types';
 import { translate } from '../../../helpers/l10n';
 
 export default class ReadMore extends React.PureComponent {
   static propTypes = {
-    link: React.PropTypes.string.isRequired
+    link: PropTypes.string.isRequired
   };
 
   render() {
     return (
       <div className="big-spacer-top">
         <a className="about-page-link-more" href={this.props.link} target="_blank">
-          <span>{translate('about_page.read_more')}</span>
+          <span>
+            {translate('about_page.read_more')}
+          </span>
         </a>
       </div>
     );

@@ -19,13 +19,14 @@
  */
 package org.sonar.api.batch.rule;
 
-import com.google.common.annotations.Beta;
+import javax.annotation.concurrent.Immutable;
 
 /**
  * @since 4.2
  */
-@Beta
+@Immutable
 public interface RuleParam {
   String key();
+
   String description();
 }

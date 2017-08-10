@@ -69,7 +69,7 @@ import static org.sonarqube.ws.client.ce.CeWsParameters.PARAM_TYPE;
 
 public class ActivityAction implements CeWsAction {
   private static final int MAX_PAGE_SIZE = 1000;
-  private static final List<String> POSSIBLE_QUALIFIERS = ImmutableList.of(Qualifiers.PROJECT, Qualifiers.VIEW, "DEV", Qualifiers.MODULE);
+  private static final List<String> POSSIBLE_QUALIFIERS = ImmutableList.of(Qualifiers.PROJECT, Qualifiers.APP, Qualifiers.VIEW, "DEV", Qualifiers.MODULE);
 
   private final UserSession userSession;
   private final DbClient dbClient;
@@ -147,7 +147,7 @@ public class ActivityAction implements CeWsAction {
       .setDescription("Deprecated parameter")
       .setDeprecatedSince("5.5")
       .setDeprecatedKey("pageIndex", "5.4");
-    action.addPageSize(100, MAX_PAGE_SIZE);
+    action.createPageSize(100, MAX_PAGE_SIZE);
   }
 
   @Override

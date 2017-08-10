@@ -26,6 +26,7 @@ import org.junit.Test;
 import org.sonarqube.ws.Rules;
 import org.sonarqube.ws.Rules.SearchResponse;
 import org.sonarqube.ws.client.GetRequest;
+import org.sonarqube.ws.client.PostRequest;
 import org.sonarqube.ws.client.ServiceTester;
 import org.sonarqube.ws.client.WsConnector;
 
@@ -35,6 +36,7 @@ import static org.mockito.Mockito.mock;
 import static org.sonarqube.ws.client.rule.RulesWsParameters.PARAM_ACTIVATION;
 import static org.sonarqube.ws.client.rule.RulesWsParameters.PARAM_ACTIVE_SEVERITIES;
 import static org.sonarqube.ws.client.rule.RulesWsParameters.PARAM_AVAILABLE_SINCE;
+import static org.sonarqube.ws.client.rule.RulesWsParameters.PARAM_COMPARE_TO_PROFILE;
 import static org.sonarqube.ws.client.rule.RulesWsParameters.PARAM_INHERITANCE;
 import static org.sonarqube.ws.client.rule.RulesWsParameters.PARAM_IS_TEMPLATE;
 import static org.sonarqube.ws.client.rule.RulesWsParameters.PARAM_LANGUAGES;
@@ -101,6 +103,7 @@ public class RulesServiceTest {
       .setPageSize(PAGE_SIZE_VALUE)
       .setQuery(QUERY_VALUE)
       .setQProfile(QPROFILE_VALUE)
+      .setCompareToProfile("CompareTo")
       .setRepositories(REPOSITORIES_VALUE)
       .setRuleKey(RULE_KEY_VALUE)
       .setSort(SORT_VALUE)
@@ -126,6 +129,7 @@ public class RulesServiceTest {
       .hasParam("ps", PAGE_SIZE_VALUE)
       .hasParam("q", QUERY_VALUE)
       .hasParam(PARAM_QPROFILE, QPROFILE_VALUE)
+      .hasParam(PARAM_COMPARE_TO_PROFILE, "CompareTo")
       .hasParam(PARAM_REPOSITORIES, REPOSITORIES_VALUE_INLINED)
       .hasParam(PARAM_RULE_KEY, RULE_KEY_VALUE)
       .hasParam(PARAM_LANGUAGES, LANGUAGES_VALUE_INLINED)
@@ -148,6 +152,33 @@ public class RulesServiceTest {
       .hasPath("show")
       .hasParam("organization", "the-org")
       .hasParam("key", "the-rule/key")
+      .andNoOtherParam();
+  }
+
+  @Test
+  public void test_create() {
+    underTest.create(new CreateWsRequest.Builder()
+      .setTemplateKey("the-template-key")
+      .setCustomKey("the-custom-key")
+      .setSeverity("BLOCKER")
+      .setParams("the-params")
+      .setPreventReactivation(true)
+      .setMarkdownDescription("the-desc")
+      .setStatus("BETA")
+      .setName("the-name")
+      .build());
+
+    PostRequest postRequest = serviceTester.getPostRequest();
+    serviceTester.assertThat(postRequest)
+      .hasPath("create")
+      .hasParam("template_key", "the-template-key")
+      .hasParam("custom_key", "the-custom-key")
+      .hasParam("severity", "BLOCKER")
+      .hasParam("params", "the-params")
+      .hasParam("prevent_reactivation", "true")
+      .hasParam("markdown_description", "the-desc")
+      .hasParam("status", "BETA")
+      .hasParam("name", "the-name")
       .andNoOtherParam();
   }
 }

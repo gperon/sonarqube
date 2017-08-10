@@ -27,8 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nullable;
-import org.apache.ibatis.session.ResultContext;
-import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
 import org.assertj.core.api.ListAssert;
 import org.junit.Rule;
@@ -53,8 +51,8 @@ import static org.assertj.guava.api.Assertions.assertThat;
 import static org.sonar.db.component.ComponentTesting.newDirectory;
 import static org.sonar.db.component.ComponentTesting.newFileDto;
 import static org.sonar.db.component.ComponentTesting.newModuleDto;
-import static org.sonar.db.component.ComponentTesting.newProjectCopy;
 import static org.sonar.db.component.ComponentTesting.newPrivateProjectDto;
+import static org.sonar.db.component.ComponentTesting.newProjectCopy;
 import static org.sonar.db.component.ComponentTesting.newSubView;
 import static org.sonar.db.component.ComponentTesting.newView;
 import static org.sonar.db.component.ComponentTreeQuery.Strategy.CHILDREN;
@@ -97,7 +95,7 @@ public class ComponentDaoTest {
     assertThat(result.moduleUuidPath()).isEqualTo("module_uuid_path_of_U1");
     assertThat(result.getRootUuid()).isEqualTo("U1");
     assertThat(result.projectUuid()).isEqualTo("U1");
-    assertThat(result.key()).isEqualTo("org.struts:struts");
+    assertThat(result.getDbKey()).isEqualTo("org.struts:struts");
     assertThat(result.path()).isEqualTo("path_of_U1");
     assertThat(result.name()).isEqualTo("Struts");
     assertThat(result.longName()).isEqualTo("Apache Struts");
@@ -122,7 +120,7 @@ public class ComponentDaoTest {
     assertThat(result.moduleUuidPath()).isEqualTo("module_uuid_path_of_U7");
     assertThat(result.getRootUuid()).isEqualTo("root_uuid_of_U7");
     assertThat(result.projectUuid()).isEqualTo("project_uuid_of_U7");
-    assertThat(result.key()).isEqualTo("DEV:anakin@skywalker.name:org.struts:struts");
+    assertThat(result.getDbKey()).isEqualTo("DEV:anakin@skywalker.name:org.struts:struts");
     assertThat(result.path()).isNull();
     assertThat(result.name()).isEqualTo("Apache Struts");
     assertThat(result.longName()).isEqualTo("Apache Struts");
@@ -171,7 +169,7 @@ public class ComponentDaoTest {
     ComponentDto result = optional.get();
     assertThat(result.getOrganizationUuid()).isEqualTo("org1");
     assertThat(result.uuid()).isEqualTo("U4");
-    assertThat(result.key()).isEqualTo("org.struts:struts-core:src/org/struts/RequestContext.java");
+    assertThat(result.getDbKey()).isEqualTo("org.struts:struts-core:src/org/struts/RequestContext.java");
     assertThat(result.path()).isEqualTo("path_of_U4");
     assertThat(result.name()).isEqualTo("RequestContext.java");
     assertThat(result.longName()).isEqualTo("org.struts.RequestContext");
@@ -205,7 +203,7 @@ public class ComponentDaoTest {
     db.prepareDbUnit(getClass(), "shared.xml");
 
     ComponentDto result = underTest.selectOrFailByKey(dbSession, "org.struts:struts");
-    assertThat(result.key()).isEqualTo("org.struts:struts");
+    assertThat(result.getDbKey()).isEqualTo("org.struts:struts");
     assertThat(result.uuid()).isEqualTo("U1");
     assertThat(result.getUuidPath()).isEqualTo("uuid_path_of_U1");
     assertThat(result.deprecatedKey()).isEqualTo("org.struts:struts");
@@ -217,7 +215,6 @@ public class ComponentDaoTest {
     assertThat(result.scope()).isEqualTo("PRJ");
     assertThat(result.getRootUuid()).isEqualTo("U1");
     assertThat(result.projectUuid()).isEqualTo("U1");
-    assertThat(result.getAuthorizationUpdatedAt()).isEqualTo(123_456_789L);
   }
 
   @Test
@@ -229,7 +226,7 @@ public class ComponentDaoTest {
 
     ComponentDto result = results.get(0);
     assertThat(result).isNotNull();
-    assertThat(result.key()).isEqualTo("org.struts:struts-core:src/org/struts/RequestContext.java");
+    assertThat(result.getDbKey()).isEqualTo("org.struts:struts-core:src/org/struts/RequestContext.java");
     assertThat(result.path()).isEqualTo("path_of_U4");
     assertThat(result.name()).isEqualTo("RequestContext.java");
     assertThat(result.longName()).isEqualTo("org.struts.RequestContext");
@@ -250,7 +247,7 @@ public class ComponentDaoTest {
 
     ComponentDto result = results.get(0);
     assertThat(result).isNotNull();
-    assertThat(result.key()).isEqualTo("org.struts:struts-core:src/org/struts/RequestContext.java");
+    assertThat(result.getDbKey()).isEqualTo("org.struts:struts-core:src/org/struts/RequestContext.java");
     assertThat(result.path()).isEqualTo("path_of_U4");
     assertThat(result.name()).isEqualTo("RequestContext.java");
     assertThat(result.longName()).isEqualTo("org.struts.RequestContext");
@@ -276,7 +273,7 @@ public class ComponentDaoTest {
     assertThat(result.moduleUuidPath()).isEqualTo("module_uuid_path_of_U4");
     assertThat(result.getRootUuid()).isEqualTo("U1");
     assertThat(result.projectUuid()).isEqualTo("U1");
-    assertThat(result.key()).isEqualTo("org.struts:struts-core:src/org/struts/RequestContext.java");
+    assertThat(result.getDbKey()).isEqualTo("org.struts:struts-core:src/org/struts/RequestContext.java");
     assertThat(result.path()).isEqualTo("path_of_U4");
     assertThat(result.name()).isEqualTo("RequestContext.java");
     assertThat(result.longName()).isEqualTo("org.struts.RequestContext");
@@ -369,22 +366,22 @@ public class ComponentDaoTest {
     // Sub project of a file
     List<ComponentDto> results = underTest.selectSubProjectsByComponentUuids(dbSession, newArrayList("HIJK"));
     assertThat(results).hasSize(1);
-    assertThat(results.get(0).getKey()).isEqualTo("org.struts:struts-data");
+    assertThat(results.get(0).getDbKey()).isEqualTo("org.struts:struts-data");
 
     // Sub project of a directory
     results = underTest.selectSubProjectsByComponentUuids(dbSession, newArrayList("GHIJ"));
     assertThat(results).hasSize(1);
-    assertThat(results.get(0).getKey()).isEqualTo("org.struts:struts-data");
+    assertThat(results.get(0).getDbKey()).isEqualTo("org.struts:struts-data");
 
     // Sub project of a sub module
     results = underTest.selectSubProjectsByComponentUuids(dbSession, newArrayList("FGHI"));
     assertThat(results).hasSize(1);
-    assertThat(results.get(0).getKey()).isEqualTo("org.struts:struts");
+    assertThat(results.get(0).getDbKey()).isEqualTo("org.struts:struts");
 
     // Sub project of a module
     results = underTest.selectSubProjectsByComponentUuids(dbSession, newArrayList("EFGH"));
     assertThat(results).hasSize(1);
-    assertThat(results.get(0).getKey()).isEqualTo("org.struts:struts");
+    assertThat(results.get(0).getDbKey()).isEqualTo("org.struts:struts");
 
     // Sub project of a project
     assertThat(underTest.selectSubProjectsByComponentUuids(dbSession, newArrayList("ABCD"))).extracting("uuid").containsOnly("ABCD");
@@ -513,11 +510,18 @@ public class ComponentDaoTest {
   }
 
   @Test
-  public void select_views_and_sub_views() {
-    db.prepareDbUnit(getClass(), "shared_views.xml");
+  public void select_views_and_sub_views_and_applications() {
+    OrganizationDto organization = db.organizations().insert();
+    db.components().insertView(organization, "ABCD");
+    db.components().insertView(organization, "IJKL");
+    ComponentDto view = db.components().insertView(organization, "EFGH");
+    db.components().insertSubView(view, dto -> dto.setUuid("FGHI"));
+    ComponentDto application = db.components().insertApplication(organization);
 
-    assertThat(underTest.selectAllViewsAndSubViews(dbSession)).extracting("uuid").containsOnly("ABCD", "EFGH", "FGHI", "IJKL");
-    assertThat(underTest.selectAllViewsAndSubViews(dbSession)).extracting("projectUuid").containsOnly("ABCD", "EFGH", "IJKL");
+    assertThat(underTest.selectAllViewsAndSubViews(dbSession)).extracting(UuidWithProjectUuidDto::getUuid)
+      .containsExactlyInAnyOrder("ABCD", "EFGH", "FGHI", "IJKL", application.uuid());
+    assertThat(underTest.selectAllViewsAndSubViews(dbSession)).extracting(UuidWithProjectUuidDto::getProjectUuid)
+      .containsOnly("ABCD", "EFGH", "IJKL", application.projectUuid());
   }
 
   @Test
@@ -549,7 +553,7 @@ public class ComponentDaoTest {
   @Test
   public void select_provisioned() {
     OrganizationDto organization = db.organizations().insert();
-    ComponentDto provisionedProject = db.components().insertComponent(ComponentTesting.newPrivateProjectDto(organization).setKey("provisioned.project").setName("Provisioned Project"));
+    ComponentDto provisionedProject = db.components().insertComponent(ComponentTesting.newPrivateProjectDto(organization).setDbKey("provisioned.project").setName("Provisioned Project"));
     ComponentDto provisionedView = db.components().insertView(organization);
     String projectUuid = db.components().insertProjectAndSnapshot(ComponentTesting.newPrivateProjectDto(organization)).getComponentUuid();
     String disabledProjectUuid = db.components().insertProjectAndSnapshot(ComponentTesting.newPrivateProjectDto(organization).setEnabled(false)).getComponentUuid();
@@ -575,7 +579,7 @@ public class ComponentDaoTest {
       .containsOnly(provisionedProject.uuid(), provisionedView.uuid());
 
     // match key
-    assertThat(underTest.selectProvisioned(dbSession, organization.getUuid(), provisionedProject.getKey(), projectQualifiers, new RowBounds(0, 10)))
+    assertThat(underTest.selectProvisioned(dbSession, organization.getUuid(), provisionedProject.getDbKey(), projectQualifiers, new RowBounds(0, 10)))
       .extracting(ComponentDto::uuid)
       .containsExactly(provisionedProject.uuid());
     assertThat(underTest.selectProvisioned(dbSession, organization.getUuid(), "pROvisiONed.proJEcT", projectQualifiers, new RowBounds(0, 10)))
@@ -670,13 +674,7 @@ public class ComponentDaoTest {
     db.prepareDbUnit(getClass(), "selectForIndexing.xml");
 
     List<ComponentDto> components = new ArrayList<>();
-    underTest.selectForIndexing(dbSession, projectUuid, new ResultHandler() {
-
-      @Override
-      public void handleResult(ResultContext context) {
-        components.add((ComponentDto) context.getResultObject());
-      }
-    });
+    underTest.scrollForIndexing(dbSession, projectUuid, context -> components.add(context.getResultObject()));
     return assertThat(components).extracting(ComponentDto::uuid);
   }
 
@@ -691,7 +689,7 @@ public class ComponentDaoTest {
       .setProjectUuid("ABCD")
       .setModuleUuid("EFGH")
       .setModuleUuidPath(".ABCD.EFGH.")
-      .setKey("org.struts:struts-core:src/org/struts/RequestContext.java")
+      .setDbKey("org.struts:struts-core:src/org/struts/RequestContext.java")
       .setDeprecatedKey("org.struts:struts-core:src/org/struts/RequestContext.java")
       .setName("RequestContext.java")
       .setLongName("org.struts.RequestContext")
@@ -705,7 +703,6 @@ public class ComponentDaoTest {
       .setDeveloperUuid("uuid_7")
       .setEnabled(true)
       .setCreatedAt(DateUtils.parseDate("2014-06-18"))
-      .setAuthorizationUpdatedAt(123456789L)
       .setTags(newArrayList("platform", "analyzers"));
 
     underTest.insert(dbSession, componentDto);
@@ -727,7 +724,7 @@ public class ComponentDaoTest {
       .setProjectUuid("ABCD")
       .setModuleUuid("EFGH")
       .setModuleUuidPath(".ABCD.EFGH.")
-      .setKey("org.struts:struts-core:src/org/struts/RequestContext.java")
+      .setDbKey("org.struts:struts-core:src/org/struts/RequestContext.java")
       .setName("RequestContext.java")
       .setLongName("org.struts.RequestContext")
       .setQualifier("FIL")
@@ -736,8 +733,7 @@ public class ComponentDaoTest {
       .setPath("src/org/struts/RequestContext.java")
       .setRootUuid("uuid_3")
       .setEnabled(false)
-      .setCreatedAt(DateUtils.parseDate("2014-06-18"))
-      .setAuthorizationUpdatedAt(123456789L);
+      .setCreatedAt(DateUtils.parseDate("2014-06-18"));
 
     underTest.insert(dbSession, componentDto);
     dbSession.commit();
@@ -839,13 +835,13 @@ public class ComponentDaoTest {
     underTest.updateTags(dbSession, project.setTags(newArrayList("finance", "toto", "tutu")));
     dbSession.commit();
 
-    assertThat(underTest.selectOrFailByKey(dbSession, project.key()).getTags()).containsOnly("finance", "toto", "tutu");
+    assertThat(underTest.selectOrFailByKey(dbSession, project.getDbKey()).getTags()).containsOnly("finance", "toto", "tutu");
   }
 
   @Test
   public void delete() throws Exception {
-    ComponentDto project1 = db.components().insertPrivateProject(db.getDefaultOrganization(), (t) -> t.setKey("PROJECT_1"));
-    db.components().insertPrivateProject(db.getDefaultOrganization(), (t) -> t.setKey("PROJECT_2"));
+    ComponentDto project1 = db.components().insertPrivateProject(db.getDefaultOrganization(), (t) -> t.setDbKey("PROJECT_1"));
+    db.components().insertPrivateProject(db.getDefaultOrganization(), (t) -> t.setDbKey("PROJECT_2"));
 
     underTest.delete(dbSession, project1.getId());
     dbSession.commit();
@@ -939,39 +935,39 @@ public class ComponentDaoTest {
 
   @Test
   public void selectByQuery_key_with_special_characters() {
-    db.components().insertProjectAndSnapshot(ComponentTesting.newPrivateProjectDto(db.organizations().insert()).setKey("project-_%-key"));
+    db.components().insertProjectAndSnapshot(ComponentTesting.newPrivateProjectDto(db.organizations().insert()).setDbKey("project-_%-key"));
 
     ComponentQuery query = ComponentQuery.builder().setNameOrKeyQuery("project-_%-key").setQualifiers(Qualifiers.PROJECT).build();
     List<ComponentDto> result = underTest.selectByQuery(dbSession, query, 0, 10);
 
     assertThat(result).hasSize(1);
-    assertThat(result.get(0).key()).isEqualTo("project-_%-key");
+    assertThat(result.get(0).getDbKey()).isEqualTo("project-_%-key");
   }
 
   @Test
   public void selectByQuery_filter_on_language() {
-    db.components().insertComponent(ComponentTesting.newPrivateProjectDto(db.getDefaultOrganization()).setKey("java-project-key").setLanguage("java"));
-    db.components().insertComponent(ComponentTesting.newPrivateProjectDto(db.getDefaultOrganization()).setKey("cpp-project-key").setLanguage("cpp"));
+    db.components().insertComponent(ComponentTesting.newPrivateProjectDto(db.getDefaultOrganization()).setDbKey("java-project-key").setLanguage("java"));
+    db.components().insertComponent(ComponentTesting.newPrivateProjectDto(db.getDefaultOrganization()).setDbKey("cpp-project-key").setLanguage("cpp"));
 
     ComponentQuery query = ComponentQuery.builder().setLanguage("java").setQualifiers(Qualifiers.PROJECT).build();
     List<ComponentDto> result = underTest.selectByQuery(dbSession, query, 0, 10);
 
     assertThat(result).hasSize(1);
-    assertThat(result.get(0).key()).isEqualTo("java-project-key");
+    assertThat(result.get(0).getDbKey()).isEqualTo("java-project-key");
   }
 
   @Test
   public void selectByQuery_filter_on_visibility() {
-    db.components().insertComponent(ComponentTesting.newPrivateProjectDto(db.getDefaultOrganization()).setKey("private-key"));
-    db.components().insertComponent(ComponentTesting.newPublicProjectDto(db.getDefaultOrganization()).setKey("public-key"));
+    db.components().insertComponent(ComponentTesting.newPrivateProjectDto(db.getDefaultOrganization()).setDbKey("private-key"));
+    db.components().insertComponent(ComponentTesting.newPublicProjectDto(db.getDefaultOrganization()).setDbKey("public-key"));
 
     ComponentQuery privateProjectsQuery = ComponentQuery.builder().setPrivate(true).setQualifiers(Qualifiers.PROJECT).build();
     ComponentQuery publicProjectsQuery = ComponentQuery.builder().setPrivate(false).setQualifiers(Qualifiers.PROJECT).build();
     ComponentQuery allProjectsQuery = ComponentQuery.builder().setPrivate(null).setQualifiers(Qualifiers.PROJECT).build();
 
-    assertThat(underTest.selectByQuery(dbSession, privateProjectsQuery, 0, 10)).extracting(ComponentDto::getKey).containsExactly("private-key");
-    assertThat(underTest.selectByQuery(dbSession, publicProjectsQuery, 0, 10)).extracting(ComponentDto::getKey).containsExactly("public-key");
-    assertThat(underTest.selectByQuery(dbSession, allProjectsQuery, 0, 10)).extracting(ComponentDto::getKey).containsOnly("public-key", "private-key");
+    assertThat(underTest.selectByQuery(dbSession, privateProjectsQuery, 0, 10)).extracting(ComponentDto::getDbKey).containsExactly("private-key");
+    assertThat(underTest.selectByQuery(dbSession, publicProjectsQuery, 0, 10)).extracting(ComponentDto::getDbKey).containsExactly("public-key");
+    assertThat(underTest.selectByQuery(dbSession, allProjectsQuery, 0, 10)).extracting(ComponentDto::getDbKey).containsOnly("public-key", "private-key");
   }
 
   @Test
@@ -1033,11 +1029,11 @@ public class ComponentDaoTest {
     db.components().insertProjectAndSnapshot(project);
     ComponentDto module = newModuleDto(MODULE_UUID, project);
     db.components().insertComponent(module);
-    ComponentDto file1 = newFileDto(project, null, FILE_1_UUID).setKey("file-key-1").setName("File One");
+    ComponentDto file1 = newFileDto(project, null, FILE_1_UUID).setDbKey("file-key-1").setName("File One");
     db.components().insertComponent(file1);
-    ComponentDto file2 = newFileDto(module, null, FILE_2_UUID).setKey("file-key-2").setName("File Two");
+    ComponentDto file2 = newFileDto(module, null, FILE_2_UUID).setDbKey("file-key-2").setName("File Two");
     db.components().insertComponent(file2);
-    ComponentDto file3 = newFileDto(module, null, FILE_3_UUID).setKey("file-key-3").setName("File Three");
+    ComponentDto file3 = newFileDto(module, null, FILE_3_UUID).setDbKey("file-key-3").setName("File Three");
     db.components().insertComponent(file3);
     db.commit();
 

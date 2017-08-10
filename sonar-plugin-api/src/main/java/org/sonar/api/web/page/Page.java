@@ -20,13 +20,13 @@
 package org.sonar.api.web.page;
 
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.CheckForNull;
 
 import static java.lang.String.format;
-import static java.util.Collections.unmodifiableSet;
 import static java.util.Objects.requireNonNull;
 import static org.sonar.api.web.page.Page.Scope.COMPONENT;
 import static org.sonar.api.web.page.Page.Scope.GLOBAL;
@@ -45,7 +45,7 @@ public final class Page {
   private Page(Builder builder) {
     this.key = builder.key;
     this.name = builder.name;
-    this.qualifiers = unmodifiableSet(Stream.of(builder.qualifiers).sorted().collect(Collectors.toSet()));
+    this.qualifiers = Stream.of(builder.qualifiers).sorted().collect(Collectors.toCollection(LinkedHashSet::new));
     this.isAdmin = builder.isAdmin;
     this.scope = builder.scope;
   }
@@ -81,6 +81,7 @@ public final class Page {
   public enum Qualifier {
     PROJECT(org.sonar.api.resources.Qualifiers.PROJECT),
     MODULE(org.sonar.api.resources.Qualifiers.MODULE),
+    APP(org.sonar.api.resources.Qualifiers.APP),
     VIEW(org.sonar.api.resources.Qualifiers.VIEW),
     SUB_VIEW(org.sonar.api.resources.Qualifiers.SUBVIEW);
 

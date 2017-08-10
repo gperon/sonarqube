@@ -81,12 +81,16 @@ export default class AddMemberForm extends React.PureComponent {
         overlayClassName="modal-overlay"
         onRequestClose={this.closeForm}>
         <header className="modal-head">
-          <h2>{translate('users.add')}</h2>
+          <h2>
+            {translate('users.add')}
+          </h2>
         </header>
         <form onSubmit={this.handleSubmit}>
           <div className="modal-body">
             <div className="modal-large-field">
-              <label>{translate('users.search_description')}</label>
+              <label>
+                {translate('users.search_description')}
+              </label>
               <UsersSelectSearch
                 autoFocus={true}
                 selectedUser={this.state.selectedMember}
@@ -98,7 +102,9 @@ export default class AddMemberForm extends React.PureComponent {
           </div>
           <footer className="modal-foot">
             <div>
-              <button type="submit">{translate('organization.members.add_to_members')}</button>
+              <button type="submit" disabled={!this.state.selectedMember}>
+                {translate('organization.members.add_to_members')}
+              </button>
               <button type="reset" className="button-link" onClick={this.closeForm}>
                 {translate('cancel')}
               </button>

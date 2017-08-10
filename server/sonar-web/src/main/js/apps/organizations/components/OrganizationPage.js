@@ -22,10 +22,10 @@ import React from 'react';
 import Helmet from 'react-helmet';
 import { connect } from 'react-redux';
 import OrganizationNavigation from '../navigation/OrganizationNavigation';
+import NotFound from '../../../app/components/NotFound';
 import { fetchOrganization } from '../actions';
 import { getOrganizationByKey } from '../../../store/rootReducer';
 import type { Organization } from '../../../store/organizations/duck';
-import NotFound from '../../../app/components/NotFound';
 
 type OwnProps = {
   params: { organizationKey: string }

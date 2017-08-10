@@ -22,7 +22,6 @@ package org.sonar.scanner.issue.tracking;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-
 import org.apache.commons.io.FileUtils;
 import org.junit.Before;
 import org.junit.Rule;
@@ -52,10 +51,11 @@ public class SourceHashHolderTest {
   DefaultInputFile file;
 
   private File ioFile;
-  private ProjectDefinition def = ProjectDefinition.create();
+  private ProjectDefinition def;
 
   @Before
   public void setUp() throws Exception {
+    def = ProjectDefinition.create().setBaseDir(temp.newFolder()).setWorkDir(temp.newFolder());
     lastSnapshots = mock(ServerLineHashesLoader.class);
     file = mock(DefaultInputFile.class);
     ioFile = temp.newFile();
@@ -102,7 +102,7 @@ public class SourceHashHolderTest {
     final String source = "source";
     FileUtils.write(ioFile, source, StandardCharsets.UTF_8);
     def.setKey("foo");
-    def.properties().put(CoreProperties.PROJECT_BRANCH_PROPERTY, "myBranch");
+    def.setProperty(CoreProperties.PROJECT_BRANCH_PROPERTY, "myBranch");
     when(file.relativePath()).thenReturn("src/Foo.java");
     String key = "foo:myBranch:src/Foo.java";
     when(file.status()).thenReturn(InputFile.Status.CHANGED);

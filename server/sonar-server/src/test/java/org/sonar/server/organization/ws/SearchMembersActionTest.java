@@ -24,7 +24,7 @@ import java.util.stream.IntStream;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.sonar.api.config.MapSettings;
+import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.server.ws.WebService;
 import org.sonar.api.server.ws.WebService.Param;
 import org.sonar.db.DbClient;
@@ -61,7 +61,7 @@ public class SearchMembersActionTest {
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
   @Rule
-  public EsTester es = new EsTester(new UserIndexDefinition(new MapSettings()));
+  public EsTester es = new EsTester(new UserIndexDefinition(new MapSettings().asConfig()));
 
   @Rule
   public DbTester db = DbTester.create();
@@ -127,7 +127,7 @@ public class SearchMembersActionTest {
   public void return_avatar() {
     UserDto user = db.users().insertUser(u -> u.setEmail("email@domain.com"));
     db.organizations().addMember(db.getDefaultOrganization(), user);
-    indexer.index(user.getLogin());
+    indexer.commitAndIndex(db.getSession(), user);
 
     SearchMembersWsResponse result = call();
 
@@ -195,7 +195,6 @@ public class SearchMembersActionTest {
     IntStream.range(0, 10).forEach(i -> {
       UserDto userDto = db.users().insertUser(user -> user.setName("USER_" + i));
       db.organizations().addMember(db.getDefaultOrganization(), userDto);
-      indexer.index(userDto.getLogin());
     });
     indexAllUsers();
     request.setPage(2).setPageSize(3);
@@ -214,7 +213,6 @@ public class SearchMembersActionTest {
     IntStream.range(0, 10).forEach(i -> {
       UserDto userDto = db.users().insertUser(user -> user.setName("USER_" + i));
       db.organizations().addMember(db.getDefaultOrganization(), userDto);
-      indexer.index(userDto.getLogin());
     });
     indexAllUsers();
     request.setQuery("_9");
@@ -229,7 +227,6 @@ public class SearchMembersActionTest {
     IntStream.range(0, 10).forEach(i -> {
       UserDto userDto = db.users().insertUser(user -> user.setLogin("USER_" + i));
       db.organizations().addMember(db.getDefaultOrganization(), userDto);
-      indexer.index(userDto.getLogin());
     });
     indexAllUsers();
     request.setQuery("_9");
@@ -246,7 +243,6 @@ public class SearchMembersActionTest {
         .setLogin("L" + i)
         .setEmail("USER_" + i + "@email.com"));
       db.organizations().addMember(db.getDefaultOrganization(), userDto);
-      indexer.index(userDto.getLogin());
     });
     indexAllUsers();
     request.setQuery("_9");

@@ -23,7 +23,7 @@ import java.util.Date;
 import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
-import org.sonar.api.config.MapSettings;
+import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.resources.Language;
 import org.sonar.api.resources.Languages;
 import org.sonar.api.rule.RuleKey;
@@ -49,7 +49,6 @@ import org.sonar.server.organization.OrganizationFlags;
 import org.sonar.server.organization.TestOrganizationFlags;
 import org.sonar.server.qualityprofile.RuleActivator;
 import org.sonar.server.qualityprofile.index.ActiveRuleIndexer;
-import org.sonar.server.qualityprofile.index.ActiveRuleIteratorFactory;
 import org.sonar.server.rule.index.RuleIndex;
 import org.sonar.server.rule.index.RuleIndexDefinition;
 import org.sonar.server.rule.index.RuleIndexer;
@@ -81,7 +80,7 @@ public class RegisterRulesTest {
   @org.junit.Rule
   public DbTester dbTester = DbTester.create(system);
   @org.junit.Rule
-  public EsTester esTester = new EsTester(new RuleIndexDefinition(new MapSettings()));
+  public EsTester esTester = new EsTester(new RuleIndexDefinition(new MapSettings().asConfig()));
   @org.junit.Rule
   public LogTester logTester = new LogTester();
 
@@ -99,7 +98,7 @@ public class RegisterRulesTest {
     when(system.now()).thenReturn(DATE1.getTime());
     ruleIndexer = new RuleIndexer(esTester.client(), dbClient);
     ruleIndex = new RuleIndex(esTester.client());
-    activeRuleIndexer = new ActiveRuleIndexer(dbClient, esTester.client(), new ActiveRuleIteratorFactory(dbClient));
+    activeRuleIndexer = new ActiveRuleIndexer(dbClient, esTester.client());
     defaultOrganization = dbTester.getDefaultOrganization();
   }
 

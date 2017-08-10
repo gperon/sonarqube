@@ -99,3 +99,32 @@ message CopyWsResponse {
   optional bool isInherited = 6;
   optional string parentKey = 7;
 }
+
+// WS api/qualityprofiles/show
+message ShowResponse {
+  optional QualityProfile profile = 1;
+  optional CompareToSonarWay compareToSonarWay = 2;
+
+  message QualityProfile {
+    optional string key = 1;
+    optional string name = 2;
+    optional string language = 3;
+    optional string languageName = 4;
+    optional bool isInherited = 5;
+    optional bool isDefault = 6;
+    optional int64 activeRuleCount = 7;
+    optional int64 activeDeprecatedRuleCount = 8;
+    optional int64 projectCount = 9;
+    optional string rulesUpdatedAt = 10;
+    optional string lastUsed = 11;
+    optional string userUpdatedAt = 12;
+    optional string organization = 13;
+    optional bool isBuiltIn = 14;
+  }
+
+  message CompareToSonarWay {
+    optional string profile = 1;
+    optional string profileName = 2;
+    optional int64 missingRuleCount = 3;
+  }
+}

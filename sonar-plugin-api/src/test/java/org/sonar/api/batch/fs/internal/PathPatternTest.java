@@ -19,14 +19,14 @@
  */
 package org.sonar.api.batch.fs.internal;
 
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.sonar.api.batch.fs.IndexedFile;
-
-import java.io.IOException;
-import java.nio.file.Path;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -45,26 +45,26 @@ public class PathPatternTest {
     PathPattern pattern = PathPattern.create("**/*Foo.java");
     assertThat(pattern.toString()).isEqualTo("**/*Foo.java");
 
-    IndexedFile indexedFile = new DefaultIndexedFile("ABCDE", moduleBasePath, "src/main/java/org/MyFoo.java");
-    assertThat(pattern.match(indexedFile)).isTrue();
+    IndexedFile indexedFile = new DefaultIndexedFile("ABCDE", moduleBasePath, "src/main/java/org/MyFoo.java", null);
+    assertThat(pattern.match(indexedFile.path(), Paths.get(indexedFile.relativePath()))).isTrue();
 
     // case sensitive by default
-    indexedFile = new DefaultIndexedFile("ABCDE", moduleBasePath, "src/main/java/org/MyFoo.JAVA");
-    assertThat(pattern.match(indexedFile)).isFalse();
+    indexedFile = new DefaultIndexedFile("ABCDE", moduleBasePath, "src/main/java/org/MyFoo.JAVA", null);
+    assertThat(pattern.match(indexedFile.path(), Paths.get(indexedFile.relativePath()))).isFalse();
 
-    indexedFile = new DefaultIndexedFile("ABCDE", moduleBasePath, "src/main/java/org/Other.java");
-    assertThat(pattern.match(indexedFile)).isFalse();
+    indexedFile = new DefaultIndexedFile("ABCDE", moduleBasePath, "src/main/java/org/Other.java", null);
+    assertThat(pattern.match(indexedFile.path(), Paths.get(indexedFile.relativePath()))).isFalse();
   }
 
   @Test
   public void match_relative_path_and_insensitive_file_extension() throws Exception {
     PathPattern pattern = PathPattern.create("**/*Foo.java");
 
-    IndexedFile indexedFile = new DefaultIndexedFile("ABCDE", moduleBasePath, "src/main/java/org/MyFoo.JAVA");
-    assertThat(pattern.match(indexedFile, false)).isTrue();
+    IndexedFile indexedFile = new DefaultIndexedFile("ABCDE", moduleBasePath, "src/main/java/org/MyFoo.JAVA", null);
+    assertThat(pattern.match(indexedFile.path(), Paths.get(indexedFile.relativePath()), false)).isTrue();
 
-    indexedFile = new DefaultIndexedFile("ABCDE", moduleBasePath, "src/main/java/org/Other.java");
-    assertThat(pattern.match(indexedFile, false)).isFalse();
+    indexedFile = new DefaultIndexedFile("ABCDE", moduleBasePath, "src/main/java/org/Other.java", null);
+    assertThat(pattern.match(indexedFile.path(), Paths.get(indexedFile.relativePath()), false)).isFalse();
   }
 
   @Test
@@ -72,15 +72,15 @@ public class PathPatternTest {
     PathPattern pattern = PathPattern.create("file:**/src/main/**Foo.java");
     assertThat(pattern.toString()).isEqualTo("file:**/src/main/**Foo.java");
 
-    IndexedFile indexedFile = new DefaultIndexedFile("ABCDE", moduleBasePath, "src/main/java/org/MyFoo.java");
-    assertThat(pattern.match(indexedFile)).isTrue();
+    IndexedFile indexedFile = new DefaultIndexedFile("ABCDE", moduleBasePath, "src/main/java/org/MyFoo.java", null);
+    assertThat(pattern.match(indexedFile.path(), Paths.get(indexedFile.relativePath()))).isTrue();
 
     // case sensitive by default
-    indexedFile = new DefaultIndexedFile("ABCDE", moduleBasePath, "src/main/java/org/MyFoo.JAVA");
-    assertThat(pattern.match(indexedFile)).isFalse();
+    indexedFile = new DefaultIndexedFile("ABCDE", moduleBasePath, "src/main/java/org/MyFoo.JAVA", null);
+    assertThat(pattern.match(indexedFile.path(), Paths.get(indexedFile.relativePath()))).isFalse();
 
-    indexedFile = new DefaultIndexedFile("ABCDE", moduleBasePath, "src/main/java/org/Other.java");
-    assertThat(pattern.match(indexedFile)).isFalse();
+    indexedFile = new DefaultIndexedFile("ABCDE", moduleBasePath, "src/main/java/org/Other.java", null);
+    assertThat(pattern.match(indexedFile.path(), Paths.get(indexedFile.relativePath()))).isFalse();
   }
 
   @Test
@@ -88,11 +88,11 @@ public class PathPatternTest {
     PathPattern pattern = PathPattern.create("file:**/src/main/**Foo.java");
     assertThat(pattern.toString()).isEqualTo("file:**/src/main/**Foo.java");
 
-    IndexedFile indexedFile = new DefaultIndexedFile("ABCDE", moduleBasePath, "src/main/java/org/MyFoo.JAVA");
-    assertThat(pattern.match(indexedFile, false)).isTrue();
+    IndexedFile indexedFile = new DefaultIndexedFile("ABCDE", moduleBasePath, "src/main/java/org/MyFoo.JAVA", null);
+    assertThat(pattern.match(indexedFile.path(), Paths.get(indexedFile.relativePath()), false)).isTrue();
 
-    indexedFile = new DefaultIndexedFile("ABCDE", moduleBasePath, "src/main/java/org/Other.JAVA");
-    assertThat(pattern.match(indexedFile, false)).isFalse();
+    indexedFile = new DefaultIndexedFile("ABCDE", moduleBasePath, "src/main/java/org/Other.JAVA", null);
+    assertThat(pattern.match(indexedFile.path(), Paths.get(indexedFile.relativePath()), false)).isFalse();
   }
 
   @Test

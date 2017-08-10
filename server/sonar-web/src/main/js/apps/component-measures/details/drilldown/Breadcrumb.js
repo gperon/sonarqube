@@ -19,8 +19,8 @@
  */
 import React from 'react';
 import QualifierIcon from '../../../../components/shared/QualifierIcon';
-import { isDiffMetric, formatLeak } from '../../utils';
-import { formatMeasure } from '../../../../helpers/measures';
+import { formatLeak } from '../../utils';
+import { formatMeasure, isDiffMetric } from '../../../../helpers/measures';
 
 const Breadcrumb = ({ component, metric, onBrowse }) => {
   const handleClick = e => {
@@ -37,10 +37,14 @@ const Breadcrumb = ({ component, metric, onBrowse }) => {
       </a>
     );
   } else {
-    inner = <span>{component.name}</span>;
+    inner = (
+      <span>
+        {component.name}
+      </span>
+    );
   }
 
-  const value = isDiffMetric(metric)
+  const value = isDiffMetric(metric.key)
     ? formatLeak(component.leak, metric)
     : formatMeasure(component.value, metric.type);
 
@@ -49,7 +53,10 @@ const Breadcrumb = ({ component, metric, onBrowse }) => {
       <QualifierIcon qualifier={component.qualifier} />
       &nbsp;
       {inner}
-      {value != null && <span>{' (' + value + ')'}</span>}
+      {value != null &&
+        <span>
+          {' (' + value + ')'}
+        </span>}
     </span>
   );
 };

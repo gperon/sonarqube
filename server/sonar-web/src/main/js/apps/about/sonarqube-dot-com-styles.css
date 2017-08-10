@@ -16,50 +16,47 @@
   color: #4b9fd5;
 }
 
-.sqcom-about-page-entry .about-page-container {
+.sqcom-about-page-entry .page-limited {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
-.sqcom-about-page-intro {}
+.sqcom-about-page-intro {
+}
 
 .sqcom-about-page-intro > h1 {
-  line-height: 56px;
+  line-height: 44px;
   color: #fff;
-  font-size: 44px;
+  font-size: 36px;
   font-weight: 300;
 }
 
-.sqcom-about-page-intro > .button {
+.sonarcloud-about-github-button {
+  display: inline-block;
   height: 44px;
-  line-height: 42px;
+  line-height: 46px;
   padding-left: 20px;
   padding-right: 20px;
-  border-color: #fff;
+  border: none;
   border-radius: 3px;
-  color: #fff;
-  font-size: 16px;
+  background-color: #444;
+  color: #fff !important;
+  font-size: 15px;
   font-weight: 500;
   text-transform: uppercase;
-  transition: none;
 }
 
-.sqcom-about-page-intro > .button:hover {
-  background-color: #fff;
-  color: #4b9fd5;
+.sonarcloud-about-github-button:hover,
+.sonarcloud-about-github-button:focus {
+  background-color: #333;
 }
 
-.sqcom-about-page-intro > .button-active {
-  border-color: #b0eb41;
-  background-color: #b0eb41;
-  color: #225463;
-}
-
-.sqcom-about-page-intro > .button-active:hover {
-  border-color: #91d315;
-  background-color: #91d315;
-  color: #225463;
+.sonarcloud-about-github-button img {
+  margin-top: 12px;
+  margin-right: 10px;
 }
 
 .sqcom-about-page-instance {
@@ -94,10 +91,12 @@
   background-color: #4193c8;
 }
 
-.sqcom-about-rules .about-page-container {
+.sqcom-about-rules .page-limited {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 .sqcom-about-rules .button {
@@ -141,4 +140,11 @@
 
 .sqcom-about-quality-model svg {
   transform: translateY(-3px) !important;
+}
+
+.sqcom-get-started .oauth-providers > ul {
+  width: 380px;
+  justify-content: space-between;
+  font-size: 14px;
+  margin-bottom: -30px;
 }

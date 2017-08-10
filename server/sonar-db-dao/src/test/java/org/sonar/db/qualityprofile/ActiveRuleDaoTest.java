@@ -19,15 +19,14 @@
  */
 package org.sonar.db.qualityprofile;
 
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
+import java.util.function.Consumer;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.sonar.api.rule.RuleStatus;
 import org.sonar.api.rule.Severity;
 import org.sonar.api.server.rule.RuleParamType;
 import org.sonar.api.utils.System2;
@@ -35,17 +34,19 @@ import org.sonar.api.utils.internal.TestSystem2;
 import org.sonar.db.DbSession;
 import org.sonar.db.DbTester;
 import org.sonar.db.organization.OrganizationDto;
-import org.sonar.db.organization.OrganizationTesting;
 import org.sonar.db.rule.RuleDefinitionDto;
 import org.sonar.db.rule.RuleParamDto;
-import org.sonar.db.rule.RuleTesting;
 
 import static com.google.common.collect.Lists.newArrayList;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
+import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.entry;
 import static org.assertj.core.api.Assertions.tuple;
-import static org.assertj.core.data.MapEntry.entry;
+import static org.sonar.api.rule.RuleStatus.BETA;
+import static org.sonar.api.rule.RuleStatus.READY;
+import static org.sonar.api.rule.RuleStatus.REMOVED;
 import static org.sonar.api.rule.Severity.BLOCKER;
 import static org.sonar.api.rule.Severity.MAJOR;
 import static org.sonar.db.qualityprofile.ActiveRuleDto.INHERITED;
@@ -86,7 +87,7 @@ public class ActiveRuleDaoTest {
     rule1 = db.rules().insert();
     rule2 = db.rules().insert();
     rule3 = db.rules().insert();
-    removedRule = db.rules().insert(r -> r.setStatus(RuleStatus.REMOVED));
+    removedRule = db.rules().insert(r -> r.setStatus(REMOVED));
 
     rule1Param1 = new RuleParamDto()
       .setName("param1")
@@ -128,7 +129,7 @@ public class ActiveRuleDaoTest {
     underTest.insert(dbSession, activeRule3);
     dbSession.commit();
 
-    assertThat(underTest.selectByRuleIds(dbSession, organization, Collections.singletonList(rule1.getId())))
+    assertThat(underTest.selectByRuleIds(dbSession, organization, singletonList(rule1.getId())))
       .extracting("key").containsOnly(activeRule1.getKey(), activeRule3.getKey());
     assertThat(underTest.selectByRuleIds(dbSession, organization, newArrayList(rule1.getId(), rule2.getId())))
       .extracting("key").containsOnly(activeRule1.getKey(), activeRule2.getKey(), activeRule3.getKey());
@@ -516,101 +517,131 @@ public class ActiveRuleDaoTest {
   }
 
   @Test
-  public void test_countActiveRulesByProfileKey_for_a_specified_organization() {
+  public void countActiveRulesByQuery_filter_by_profiles() {
     db.qualityProfiles().activateRule(profile1, rule1);
     db.qualityProfiles().activateRule(profile1, rule2);
+    db.qualityProfiles().activateRule(profile1, removedRule);
     db.qualityProfiles().activateRule(profile2, rule1);
+    QProfileDto profileWithoutActiveRule = db.qualityProfiles().insert(organization);
 
-    Map<String, Long> counts = underTest.countActiveRulesByProfileUuid(dbSession, organization);
-
-    assertThat(counts).containsOnly(
+    ActiveRuleCountQuery.Builder builder = ActiveRuleCountQuery.builder().setOrganization(organization);
+    assertThat(underTest.countActiveRulesByQuery(dbSession, builder.setProfiles(asList(profile1, profile2)).build()))
+      .containsOnly(entry(profile1.getKee(), 2L), entry(profile2.getKee(), 1L));
+    assertThat(underTest.countActiveRulesByQuery(dbSession, builder.setProfiles(singletonList(profileWithoutActiveRule)).build())).isEmpty();
+    assertThat(underTest.countActiveRulesByQuery(dbSession, builder.setProfiles(asList(profile1, profile2, profileWithoutActiveRule)).build())).containsOnly(
       entry(profile1.getKee(), 2L),
       entry(profile2.getKee(), 1L));
+    assertThat(underTest.countActiveRulesByQuery(dbSession, builder.setProfiles(emptyList()).build())).isEmpty();
   }
 
   @Test
-  public void countActiveRulesByProfileKey_returns_empty_map_if_organization_does_not_exist() {
-    Map<String, Long> counts = underTest.countActiveRulesByProfileUuid(dbSession, OrganizationTesting.newOrganizationDto());
-
-    assertThat(counts).isEmpty();
-  }
-
-  @Test
-  public void countActiveRulesByProfileKey_returns_empty_map_if_profile_does_not_have_active_rules() {
-    Map<String, Long> counts = underTest.countActiveRulesByProfileUuid(dbSession, organization);
-
-    assertThat(counts).isEmpty();
-  }
-
-  @Test
-  public void countActiveRulesByProfileKey_ignores_removed_rules() {
+  public void countActiveRulesByQuery_filter_by_rule_status() {
+    RuleDefinitionDto betaRule = db.rules().insert(r -> r.setStatus(BETA));
     db.qualityProfiles().activateRule(profile1, rule1);
+    db.qualityProfiles().activateRule(profile1, rule2);
+    db.qualityProfiles().activateRule(profile1, betaRule);
     db.qualityProfiles().activateRule(profile1, removedRule);
+    db.qualityProfiles().activateRule(profile2, rule1);
+    db.qualityProfiles().activateRule(profile2, betaRule);
 
-    Map<String, Long> counts = underTest.countActiveRulesByProfileUuid(dbSession, organization);
-
-    assertThat(counts).containsExactly(entry(profile1.getKee(), 1L));
+    ActiveRuleCountQuery.Builder builder = ActiveRuleCountQuery.builder().setOrganization(organization);
+    assertThat(underTest.countActiveRulesByQuery(dbSession, builder.setProfiles(asList(profile1, profile2)).setRuleStatus(BETA).build()))
+      .containsOnly(entry(profile1.getKee(), 1L), entry(profile2.getKee(), 1L));
+    assertThat(underTest.countActiveRulesByQuery(dbSession, builder.setProfiles(singletonList(profile1)).setRuleStatus(READY).build()))
+      .containsOnly(entry(profile1.getKee(), 2L));
+    assertThat(underTest.countActiveRulesByQuery(dbSession, builder.setProfiles(singletonList(profile1)).setRuleStatus(REMOVED).build()))
+      .containsOnly(entry(profile1.getKee(), 1L));
   }
 
   @Test
-  public void test_countActiveRulesForRuleStatusByProfileKey_for_a_specified_organization() {
-    RuleDefinitionDto betaRule1 = db.rules().insertRule(RuleTesting.newRuleDto().setStatus(RuleStatus.BETA)).getDefinition();
-    RuleDefinitionDto betaRule2 = db.rules().insertRule(RuleTesting.newRuleDto().setStatus(RuleStatus.BETA)).getDefinition();
+  public void countActiveRulesByQuery_filter_by_inheritance() {
     db.qualityProfiles().activateRule(profile1, rule1);
-    db.qualityProfiles().activateRule(profile2, betaRule1);
-    db.qualityProfiles().activateRule(profile2, betaRule2);
+    db.qualityProfiles().activateRule(profile1, rule2, ar -> ar.setInheritance(OVERRIDES));
+    db.qualityProfiles().activateRule(profile1, removedRule, ar -> ar.setInheritance(OVERRIDES));
+    db.qualityProfiles().activateRule(profile2, rule1, ar -> ar.setInheritance(OVERRIDES));
+    db.qualityProfiles().activateRule(profile2, rule2, ar -> ar.setInheritance(INHERITED));
 
-    Map<String, Long> counts = underTest.countActiveRulesForRuleStatusByProfileUuid(dbSession, organization, RuleStatus.BETA);
-
-    assertThat(counts).containsOnly(entry(profile2.getKee(), 2L));
+    ActiveRuleCountQuery.Builder builder = ActiveRuleCountQuery.builder().setOrganization(organization);
+    assertThat(underTest.countActiveRulesByQuery(dbSession, builder.setProfiles(asList(profile1, profile2)).setInheritance(OVERRIDES).build()))
+      .containsOnly(entry(profile1.getKee(), 1L), entry(profile2.getKee(), 1L));
+    assertThat(underTest.countActiveRulesByQuery(dbSession, builder.setProfiles(asList(profile1, profile2)).setInheritance(INHERITED).build()))
+      .containsOnly(entry(profile2.getKee(), 1L));
   }
 
   @Test
-  public void countActiveRulesForRuleStatusByProfileKey_returns_empty_map_if_organization_does_not_exist() {
-    Map<String, Long> counts = underTest.countActiveRulesForRuleStatusByProfileUuid(dbSession, OrganizationTesting.newOrganizationDto(), RuleStatus.READY);
-
-    assertThat(counts).isEmpty();
-  }
-
-  @Test
-  public void countActiveRulesForRuleStatusByProfileKey_returns_empty_map_if_profile_does_not_have_rules_with_specified_status() {
-    Map<String, Long> counts = underTest.countActiveRulesForRuleStatusByProfileUuid(dbSession, organization, RuleStatus.DEPRECATED);
-
-    assertThat(counts).isEmpty();
-  }
-
-  @Test
-  public void test_countActiveRulesForInheritanceByProfileKey_for_a_specified_organization() {
+  public void countActiveRulesByQuery_filter_by_organization() {
     db.qualityProfiles().activateRule(profile1, rule1);
-    db.qualityProfiles().activateRule(profile2, rule1, ar -> ar.setInheritance(ActiveRuleDto.OVERRIDES));
-    db.qualityProfiles().activateRule(profile2, rule2, ar -> ar.setInheritance(ActiveRuleDto.INHERITED));
+    OrganizationDto anotherOrganization = db.organizations().insert();
+    QProfileDto profileOnAnotherOrganization = db.qualityProfiles().insert(anotherOrganization);
+    db.qualityProfiles().activateRule(profileOnAnotherOrganization, rule1);
 
-    Map<String, Long> counts = underTest.countActiveRulesForInheritanceByProfileUuid(dbSession, organization, ActiveRuleDto.OVERRIDES);
-
-    assertThat(counts).containsOnly(entry(profile2.getKee(), 1L));
+    assertThat(underTest.countActiveRulesByQuery(dbSession,
+      ActiveRuleCountQuery.builder().setOrganization(organization).setProfiles(asList(profile1, profileOnAnotherOrganization)).build()))
+      .containsOnly(entry(profile1.getKee(), 1L));
   }
 
   @Test
-  public void countActiveRulesForInheritanceByProfileKey_returns_empty_map_if_organization_does_not_exist() {
-    Map<String, Long> counts = underTest.countActiveRulesForInheritanceByProfileUuid(dbSession, OrganizationTesting.newOrganizationDto(), ActiveRuleDto.OVERRIDES);
-
-    assertThat(counts).isEmpty();
+  public void scrollAllForIndexing_empty_table() {
+    Accumulator accumulator = new Accumulator();
+    underTest.scrollAllForIndexing(dbSession, accumulator);
+    assertThat(accumulator.list).isEmpty();
   }
 
   @Test
-  public void countActiveRulesForInheritanceByProfileKey_returns_empty_map_if_profile_does_not_have_rules_with_specified_status() {
-    Map<String, Long> counts = underTest.countActiveRulesForInheritanceByProfileUuid(dbSession, organization, ActiveRuleDto.OVERRIDES);
+  public void scrollAllForIndexing() {
+    ActiveRuleDto ar1 = db.qualityProfiles().activateRule(profile1, rule1);
+    ActiveRuleDto ar2 = db.qualityProfiles().activateRule(profile2, rule1);
+    ActiveRuleDto ar3 = db.qualityProfiles().activateRule(profile2, rule2);
 
-    assertThat(counts).isEmpty();
+    Accumulator accumulator = new Accumulator();
+    underTest.scrollAllForIndexing(dbSession, accumulator);
+    assertThat(accumulator.list)
+      .extracting(IndexedActiveRuleDto::getId, IndexedActiveRuleDto::getRepository, IndexedActiveRuleDto::getKey, IndexedActiveRuleDto::getRuleProfileUuid,
+        IndexedActiveRuleDto::getSeverity, IndexedActiveRuleDto::getInheritance)
+      .containsExactlyInAnyOrder(
+        tuple((long)ar1.getId(), ar1.getRuleKey().repository(), ar1.getRuleKey().rule(), profile1.getRulesProfileUuid(), ar1.getSeverity(), ar1.getInheritance()),
+        tuple((long)ar2.getId(), ar2.getRuleKey().repository(), ar2.getRuleKey().rule(), profile2.getRulesProfileUuid(), ar2.getSeverity(), ar2.getInheritance()),
+        tuple((long)ar3.getId(), ar3.getRuleKey().repository(), ar3.getRuleKey().rule(), profile2.getRulesProfileUuid(), ar3.getSeverity(), ar3.getInheritance()));
   }
 
   @Test
-  public void countActiveRulesForInheritanceByProfileKey_ignores_removed_rules() {
-    db.qualityProfiles().activateRule(profile1, rule1, ar -> ar.setInheritance(ActiveRuleDto.OVERRIDES));
-    db.qualityProfiles().activateRule(profile1, removedRule, ar -> ar.setInheritance(ActiveRuleDto.OVERRIDES));
+  public void scrollByIdsForIndexing() {
+    ActiveRuleDto ar1 = db.qualityProfiles().activateRule(profile1, rule1);
+    ActiveRuleDto ar2 = db.qualityProfiles().activateRule(profile2, rule1);
+    ActiveRuleDto ar3 = db.qualityProfiles().activateRule(profile2, rule2);
 
-    Map<String, Long> counts = underTest.countActiveRulesForInheritanceByProfileUuid(dbSession, organization, ActiveRuleDto.OVERRIDES);
+    Accumulator accumulator = new Accumulator();
+    underTest.scrollByIdsForIndexing(dbSession, asList((long)ar1.getId(), (long)ar2.getId()), accumulator);
+    assertThat(accumulator.list)
+      .extracting(IndexedActiveRuleDto::getId, IndexedActiveRuleDto::getRepository, IndexedActiveRuleDto::getKey, IndexedActiveRuleDto::getRuleProfileUuid,
+        IndexedActiveRuleDto::getSeverity)
+      .containsExactlyInAnyOrder(
+        tuple((long)ar1.getId(), ar1.getRuleKey().repository(), ar1.getRuleKey().rule(), profile1.getRulesProfileUuid(), ar1.getSeverity()),
+        tuple((long)ar2.getId(), ar2.getRuleKey().repository(), ar2.getRuleKey().rule(), profile2.getRulesProfileUuid(), ar2.getSeverity()));
+  }
 
-    assertThat(counts).containsOnly(entry(profile1.getKee(), 1L));
+  @Test
+  public void scrollByRuleProfileForIndexing() {
+    ActiveRuleDto ar1 = db.qualityProfiles().activateRule(profile1, rule1);
+    ActiveRuleDto ar2 = db.qualityProfiles().activateRule(profile2, rule1);
+    ActiveRuleDto ar3 = db.qualityProfiles().activateRule(profile2, rule2);
+
+    Accumulator accumulator = new Accumulator();
+    underTest.scrollByRuleProfileForIndexing(dbSession, profile2.getRulesProfileUuid(), accumulator);
+    assertThat(accumulator.list)
+      .extracting(IndexedActiveRuleDto::getId, IndexedActiveRuleDto::getRepository, IndexedActiveRuleDto::getKey, IndexedActiveRuleDto::getRuleProfileUuid,
+        IndexedActiveRuleDto::getSeverity)
+      .containsExactlyInAnyOrder(
+        tuple((long)ar2.getId(), ar2.getRuleKey().repository(), ar2.getRuleKey().rule(), profile2.getRulesProfileUuid(), ar2.getSeverity()),
+        tuple((long)ar3.getId(), ar3.getRuleKey().repository(), ar3.getRuleKey().rule(), profile2.getRulesProfileUuid(), ar3.getSeverity()));
+  }
+
+  private static class Accumulator implements Consumer<IndexedActiveRuleDto> {
+    private final List<IndexedActiveRuleDto> list = new ArrayList<>();
+
+    @Override
+    public void accept(IndexedActiveRuleDto dto) {
+      list.add(dto);
+    }
   }
 }

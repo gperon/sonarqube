@@ -23,7 +23,7 @@ import com.google.common.base.Optional;
 import java.util.List;
 import org.junit.Rule;
 import org.junit.Test;
-import org.sonar.api.config.MapSettings;
+import org.sonar.api.config.internal.MapSettings;
 import org.sonar.server.es.EsTester;
 import org.sonar.server.es.SearchOptions;
 
@@ -34,7 +34,7 @@ import static org.sonar.server.test.index.TestIndexDefinition.INDEX_TYPE_TEST;
 
 public class TestIndexTest {
   @Rule
-  public EsTester es = new EsTester(new TestIndexDefinition(new MapSettings()));
+  public EsTester es = new EsTester(new TestIndexDefinition(new MapSettings().asConfig()));
 
   TestIndex underTest = new TestIndex(es.client());
 

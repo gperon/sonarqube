@@ -31,7 +31,7 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 import org.junit.rules.TestRule;
 import org.junit.rules.Timeout;
-import org.sonar.api.config.MapSettings;
+import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.utils.System2;
 import org.sonar.api.utils.log.LogTester;
 import org.sonar.process.NetworkUtils;
@@ -62,7 +62,7 @@ public class EmbeddedDatabaseTest {
 
   private MapSettings settings = new MapSettings();
   private System2 system2 = mock(System2.class);
-  private EmbeddedDatabase underTest = new EmbeddedDatabase(settings, system2);
+  private EmbeddedDatabase underTest = new EmbeddedDatabase(settings.asConfig(), system2);
 
   @After
   public void tearDown() throws Exception {

@@ -22,9 +22,10 @@ package org.sonar.server.view.index;
 import com.google.common.collect.Maps;
 import java.util.List;
 import java.util.Map;
+import org.elasticsearch.action.search.SearchResponse;
 import org.junit.Rule;
 import org.junit.Test;
-import org.sonar.api.config.MapSettings;
+import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.utils.System2;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbSession;
@@ -38,9 +39,7 @@ import org.sonar.db.rule.RuleDto;
 import org.sonar.db.rule.RuleTesting;
 import org.sonar.server.es.EsTester;
 import org.sonar.server.es.SearchOptions;
-import org.sonar.server.es.SearchResult;
 import org.sonar.server.issue.IssueQuery;
-import org.sonar.server.issue.index.IssueDoc;
 import org.sonar.server.issue.index.IssueIndex;
 import org.sonar.server.issue.index.IssueIndexDefinition;
 import org.sonar.server.issue.index.IssueIndexer;
@@ -50,8 +49,9 @@ import org.sonar.server.permission.index.PermissionIndexer;
 import org.sonar.server.tester.UserSessionRule;
 
 import static com.google.common.collect.Lists.newArrayList;
-import static java.util.Arrays.asList;
+import static java.util.Collections.emptySet;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.sonar.db.component.ComponentTesting.newProjectCopy;
 
 public class ViewIndexerTest {
 
@@ -61,28 +61,28 @@ public class ViewIndexerTest {
   public DbTester dbTester = DbTester.create(system2);
 
   @Rule
-  public EsTester esTester = new EsTester(new IssueIndexDefinition(new MapSettings()), new ViewIndexDefinition(new MapSettings()));
+  public EsTester esTester = new EsTester(new IssueIndexDefinition(new MapSettings().asConfig()), new ViewIndexDefinition(new MapSettings().asConfig()));
 
   @Rule
   public UserSessionRule userSessionRule = UserSessionRule.standalone();
 
   private DbClient dbClient = dbTester.getDbClient();
   private DbSession dbSession = dbTester.getSession();
-  private IssueIndexer issueIndexer = new IssueIndexer(esTester.client(), new IssueIteratorFactory(dbClient));
+  private IssueIndexer issueIndexer = new IssueIndexer(esTester.client(), dbClient, new IssueIteratorFactory(dbClient));
   private PermissionIndexer permissionIndexer = new PermissionIndexer(dbClient, esTester.client(), issueIndexer);
   private ViewIndexer underTest = new ViewIndexer(dbClient, esTester.client());
 
   @Test
   public void index_nothing() {
-    underTest.indexOnStartup(null);
+    underTest.indexOnStartup(emptySet());
     assertThat(esTester.countDocuments(ViewIndexDefinition.INDEX_TYPE_VIEW)).isEqualTo(0L);
   }
 
   @Test
-  public void index() {
+  public void index_on_startup() {
     dbTester.prepareDbUnit(getClass(), "index.xml");
 
-    underTest.indexOnStartup(null);
+    underTest.indexOnStartup(emptySet());
 
     List<ViewDoc> docs = esTester.getDocuments(ViewIndexDefinition.INDEX_TYPE_VIEW, ViewDoc.class);
     assertThat(docs).hasSize(4);
@@ -114,19 +114,48 @@ public class ViewIndexerTest {
   public void index_view_doc() {
     underTest.index(new ViewDoc().setUuid("EFGH").setProjects(newArrayList("KLMN", "JKLM")));
 
-    List<ViewDoc> docs = esTester.getDocuments(ViewIndexDefinition.INDEX_TYPE_VIEW, ViewDoc.class);
-    assertThat(docs).hasSize(1);
+    List<ViewDoc> result = esTester.getDocuments(ViewIndexDefinition.INDEX_TYPE_VIEW, ViewDoc.class);
 
-    ViewDoc view = docs.get(0);
+    assertThat(result).hasSize(1);
+    ViewDoc view = result.get(0);
     assertThat(view.uuid()).isEqualTo("EFGH");
     assertThat(view.projects()).containsOnly("KLMN", "JKLM");
   }
 
   @Test
+  public void index_application() {
+    ComponentDto application = dbTester.components().insertApplication(dbTester.getDefaultOrganization());
+    ComponentDto project = dbTester.components().insertPrivateProject();
+    dbTester.components().insertComponent(newProjectCopy("PC1", project, application));
+
+    underTest.index(application.uuid());
+    List<ViewDoc> result = esTester.getDocuments(ViewIndexDefinition.INDEX_TYPE_VIEW, ViewDoc.class);
+
+    assertThat(result).hasSize(1);
+    ViewDoc resultApp = result.get(0);
+    assertThat(resultApp.uuid()).isEqualTo(application.uuid());
+    assertThat(resultApp.projects()).containsExactlyInAnyOrder(project.uuid());
+  }
+
+  @Test
+  public void index_application_on_startup() {
+    ComponentDto application = dbTester.components().insertApplication(dbTester.getDefaultOrganization());
+    ComponentDto project = dbTester.components().insertPrivateProject();
+    dbTester.components().insertComponent(newProjectCopy("PC1", project, application));
+
+    underTest.indexOnStartup(emptySet());
+    List<ViewDoc> result = esTester.getDocuments(ViewIndexDefinition.INDEX_TYPE_VIEW, ViewDoc.class);
+
+    assertThat(result).hasSize(1);
+    ViewDoc resultApp = result.get(0);
+    assertThat(resultApp.uuid()).isEqualTo(application.uuid());
+    assertThat(resultApp.projects()).containsExactlyInAnyOrder(project.uuid());
+  }
+
+  @Test
   public void clear_views_lookup_cache_on_index_view_uuid() {
-    IssueIndex issueIndex = new IssueIndex(esTester.client(), System2.INSTANCE, userSessionRule, new AuthorizationTypeSupport(userSessionRule)
-    );
-    IssueIndexer issueIndexer = new IssueIndexer(esTester.client(), new IssueIteratorFactory(dbClient));
+    IssueIndex issueIndex = new IssueIndex(esTester.client(), System2.INSTANCE, userSessionRule, new AuthorizationTypeSupport(userSessionRule));
+    IssueIndexer issueIndexer = new IssueIndexer(esTester.client(), dbClient, new IssueIteratorFactory(dbClient));
 
     String viewUuid = "ABCD";
 
@@ -134,11 +163,11 @@ public class ViewIndexerTest {
     dbClient.ruleDao().insert(dbSession, rule.getDefinition());
     ComponentDto project1 = addProjectWithIssue(rule, dbTester.organizations().insert());
     issueIndexer.indexOnStartup(issueIndexer.getIndexTypes());
-    permissionIndexer.indexProjectsByUuids(dbSession, asList(project1.uuid()));
+    permissionIndexer.indexOnStartup(permissionIndexer.getIndexTypes());
 
     OrganizationDto organizationDto = dbTester.organizations().insert();
     ComponentDto view = ComponentTesting.newView(organizationDto, "ABCD");
-    ComponentDto techProject1 = ComponentTesting.newProjectCopy("CDEF", project1, view);
+    ComponentDto techProject1 = newProjectCopy("CDEF", project1, view);
     dbClient.componentDao().insert(dbSession, view, techProject1);
     dbSession.commit();
 
@@ -146,21 +175,21 @@ public class ViewIndexerTest {
     underTest.index(viewUuid);
 
     // Execute issue query on view -> 1 issue on view
-    SearchResult<IssueDoc> docs = issueIndex.search(IssueQuery.builder().viewUuids(newArrayList(viewUuid)).build(), new SearchOptions());
-    assertThat(docs.getDocs()).hasSize(1);
+    SearchResponse issueResponse = issueIndex.search(IssueQuery.builder().viewUuids(newArrayList(viewUuid)).build(), new SearchOptions());
+    assertThat(issueResponse.getHits().getHits()).hasSize(1);
 
     // Add a project to the view and index it again
     ComponentDto project2 = addProjectWithIssue(rule, organizationDto);
     issueIndexer.indexOnStartup(issueIndexer.getIndexTypes());
-    permissionIndexer.indexProjectsByUuids(dbSession, asList(project2.uuid()));
+    permissionIndexer.indexOnStartup(permissionIndexer.getIndexTypes());
 
-    ComponentDto techProject2 = ComponentTesting.newProjectCopy("EFGH", project2, view);
+    ComponentDto techProject2 = newProjectCopy("EFGH", project2, view);
     dbClient.componentDao().insert(dbSession, techProject2);
     dbSession.commit();
     underTest.index(viewUuid);
 
     // Execute issue query on view -> issue of project2 are well taken into account : the cache has been cleared
-    assertThat(issueIndex.search(IssueQuery.builder().viewUuids(newArrayList(viewUuid)).build(), new SearchOptions()).getDocs()).hasSize(2);
+    assertThat(issueIndex.search(IssueQuery.builder().viewUuids(newArrayList(viewUuid)).build(), new SearchOptions()).getHits()).hasSize(2);
   }
 
   private ComponentDto addProjectWithIssue(RuleDto rule, OrganizationDto org) {

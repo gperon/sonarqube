@@ -18,14 +18,15 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 import React from 'react';
+import PropTypes from 'prop-types';
 import moment from 'moment';
 import LicenseStatus from './LicenseStatus';
 import LicenseChangeForm from './LicenseChangeForm';
 
 export default class LicenseRow extends React.PureComponent {
   static propTypes = {
-    license: React.PropTypes.object.isRequired,
-    setLicense: React.PropTypes.func.isRequired
+    license: PropTypes.object.isRequired,
+    setLicense: PropTypes.func.isRequired
   };
 
   handleSet = value => this.props.setLicense(this.props.license.key, value);
@@ -35,20 +36,26 @@ export default class LicenseRow extends React.PureComponent {
 
     return (
       <tr className="js-license" data-license-key={license.key}>
-        <td className="text-middle"><LicenseStatus license={license} /></td>
+        <td className="text-middle">
+          <LicenseStatus license={license} />
+        </td>
         <td className="js-product text-middle">
           <div className={license.invalidProduct ? 'text-danger' : null}>
             {license.name || license.key}
           </div>
         </td>
-        <td className="js-organization text-middle">{license.organization}</td>
+        <td className="js-organization text-middle">
+          {license.organization}
+        </td>
         <td className="js-expiration text-middle">
           {license.expiration != null &&
             <div className={license.invalidExpiration ? 'text-danger' : null}>
               {moment(license.expiration).format('LL')}
             </div>}
         </td>
-        <td className="js-type text-middle">{license.type}</td>
+        <td className="js-type text-middle">
+          {license.type}
+        </td>
         <td className="js-server-id text-middle">
           <div className={license.invalidServerId ? 'text-danger' : null}>
             {license.serverId}

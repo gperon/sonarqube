@@ -19,11 +19,10 @@
  */
 package org.sonar.scanner.profiling;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
+import com.google.common.collect.Maps;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -44,12 +43,13 @@ import org.sonar.api.batch.events.SensorExecutionHandler;
 import org.sonar.api.batch.events.SensorExecutionHandler.SensorExecutionEvent;
 import org.sonar.api.batch.events.SensorsPhaseHandler;
 import org.sonar.api.batch.events.SensorsPhaseHandler.SensorsPhaseEvent;
+import org.sonar.api.batch.fs.internal.DefaultInputModule;
 import org.sonar.api.resources.Project;
 import org.sonar.api.utils.System2;
 import org.sonar.scanner.bootstrap.GlobalProperties;
 import org.sonar.scanner.events.BatchStepEvent;
 
-import com.google.common.collect.Maps;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class PhasesSumUpTimeProfilerTest {
 
@@ -68,7 +68,7 @@ public class PhasesSumUpTimeProfilerTest {
   }
 
   @Test
-  public void testSimpleProject() throws InterruptedException {
+  public void testSimpleProject() throws Exception {
 
     final Project project = mockProject("my:project", true);
 
@@ -81,7 +81,7 @@ public class PhasesSumUpTimeProfilerTest {
   }
 
   @Test
-  public void testMultimoduleProject() throws InterruptedException {
+  public void testMultimoduleProject() throws Exception {
     final Project project = mockProject("project root", true);
     final Project moduleA = mockProject("moduleA", false);
     final Project moduleB = mockProject("moduleB", false);
@@ -133,8 +133,8 @@ public class PhasesSumUpTimeProfilerTest {
     }
   }
 
-  private Project mockProject(String name, boolean isRoot) {
-    return new Project(ProjectDefinition.create().setName(name).setKey(name));
+  private Project mockProject(String name, boolean isRoot) throws IOException {
+    return new Project(new DefaultInputModule(ProjectDefinition.create().setName(name).setKey(name).setBaseDir(temp.newFolder()).setWorkDir(temp.newFolder())));
   }
 
   private void fakeAnalysis(PhasesSumUpTimeProfiler profiler, final Project module) {

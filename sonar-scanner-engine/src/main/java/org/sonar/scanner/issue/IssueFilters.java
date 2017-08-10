@@ -19,26 +19,25 @@
  */
 package org.sonar.scanner.issue;
 
-import org.sonar.api.scan.issue.filter.FilterableIssue;
-
-import org.sonar.api.scan.issue.filter.IssueFilterChain;
-import org.sonar.scanner.ProjectAnalysisInfo;
-import org.sonar.scanner.protocol.output.ScannerReport;
 import org.sonar.api.batch.ScannerSide;
 import org.sonar.api.batch.fs.internal.DefaultInputModule;
 import org.sonar.api.issue.Issue;
+import org.sonar.api.scan.issue.filter.FilterableIssue;
 import org.sonar.api.scan.issue.filter.IssueFilter;
+import org.sonar.api.scan.issue.filter.IssueFilterChain;
+import org.sonar.scanner.ProjectAnalysisInfo;
+import org.sonar.scanner.protocol.output.ScannerReport;
 
 @ScannerSide
 public class IssueFilters {
-  private final IssueFilter[] filters;
+  private final IssueFilterChain filterChain;
   private final org.sonar.api.issue.batch.IssueFilter[] deprecatedFilters;
   private final DefaultInputModule module;
   private final ProjectAnalysisInfo projectAnalysisInfo;
 
   public IssueFilters(DefaultInputModule module, ProjectAnalysisInfo projectAnalysisInfo, IssueFilter[] exclusionFilters, org.sonar.api.issue.batch.IssueFilter[] filters) {
     this.module = module;
-    this.filters = exclusionFilters;
+    this.filterChain = new DefaultIssueFilterChain(exclusionFilters);
     this.deprecatedFilters = filters;
     this.projectAnalysisInfo = projectAnalysisInfo;
   }
@@ -56,7 +55,6 @@ public class IssueFilters {
   }
 
   public boolean accept(String componentKey, ScannerReport.Issue rawIssue) {
-    IssueFilterChain filterChain = new DefaultIssueFilterChain(filters);
     FilterableIssue fIssue = new DefaultFilterableIssue(module, projectAnalysisInfo, rawIssue, componentKey);
     if (filterChain.accept(fIssue)) {
       return acceptDeprecated(componentKey, rawIssue);

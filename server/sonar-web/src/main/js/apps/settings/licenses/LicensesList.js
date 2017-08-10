@@ -18,13 +18,14 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 import React from 'react';
+import PropTypes from 'prop-types';
 import LicenseRowContainer from './LicenseRowContainer';
 import { translate } from '../../../helpers/l10n';
 
 export default class LicensesList extends React.PureComponent {
   static propTypes = {
-    licenses: React.PropTypes.array.isRequired,
-    fetchLicenses: React.PropTypes.func.isRequired
+    licenses: PropTypes.array.isRequired,
+    fetchLicenses: PropTypes.func.isRequired
   };
 
   componentDidMount() {
@@ -39,18 +40,28 @@ export default class LicensesList extends React.PureComponent {
         <thead>
           <tr>
             <th width={40}>&nbsp;</th>
-            <th>{translate('licenses.list.product')}</th>
-            <th width={150}>{translate('licenses.list.organization')}</th>
-            <th width={150}>{translate('licenses.list.expiration')}</th>
-            <th width={150}>{translate('licenses.list.type')}</th>
-            <th width={150}>{translate('licenses.list.server')}</th>
+            <th>
+              {translate('licenses.list.product')}
+            </th>
+            <th width={150}>
+              {translate('licenses.list.organization')}
+            </th>
+            <th width={150}>
+              {translate('licenses.list.expiration')}
+            </th>
+            <th width={150}>
+              {translate('licenses.list.type')}
+            </th>
+            <th width={150}>
+              {translate('licenses.list.server')}
+            </th>
             <th width={80}>&nbsp;</th>
           </tr>
         </thead>
         <tbody>
-          {this.props.licenses.map(licenseKey => (
+          {this.props.licenses.map(licenseKey =>
             <LicenseRowContainer key={licenseKey} licenseKey={licenseKey} />
-          ))}
+          )}
         </tbody>
       </table>
     );

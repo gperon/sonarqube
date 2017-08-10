@@ -23,7 +23,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.sonar.api.config.MapSettings;
+import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.measures.Metric.ValueType;
 import org.sonar.api.utils.System2;
 import org.sonar.api.web.UserRole;
@@ -65,7 +65,7 @@ public class UpdateActionTest {
   @Rule
   public DbTester db = DbTester.create(System2.INSTANCE);
   @Rule
-  public EsTester es = new EsTester(new UserIndexDefinition(new MapSettings()));
+  public EsTester es = new EsTester(new UserIndexDefinition(new MapSettings().asConfig()));
 
   private DbClient dbClient = db.getDbClient();
   private DbSession dbSession = db.getSession();
@@ -144,7 +144,7 @@ public class UpdateActionTest {
       .setKey("metric-key");
     dbClient.metricDao().insert(dbSession, metric);
     OrganizationDto organizationDto = db.organizations().insert();
-    ComponentDto component = ComponentTesting.newPrivateProjectDto(organizationDto, "project-uuid").setKey("project-key");
+    ComponentDto component = ComponentTesting.newPrivateProjectDto(organizationDto, "project-uuid").setDbKey("project-key");
     dbClient.componentDao().insert(dbSession, component);
     CustomMeasureDto customMeasure = newCustomMeasure(component, metric)
       .setCreatedAt(100_000_000L)

@@ -28,8 +28,8 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 import org.sonar.api.config.Encryption;
-import org.sonar.api.config.MapSettings;
 import org.sonar.api.config.Settings;
+import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.server.ws.WebService;
 import org.sonar.server.exceptions.BadRequestException;
 import org.sonar.server.exceptions.ForbiddenException;
@@ -50,7 +50,7 @@ public class EncryptActionTest {
   @Rule
   public TemporaryFolder folder = new TemporaryFolder();
 
-  private Settings settings = new MapSettings();
+  private MapSettings settings = new MapSettings();
   private Encryption encryption = settings.getEncryption();
   private EncryptAction underTest = new EncryptAction(userSession, settings);
   private WsActionTester ws = new WsActionTester(underTest);

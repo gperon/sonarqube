@@ -18,6 +18,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 import React from 'react';
+import PropTypes from 'prop-types';
 import { Link } from 'react-router';
 import { connect } from 'react-redux';
 import { getSettingValue, getCurrentUser } from '../../../../store/rootReducer';
@@ -25,13 +26,13 @@ import { translate } from '../../../../helpers/l10n';
 
 class GlobalNavBranding extends React.PureComponent {
   static propTypes = {
-    customLogoUrl: React.PropTypes.string,
-    customLogoWidth: React.PropTypes.oneOfType([React.PropTypes.string, React.PropTypes.number])
+    customLogoUrl: PropTypes.string,
+    customLogoWidth: PropTypes.oneOfType([PropTypes.string, PropTypes.number])
   };
 
   renderLogo() {
     const url = this.props.customLogoUrl || `${window.baseUrl}/images/logo.svg`;
-    const width = this.props.customLogoWidth || 100;
+    const width = this.props.customLogoUrl ? this.props.customLogoWidth || 100 : 83;
     const height = 30;
     const title = translate('layout.sonar.slogan');
     return <img src={url} width={width} height={height} alt={title} title={title} />;
@@ -39,11 +40,11 @@ class GlobalNavBranding extends React.PureComponent {
 
   render() {
     const homeController = this.props.currentUser.isLoggedIn ? '/projects' : '/about';
-    const homeLinkClassName =
-      'navbar-brand' + (this.props.customLogoUrl ? ' navbar-brand-custom' : '');
     return (
-      <div className="navbar-header">
-        <Link to={homeController} className={homeLinkClassName}>{this.renderLogo()}</Link>
+      <div className="pull-left">
+        <Link to={homeController} className="navbar-brand">
+          {this.renderLogo()}
+        </Link>
       </div>
     );
   }

@@ -18,13 +18,14 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 import React from 'react';
+import PropTypes from 'prop-types';
 import Modal from 'react-modal';
 import { translate, translateWithParameters } from '../../../helpers/l10n';
 
 export default class LicenseChangeForm extends React.PureComponent {
   static propTypes = {
-    license: React.PropTypes.object.isRequired,
-    onChange: React.PropTypes.func.isRequired
+    license: PropTypes.object.isRequired,
+    onChange: PropTypes.func.isRequired
   };
 
   state = {
@@ -76,10 +77,14 @@ export default class LicenseChangeForm extends React.PureComponent {
             onRequestClose={this.closeModal}>
             <form onSubmit={this.handleSubmit}>
               <div className="modal-head">
-                <h2>{translateWithParameters('licenses.update_license_for_x', productName)}</h2>
+                <h2>
+                  {translateWithParameters('licenses.update_license_for_x', productName)}
+                </h2>
               </div>
               <div className="modal-body">
-                <label htmlFor="license-input">{translate('licenses.license_input_label')}</label>
+                <label htmlFor="license-input">
+                  {translate('licenses.license_input_label')}
+                </label>
                 <textarea
                   autoFocus={true}
                   className="width-100 spacer-top"
@@ -88,7 +93,9 @@ export default class LicenseChangeForm extends React.PureComponent {
                   id="license-input"
                   defaultValue={license.value}
                 />
-                <div className="spacer-top note">{translate('licenses.license_input_note')}</div>
+                <div className="spacer-top note">
+                  {translate('licenses.license_input_note')}
+                </div>
               </div>
               <div className="modal-foot">
                 {this.state.loading && <i className="js-modal-spinner spinner spacer-right" />}

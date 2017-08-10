@@ -29,7 +29,6 @@ import GlobalContainer from '../components/GlobalContainer';
 import SimpleContainer from '../components/SimpleContainer';
 import SimpleSessionsContainer from '../../apps/sessions/components/SimpleSessionsContainer';
 import Landing from '../components/Landing';
-import ProjectContainer from '../components/ProjectContainer';
 import ProjectAdminContainer from '../components/ProjectAdminContainer';
 import ProjectPageExtension from '../components/extensions/ProjectPageExtension';
 import ProjectAdminPageExtension from '../components/extensions/ProjectAdminPageExtension';
@@ -119,11 +118,14 @@ const startReactApp = () => {
         <Redirect from="/component/index" to="/component" />
         <Redirect from="/component_issues" to="/project/issues" />
         <Redirect from="/dashboard/index" to="/dashboard" />
-        <Redirect from="/governance" to="/view" />
+        <Redirect from="/governance" to="/portfolio" />
+        <Redirect from="/view" to="/portfolio" />
+        <Redirect from="/extension/governance/governance" to="/portfolio" />
         <Redirect from="/extension/governance/portfolios" to="/portfolios" />
         <Redirect from="/profiles/index" to="/profiles" />
         <Redirect from="/quality_gates/index" to="/quality_gates" />
         <Redirect from="/settings/index" to="/settings" />
+        <Redirect from="/sessions/login" to="/sessions/new" />
         <Redirect from="/system/index" to="/system" />
 
         <Route path="markdown/help" component={MarkdownHelp} />
@@ -131,17 +133,20 @@ const startReactApp = () => {
         <Route component={DefaultHelmetContainer}>
           <Route component={LocalizationContainer}>
             <Route component={SimpleContainer}>
-              <Route path="maintenance">{maintenanceRoutes}</Route>
-              <Route path="setup">{setupRoutes}</Route>
+              <Route path="maintenance">
+                {maintenanceRoutes}
+              </Route>
+              <Route path="setup">
+                {setupRoutes}
+              </Route>
             </Route>
 
             <Route component={MigrationContainer}>
               <Route component={SimpleSessionsContainer}>
-                <Route path="/sessions">{sessionsRoutes}</Route>
+                <Route path="/sessions" childRoutes={sessionsRoutes} />
               </Route>
 
               <Route path="/" component={App}>
-
                 <IndexRoute component={Landing} />
 
                 <Route component={GlobalContainer}>
@@ -161,7 +166,9 @@ const startReactApp = () => {
                   <Route path="profiles" childRoutes={qualityProfilesRoutes} />
                   <Route path="web_api" childRoutes={webAPIRoutes} />
 
-                  <Route component={ProjectContainer}>
+                  <Route
+                    getComponent={() =>
+                      import('../components/ProjectContainer').then(i => i.default)}>
                     <Route path="code" childRoutes={codeRoutes} />
                     <Route path="component_measures" childRoutes={componentMeasuresRoutes} />
                     <Route path="custom_measures" childRoutes={customMeasuresRoutes} />
@@ -174,7 +181,6 @@ const startReactApp = () => {
                           component={ProjectAdminPageExtension}
                         />
                       </Route>
-                      <Redirect from="extension/governance/governance" to="/view" />
                       <Route
                         path="extension/:pluginKey/:extensionKey"
                         component={ProjectPageExtension}
@@ -185,7 +191,7 @@ const startReactApp = () => {
                       {projectAdminRoutes}
                     </Route>
                     <Route path="project_roles" childRoutes={projectPermissionsRoutes} />
-                    <Route path="view" component={ViewDashboard} />
+                    <Route path="portfolio" component={ViewDashboard} />
                   </Route>
 
                   <Route component={AdminContainer}>

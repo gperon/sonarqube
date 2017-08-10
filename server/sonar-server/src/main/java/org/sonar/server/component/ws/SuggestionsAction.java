@@ -28,14 +28,16 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.CheckForNull;
 import javax.annotation.Nullable;
+import org.sonar.api.resources.Qualifiers;
 import org.sonar.api.resources.ResourceType;
 import org.sonar.api.resources.ResourceTypes;
-import org.sonar.api.resources.Qualifiers;
 import org.sonar.api.server.ws.Change;
 import org.sonar.api.server.ws.Request;
 import org.sonar.api.server.ws.Response;
@@ -115,7 +117,7 @@ public class SuggestionsAction implements ComponentsWsAction {
       .setSince("4.2")
       .setInternal(true)
       .setHandler(this)
-      .setResponseExample(Resources.getResource(this.getClass(), "components-example-suggestions.json"))
+      .setResponseExample(Resources.getResource(this.getClass(), "suggestions-example.json"))
       .setChangelog(new Change("6.4", "Parameter 's' is optional"));
 
     action.createParam(PARAM_QUERY)
@@ -215,7 +217,7 @@ public class SuggestionsAction implements ComponentsWsAction {
     }
 
     List<ComponentDto> favorites = favoriteFinder.list();
-    Set<String> favoriteKeys = favorites.stream().map(ComponentDto::getKey).collect(MoreCollectors.toSet(favorites.size()));
+    Set<String> favoriteKeys = favorites.stream().map(ComponentDto::getDbKey).collect(MoreCollectors.toSet(favorites.size()));
     ComponentIndexQuery.Builder queryBuilder = ComponentIndexQuery.builder()
       .setQuery(query)
       .setRecentlyBrowsedKeys(recentlyBrowsedKeys)
@@ -315,6 +317,7 @@ public class SuggestionsAction implements ComponentsWsAction {
 
       List<Suggestion> suggestions = qualifier.getHits().stream()
         .map(hit -> toSuggestion(hit, recentlyBrowsedKeys, favoriteUuids, componentsByUuids, organizationByUuids, projectsByUuids))
+        .filter(Objects::nonNull)
         .collect(toList());
 
       return Category.newBuilder()
@@ -325,23 +328,30 @@ public class SuggestionsAction implements ComponentsWsAction {
     }).collect(toList());
   }
 
+  /**
+   * @return null when the component exists in Elasticsearch but not in database. That
+   * occurs when failed indexing requests are been recovering.
+   */
+  @CheckForNull
   private static Suggestion toSuggestion(ComponentHit hit, Set<String> recentlyBrowsedKeys, Set<String> favoriteUuids, Map<String, ComponentDto> componentsByUuids,
     Map<String, OrganizationDto> organizationByUuids, Map<String, ComponentDto> projectsByUuids) {
     ComponentDto result = componentsByUuids.get(hit.getUuid());
+    if (result == null) {
+      return null;
+    }
     String organizationKey = organizationByUuids.get(result.getOrganizationUuid()).getKey();
     checkState(organizationKey != null, "Organization with uuid '%s' not found", result.getOrganizationUuid());
     Suggestion.Builder builder = Suggestion.newBuilder()
       .setOrganization(organizationKey)
-      .setKey(result.getKey())
+      .setKey(result.getDbKey())
       .setName(result.name())
       .setMatch(hit.getHighlightedText().orElse(HtmlEscapers.htmlEscaper().escape(result.name())))
-      .setIsRecentlyBrowsed(recentlyBrowsedKeys.contains(result.getKey()))
+      .setIsRecentlyBrowsed(recentlyBrowsedKeys.contains(result.getDbKey()))
       .setIsFavorite(favoriteUuids.contains(result.uuid()));
     if (QUALIFIERS_FOR_WHICH_TO_RETURN_PROJECT.contains(result.qualifier())) {
-      builder.setProject(projectsByUuids.get(result.projectUuid()).getKey());
+      builder.setProject(projectsByUuids.get(result.projectUuid()).getDbKey());
     }
-    return builder
-      .build();
+    return builder.build();
   }
 
   private static List<Organization> toOrganizations(Map<String, OrganizationDto> organizationByUuids) {
@@ -356,7 +366,7 @@ public class SuggestionsAction implements ComponentsWsAction {
   private static List<Project> toProjects(Map<String, ComponentDto> projectsByUuids) {
     return projectsByUuids.values().stream()
       .map(p -> Project.newBuilder()
-        .setKey(p.key())
+        .setKey(p.getDbKey())
         .setName(p.longName())
         .build())
       .collect(Collectors.toList());

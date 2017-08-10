@@ -19,10 +19,13 @@
  */
 package org.sonar.server.qualityprofile;
 
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import org.sonar.api.server.ServerSide;
+import org.sonar.api.utils.System2;
 import org.sonar.api.utils.log.Logger;
 import org.sonar.api.utils.log.Loggers;
 import org.sonar.api.utils.log.Profiler;
@@ -32,6 +35,7 @@ import org.sonar.db.DbSession;
 import org.sonar.db.qualityprofile.RulesProfileDto;
 
 import static java.lang.String.format;
+import static org.sonar.server.qualityprofile.ActiveRule.Inheritance.NONE;
 
 /**
  * Synchronize Quality profiles during server startup
@@ -45,13 +49,18 @@ public class RegisterQualityProfiles {
   private final DbClient dbClient;
   private final BuiltInQProfileInsert builtInQProfileInsert;
   private final BuiltInQProfileUpdate builtInQProfileUpdate;
+  private final BuiltInQualityProfilesUpdateListener builtInQualityProfilesNotification;
+  private final System2 system2;
 
   public RegisterQualityProfiles(BuiltInQProfileRepository builtInQProfileRepository,
-    DbClient dbClient, BuiltInQProfileInsert builtInQProfileInsert, BuiltInQProfileUpdate builtInQProfileUpdate) {
+    DbClient dbClient, BuiltInQProfileInsert builtInQProfileInsert, BuiltInQProfileUpdate builtInQProfileUpdate,
+    BuiltInQualityProfilesUpdateListener builtInQualityProfilesNotification, System2 system2) {
     this.builtInQProfileRepository = builtInQProfileRepository;
     this.dbClient = dbClient;
     this.builtInQProfileInsert = builtInQProfileInsert;
     this.builtInQProfileUpdate = builtInQProfileUpdate;
+    this.builtInQualityProfilesNotification = builtInQualityProfilesNotification;
+    this.system2 = system2;
   }
 
   public void start() {
@@ -63,17 +72,29 @@ public class RegisterQualityProfiles {
     Profiler profiler = Profiler.create(Loggers.get(getClass())).startInfo("Register quality profiles");
     try (DbSession dbSession = dbClient.openSession(false);
       DbSession batchDbSession = dbClient.openSession(true)) {
+      long startDate = system2.now();
 
       Map<QProfileName, RulesProfileDto> persistedRuleProfiles = loadPersistedProfiles(dbSession);
 
+      Multimap<QProfileName, ActiveRuleChange> changedProfiles = ArrayListMultimap.create();
       builtInQProfiles.forEach(builtIn -> {
         RulesProfileDto ruleProfile = persistedRuleProfiles.get(builtIn.getQProfileName());
         if (ruleProfile == null) {
           register(dbSession, batchDbSession, builtIn);
         } else {
-          update(dbSession, builtIn, ruleProfile);
+          List<ActiveRuleChange> changes = update(dbSession, builtIn, ruleProfile);
+          changedProfiles.putAll(builtIn.getQProfileName(), changes.stream()
+            .filter(change -> {
+              String inheritance = change.getActiveRule().getInheritance();
+              return inheritance == null || NONE.name().equals(inheritance);
+            })
+            .collect(MoreCollectors.toList()));
         }
       });
+      if (!changedProfiles.isEmpty()) {
+        long endDate = system2.now();
+        builtInQualityProfilesNotification.onChange(changedProfiles, startDate, endDate);
+      }
     }
     profiler.stopDebug();
   }
@@ -91,10 +112,10 @@ public class RegisterQualityProfiles {
     builtInQProfileInsert.create(dbSession, batchDbSession, builtIn);
   }
 
-  private void update(DbSession dbSession, BuiltInQProfile builtIn, RulesProfileDto ruleProfile) {
+  private List<ActiveRuleChange> update(DbSession dbSession, BuiltInQProfile builtIn, RulesProfileDto ruleProfile) {
     LOGGER.info("Update profile {}", builtIn.getQProfileName());
 
-    builtInQProfileUpdate.update(dbSession, builtIn, ruleProfile);
+    return builtInQProfileUpdate.update(dbSession, builtIn, ruleProfile);
   }
 
   /**

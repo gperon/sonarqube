@@ -26,9 +26,7 @@ import java.nio.charset.Charset;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-
 import javax.annotation.Nullable;
-
 import org.sonar.api.batch.bootstrap.ProjectDefinition;
 import org.sonar.api.batch.fs.InputFile;
 import org.sonar.api.utils.PathUtils;
@@ -66,7 +64,7 @@ public class TestInputFileBuilder {
   private int lastValidOffset = -1;
   private String hash;
   private int nonBlankLines;
-  private int[] originalLineOffsets;
+  private int[] originalLineOffsets = new int[0];
   private boolean publish = true;
   private String contents;
 
@@ -194,20 +192,22 @@ public class TestInputFileBuilder {
   }
 
   public DefaultInputFile build() {
-    DefaultIndexedFile indexedFile = new DefaultIndexedFile(moduleKey, moduleBaseDir, relativePath, type, id);
-    indexedFile.setLanguage(language);
+    DefaultIndexedFile indexedFile = new DefaultIndexedFile(moduleBaseDir.resolve(relativePath), moduleKey, relativePath, relativePath, type, language, id, new SensorStrategy());
     DefaultInputFile inputFile = new DefaultInputFile(indexedFile,
       f -> f.setMetadata(new Metadata(lines, nonBlankLines, hash, originalLineOffsets, lastValidOffset)),
       contents);
     inputFile.setStatus(status);
     inputFile.setCharset(charset);
-    inputFile.setPublish(publish);
+    inputFile.setPublished(publish);
     return inputFile;
   }
 
   public static DefaultInputModule newDefaultInputModule(String moduleKey, File baseDir) {
-    ProjectDefinition definition = ProjectDefinition.create().setKey(moduleKey);
-    definition.setBaseDir(baseDir);
-    return new DefaultInputModule(definition, TestInputFileBuilder.nextBatchId());
+    ProjectDefinition definition = ProjectDefinition.create().setKey(moduleKey).setBaseDir(baseDir).setWorkDir(new File(baseDir, ".sonar"));
+    return newDefaultInputModule(definition);
+  }
+
+  public static DefaultInputModule newDefaultInputModule(ProjectDefinition projectDefinition) {
+    return new DefaultInputModule(projectDefinition, TestInputFileBuilder.nextBatchId());
   }
 }

@@ -24,7 +24,6 @@ import { debounce } from 'lodash';
 import { translate, translateWithParameters } from '../../../helpers/l10n';
 import UsersSelectSearchOption from './UsersSelectSearchOption';
 import UsersSelectSearchValue from './UsersSelectSearchValue';
-import './UsersSelectSearch.css';
 
 export type Option = {
   login: string,
@@ -99,9 +98,10 @@ export default class UsersSelectSearch extends React.PureComponent {
   };
 
   render() {
-    const noResult = this.state.search.length === 1
-      ? translateWithParameters('select2.tooShort', 2)
-      : translate('no_results');
+    const noResult =
+      this.state.search.length === 1
+        ? translateWithParameters('select2.tooShort', 2)
+        : translate('no_results');
     return (
       <Select
         autofocus={this.props.autoFocus}

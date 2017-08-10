@@ -28,7 +28,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collection;
-import java.util.Date;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import javax.annotation.CheckForNull;
@@ -56,34 +55,28 @@ class IssueIteratorForSingleChunk implements IssueIterator {
     // column 1
     "i.kee",
     "root.uuid",
-    "i.updated_at",
     "i.assignee",
-    "i.gap",
-    "i.issue_attributes",
     "i.line",
-    "i.message",
     "i.resolution",
     "i.severity",
-
-    // column 11
-    "i.manual_severity",
-    "i.checksum",
     "i.status",
     "i.effort",
     "i.author_login",
     "i.issue_close_date",
+
+    // column 11
     "i.issue_creation_date",
     "i.issue_update_date",
     "r.plugin_name",
     "r.plugin_rule_key",
-
-    // column 21
     "r.language",
     "p.uuid",
     "p.module_uuid_path",
     "p.path",
     "p.scope",
     "p.organization_uuid",
+
+    // column 21
     "i.tags",
     "i.issue_type"
   };
@@ -199,38 +192,32 @@ class IssueIteratorForSingleChunk implements IssueIterator {
       // all the fields must be present, even if value is null
       doc.setKey(key);
       doc.setProjectUuid(projectUuid);
-      doc.setTechnicalUpdateDate(new Date(rs.getLong(3)));
-      doc.setAssignee(rs.getString(4));
-      doc.setGap(DatabaseUtils.getDouble(rs, 5));
-      doc.setAttributes(rs.getString(6));
-      doc.setLine(DatabaseUtils.getInt(rs, 7));
-      doc.setMessage(rs.getString(8));
-      doc.setResolution(rs.getString(9));
-      doc.setSeverity(rs.getString(10));
-      doc.setManualSeverity(rs.getBoolean(11));
-      doc.setChecksum(rs.getString(12));
-      doc.setStatus(rs.getString(13));
-      doc.setEffort(getLong(rs, 14));
-      doc.setAuthorLogin(rs.getString(15));
-      doc.setFuncCloseDate(longToDate(getLong(rs, 16)));
-      doc.setFuncCreationDate(longToDate(getLong(rs, 17)));
-      doc.setFuncUpdateDate(longToDate(getLong(rs, 18)));
-      String ruleRepo = rs.getString(19);
-      String ruleKey = rs.getString(20);
+      doc.setAssignee(rs.getString(3));
+      doc.setLine(DatabaseUtils.getInt(rs, 4));
+      doc.setResolution(rs.getString(5));
+      doc.setSeverity(rs.getString(6));
+      doc.setStatus(rs.getString(7));
+      doc.setEffort(getLong(rs, 8));
+      doc.setAuthorLogin(rs.getString(9));
+      doc.setFuncCloseDate(longToDate(getLong(rs, 10)));
+      doc.setFuncCreationDate(longToDate(getLong(rs, 11)));
+      doc.setFuncUpdateDate(longToDate(getLong(rs, 12)));
+      String ruleRepo = rs.getString(13);
+      String ruleKey = rs.getString(14);
       doc.setRuleKey(RuleKey.of(ruleRepo, ruleKey).toString());
-      doc.setLanguage(rs.getString(21));
-      doc.setComponentUuid(rs.getString(22));
-      String moduleUuidPath = rs.getString(23);
+      doc.setLanguage(rs.getString(15));
+      doc.setComponentUuid(rs.getString(16));
+      String moduleUuidPath = rs.getString(17);
       doc.setModuleUuid(extractModule(moduleUuidPath));
       doc.setModuleUuidPath(moduleUuidPath);
-      String scope = rs.getString(25);
-      String filePath = extractFilePath(rs.getString(24), scope);
+      String scope = rs.getString(19);
+      String filePath = extractFilePath(rs.getString(18), scope);
       doc.setFilePath(filePath);
       doc.setDirectoryPath(extractDirPath(doc.filePath(), scope));
-      doc.setOrganizationUuid(rs.getString(26));
-      String tags = rs.getString(27);
+      doc.setOrganizationUuid(rs.getString(20));
+      String tags = rs.getString(21);
       doc.setTags(ImmutableList.copyOf(IssueIteratorForSingleChunk.TAGS_SPLITTER.split(tags == null ? "" : tags)));
-      doc.setType(RuleType.valueOf(rs.getInt(28)));
+      doc.setType(RuleType.valueOf(rs.getInt(22)));
       return doc;
     }
 

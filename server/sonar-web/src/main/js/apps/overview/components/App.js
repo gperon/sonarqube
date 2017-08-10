@@ -19,7 +19,7 @@
  */
 // @flow
 import React from 'react';
-import { withRouter } from 'react-router';
+import PropTypes from 'prop-types';
 import OverviewApp from './OverviewApp';
 import EmptyOverview from './EmptyOverview';
 import SourceViewer from '../../../components/SourceViewer/SourceViewer';
@@ -35,38 +35,46 @@ type Props = {
   router: Object
 };
 
-class App extends React.PureComponent {
+export default class App extends React.PureComponent {
   props: Props;
   state: Object;
 
+  static contextTypes = {
+    router: PropTypes.object
+  };
+
   componentDidMount() {
-    if (['VW', 'SVW'].includes(this.props.component.qualifier)) {
-      this.props.router.replace({
-        pathname: '/view',
+    if (this.isPortfolio()) {
+      this.context.router.replace({
+        pathname: '/portfolio',
         query: { id: this.props.component.key }
       });
     }
   }
 
+  isPortfolio() {
+    return this.props.component.qualifier === 'VW' || this.props.component.qualifier === 'SVW';
+  }
+
   render() {
+    if (this.isPortfolio()) {
+      return null;
+    }
+
     const { component } = this.props;
 
     if (['FIL', 'UTS'].includes(component.qualifier)) {
       return (
-        <div className="page">
+        <div className="page page-limited">
           <SourceViewer component={component.key} />
         </div>
       );
     }
 
     if (!component.analysisDate) {
-      return <EmptyOverview {...this.props} />;
+      return <EmptyOverview component={component} />;
     }
 
-    return <OverviewApp {...this.props} leakPeriodIndex="1" />;
+    return <OverviewApp component={component} />;
   }
 }
-
-export default withRouter(App);
-
-export const UnconnectedApp = App;

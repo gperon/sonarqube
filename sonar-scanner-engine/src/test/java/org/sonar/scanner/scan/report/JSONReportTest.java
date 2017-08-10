@@ -31,6 +31,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.sonar.api.batch.AnalysisMode;
 import org.sonar.api.batch.bootstrap.ProjectDefinition;
 import org.sonar.api.batch.fs.InputFile;
 import org.sonar.api.batch.fs.internal.DefaultFileSystem;
@@ -41,12 +42,10 @@ import org.sonar.api.batch.fs.internal.InputModuleHierarchy;
 import org.sonar.api.batch.fs.internal.TestInputFileBuilder;
 import org.sonar.api.batch.rule.Rules;
 import org.sonar.api.batch.rule.internal.RulesBuilder;
-import org.sonar.api.config.MapSettings;
-import org.sonar.api.config.Settings;
+import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.issue.Issue;
 import org.sonar.api.platform.Server;
 import org.sonar.api.rule.RuleKey;
-import org.sonar.api.scan.filesystem.PathResolver;
 import org.sonar.scanner.issue.IssueCache;
 import org.sonar.scanner.issue.tracking.TrackedIssue;
 import org.sonar.scanner.scan.DefaultComponentTree;
@@ -65,12 +64,12 @@ public class JSONReportTest {
   @Rule
   public TemporaryFolder temp = new TemporaryFolder();
 
-  JSONReport jsonReport;
-  DefaultFileSystem fs;
-  Server server = mock(Server.class);
-  Rules rules = mock(Rules.class);
-  Settings settings = new MapSettings();
-  IssueCache issueCache = mock(IssueCache.class);
+  private JSONReport jsonReport;
+  private DefaultFileSystem fs;
+  private Server server = mock(Server.class);
+  private Rules rules = mock(Rules.class);
+  private MapSettings settings = new MapSettings();
+  private IssueCache issueCache = mock(IssueCache.class);
   private InputModuleHierarchy moduleHierarchy;
 
   @Before
@@ -81,13 +80,14 @@ public class JSONReportTest {
     SIMPLE_DATE_FORMAT.setTimeZone(TimeZone.getTimeZone("GMT+02:00"));
     when(server.getVersion()).thenReturn("3.6");
 
-    InputComponentStore inputComponentStore = new InputComponentStore(new PathResolver());
     DefaultComponentTree inputComponentTree = new DefaultComponentTree();
-    DefaultInputModule rootModule = new DefaultInputModule(ProjectDefinition.create().setBaseDir(projectBaseDir).setKey("struts"), 1);
-    inputComponentStore.put(rootModule);
-    DefaultInputModule moduleA = new DefaultInputModule("struts-core");
+    ProjectDefinition def = ProjectDefinition.create().setBaseDir(projectBaseDir).setWorkDir(temp.newFolder()).setKey("struts");
+    DefaultInputModule rootModule = new DefaultInputModule(def, 1);
+    InputComponentStore inputComponentStore = new InputComponentStore(rootModule, mock(AnalysisMode.class));
+
+    DefaultInputModule moduleA = new DefaultInputModule(ProjectDefinition.create().setKey("struts-core").setBaseDir(temp.newFolder()).setWorkDir(temp.newFolder()));
     inputComponentTree.index(moduleA, rootModule);
-    DefaultInputModule moduleB = new DefaultInputModule("struts-ui");
+    DefaultInputModule moduleB = new DefaultInputModule(ProjectDefinition.create().setKey("struts-ui").setBaseDir(temp.newFolder()).setWorkDir(temp.newFolder()));
     inputComponentTree.index(moduleB, rootModule);
 
     DefaultInputDir inputDir = new DefaultInputDir("struts", "src/main/java/org/apache/struts", TestInputFileBuilder.nextBatchId())
@@ -95,7 +95,7 @@ public class JSONReportTest {
     DefaultInputFile inputFile = new TestInputFileBuilder("struts", "src/main/java/org/apache/struts/Action.java")
       .setModuleBaseDir(projectBaseDir.toPath()).build();
     inputFile.setStatus(InputFile.Status.CHANGED);
-    inputFile.setPublish(true);
+    inputFile.setPublished(true);
     inputComponentStore.put(inputFile);
     inputComponentStore.put(inputDir);
 
@@ -111,7 +111,7 @@ public class JSONReportTest {
     RulesBuilder builder = new RulesBuilder();
     builder.add(RuleKey.of("squid", "AvoidCycles")).setName("Avoid Cycles");
     rules = builder.build();
-    jsonReport = new JSONReport(moduleHierarchy, settings, fs, server, rules, issueCache, rootModule, inputComponentStore, inputComponentTree);
+    jsonReport = new JSONReport(moduleHierarchy, settings.asConfig(), fs, server, rules, issueCache, rootModule, inputComponentStore, inputComponentTree);
   }
 
   @Test
@@ -162,7 +162,7 @@ public class JSONReportTest {
   @Test
   public void should_not_export_by_default() throws IOException {
     File workDir = temp.newFolder("sonar");
-    fs.setWorkDir(workDir);
+    fs.setWorkDir(workDir.toPath());
 
     jsonReport.execute();
 
@@ -172,7 +172,7 @@ public class JSONReportTest {
   @Test
   public void should_export_issues_to_file() throws IOException {
     File workDir = temp.newFolder("sonar");
-    fs.setWorkDir(workDir);
+    fs.setWorkDir(workDir.toPath());
 
     when(issueCache.all()).thenReturn(Collections.<TrackedIssue>emptyList());
 

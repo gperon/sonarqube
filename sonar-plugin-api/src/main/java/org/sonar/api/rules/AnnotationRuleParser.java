@@ -19,12 +19,11 @@
  */
 package org.sonar.api.rules;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import org.apache.commons.lang.StringUtils;
@@ -49,7 +48,7 @@ public final class AnnotationRuleParser {
   private static final Logger LOG = Loggers.get(AnnotationRuleParser.class);
 
   public List<Rule> parse(String repositoryKey, Collection<Class> annotatedClasses) {
-    List<Rule> rules = Lists.newArrayList();
+    List<Rule> rules = new ArrayList<>();
     for (Class annotatedClass : annotatedClasses) {
       rules.add(create(repositoryKey, annotatedClass));
     }
@@ -113,7 +112,6 @@ public final class AnnotationRuleParser {
       .build(),
     PropertyType.STRING);
 
-  @VisibleForTesting
   static PropertyType guessType(Class<?> type) {
     return TYPE_FOR_CLASS.apply(type);
   }

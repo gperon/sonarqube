@@ -24,7 +24,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.mockito.ArgumentCaptor;
-import org.sonar.api.config.MapSettings;
+import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.rule.RuleStatus;
 import org.sonar.api.utils.System2;
 import org.sonar.core.issue.DefaultIssue;
@@ -70,7 +70,7 @@ public class IssueUpdaterTest {
   public DbTester dbTester = DbTester.create(system2);
 
   @Rule
-  public EsTester esTester = new EsTester(new IssueIndexDefinition(new MapSettings()));
+  public EsTester esTester = new EsTester(new IssueIndexDefinition(new MapSettings().asConfig()));
 
   private DbClient dbClient = dbTester.getDbClient();
   private DefaultOrganizationProvider defaultOrganizationProvider = TestDefaultOrganizationProvider.from(dbTester);
@@ -82,7 +82,7 @@ public class IssueUpdaterTest {
   private NotificationManager notificationManager = mock(NotificationManager.class);
   private ArgumentCaptor<IssueChangeNotification> notificationArgumentCaptor = ArgumentCaptor.forClass(IssueChangeNotification.class);
 
-  private IssueIndexer issueIndexer = new IssueIndexer(esTester.client(), new IssueIteratorFactory(dbClient));
+  private IssueIndexer issueIndexer = new IssueIndexer(esTester.client(), dbClient, new IssueIteratorFactory(dbClient));
   private IssueUpdater underTest = new IssueUpdater(dbClient,
     new ServerIssueStorage(system2, new DefaultRuleFinder(dbClient, defaultOrganizationProvider), dbClient, issueIndexer), notificationManager);
 
@@ -114,9 +114,9 @@ public class IssueUpdaterTest {
     assertThat(issueChangeNotification.getFieldValue("key")).isEqualTo(issue.key());
     assertThat(issueChangeNotification.getFieldValue("old.severity")).isEqualTo(MAJOR);
     assertThat(issueChangeNotification.getFieldValue("new.severity")).isEqualTo(BLOCKER);
-    assertThat(issueChangeNotification.getFieldValue("componentKey")).isEqualTo(file.key());
+    assertThat(issueChangeNotification.getFieldValue("componentKey")).isEqualTo(file.getDbKey());
     assertThat(issueChangeNotification.getFieldValue("componentName")).isEqualTo(file.longName());
-    assertThat(issueChangeNotification.getFieldValue("projectKey")).isEqualTo(project.key());
+    assertThat(issueChangeNotification.getFieldValue("projectKey")).isEqualTo(project.getDbKey());
     assertThat(issueChangeNotification.getFieldValue("projectName")).isEqualTo(project.name());
     assertThat(issueChangeNotification.getFieldValue("ruleName")).isEqualTo(rule.getName());
     assertThat(issueChangeNotification.getFieldValue("changeAuthor")).isEqualTo("john");

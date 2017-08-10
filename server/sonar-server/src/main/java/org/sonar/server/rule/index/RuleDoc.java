@@ -27,6 +27,9 @@ import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.sonar.api.rule.RuleKey;
 import org.sonar.api.rule.RuleStatus;
 import org.sonar.api.rules.RuleType;
+import org.sonar.db.rule.RuleDto;
+import org.sonar.db.rule.RuleForIndexingDto;
+import org.sonar.markdown.Markdown;
 import org.sonar.server.es.BaseDoc;
 
 /**
@@ -49,7 +52,7 @@ public class RuleDoc extends BaseDoc {
 
   @Override
   public String getRouting() {
-    return null;
+    return keyAsString();
   }
 
   @Override
@@ -58,7 +61,11 @@ public class RuleDoc extends BaseDoc {
   }
 
   public RuleKey key() {
-    return RuleKey.parse(this.getField(RuleIndexDefinition.FIELD_RULE_KEY));
+    return RuleKey.parse(keyAsString());
+  }
+
+  private String keyAsString() {
+    return getField(RuleIndexDefinition.FIELD_RULE_KEY);
   }
 
   public RuleDoc setKey(@Nullable String s) {
@@ -197,4 +204,34 @@ public class RuleDoc extends BaseDoc {
     return ReflectionToStringBuilder.toString(this);
   }
 
+  public static RuleDoc of(RuleForIndexingDto dto) {
+    RuleDoc ruleDoc = new RuleDoc()
+      .setKey(dto.getRuleKey().toString())
+      .setRepository(dto.getRepository())
+      .setInternalKey(dto.getInternalKey())
+      .setIsTemplate(dto.isTemplate())
+      .setLanguage(dto.getLanguage())
+      .setName(dto.getName())
+      .setRuleKey(dto.getPluginRuleKey())
+      .setSeverity(dto.getSeverityAsString())
+      .setStatus(dto.getStatus().toString())
+      .setType(dto.getTypeAsRuleType())
+      .setCreatedAt(dto.getCreatedAt())
+      .setUpdatedAt(dto.getUpdatedAt());
+
+    if (dto.getTemplateRuleKey() != null && dto.getTemplateRepository() != null) {
+      ruleDoc.setTemplateKey(RuleKey.of(dto.getTemplateRepository(), dto.getTemplateRuleKey()).toString());
+    } else {
+      ruleDoc.setTemplateKey(null);
+    }
+
+    if (dto.getDescription() != null && dto.getDescriptionFormat() != null) {
+      if (RuleDto.Format.HTML == dto.getDescriptionFormat()) {
+        ruleDoc.setHtmlDescription(dto.getDescription());
+      } else {
+        ruleDoc.setHtmlDescription(Markdown.convertToHtml(dto.getDescription()));
+      }
+    }
+    return ruleDoc;
+  }
 }

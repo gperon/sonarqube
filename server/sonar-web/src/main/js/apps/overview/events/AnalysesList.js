@@ -20,26 +20,33 @@
 // @flow
 import React from 'react';
 import { Link } from 'react-router';
-import { connect } from 'react-redux';
 import Analysis from './Analysis';
+import PreviewGraph from './PreviewGraph';
+import { getMetrics } from '../../../api/metrics';
+import { getProjectActivity } from '../../../api/projectActivity';
 import { translate } from '../../../helpers/l10n';
-import { fetchRecentProjectActivity } from '../actions';
-import { getProjectActivity } from '../../../store/rootReducer';
-import { getAnalyses } from '../../../store/projectActivity/duck';
+import type { Analysis as AnalysisType } from '../../projectActivity/types';
+import type { History, Metric } from '../types';
 
 type Props = {
-  analyses?: Array<*>,
+  history: ?History,
   project: string,
-  fetchRecentProjectActivity: (project: string) => Promise<*>
+  qualifier: string,
+  router: { push: ({ pathname: string, query?: {} }) => void }
 };
 
-class AnalysesList extends React.PureComponent {
+type State = {
+  analyses: Array<AnalysisType>,
+  loading: boolean,
+  metrics: Array<Metric>
+};
+
+const PAGE_SIZE = 3;
+
+export default class AnalysesList extends React.PureComponent {
   mounted: boolean;
   props: Props;
-
-  state = {
-    loading: true
-  };
+  state: State = { analyses: [], loading: true, metrics: [] };
 
   componentDidMount() {
     this.mounted = true;
@@ -58,14 +65,17 @@ class AnalysesList extends React.PureComponent {
 
   fetchData() {
     this.setState({ loading: true });
-    this.props.fetchRecentProjectActivity(this.props.project).then(() => {
+    Promise.all([
+      getProjectActivity({ project: this.props.project, ps: PAGE_SIZE }),
+      getMetrics()
+    ]).then(response => {
       if (this.mounted) {
-        this.setState({ loading: false });
+        this.setState({ analyses: response[0].analyses, metrics: response[1], loading: false });
       }
     });
   }
 
-  renderList(analyses) {
+  renderList(analyses: Array<AnalysisType>) {
     if (!analyses.length) {
       return (
         <p className="spacer-top note">
@@ -76,16 +86,17 @@ class AnalysesList extends React.PureComponent {
 
     return (
       <ul className="spacer-top">
-        {analyses.map(analysis => <Analysis key={analysis.key} analysis={analysis} />)}
+        {analyses.map(analysis =>
+          <Analysis key={analysis.key} analysis={analysis} qualifier={this.props.qualifier} />
+        )}
       </ul>
     );
   }
 
   render() {
-    const { analyses } = this.props;
-    const { loading } = this.state;
+    const { analyses, loading } = this.state;
 
-    if (loading || !analyses) {
+    if (loading) {
       return null;
     }
 
@@ -94,6 +105,13 @@ class AnalysesList extends React.PureComponent {
         <h4 className="overview-meta-header">
           {translate('project_activity.page')}
         </h4>
+
+        <PreviewGraph
+          history={this.props.history}
+          project={this.props.project}
+          metrics={this.state.metrics}
+          router={this.props.router}
+        />
 
         {this.renderList(analyses)}
 
@@ -106,11 +124,3 @@ class AnalysesList extends React.PureComponent {
     );
   }
 }
-
-const mapStateToProps = (state, ownProps: Props) => ({
-  analyses: getAnalyses(getProjectActivity(state), ownProps.project)
-});
-
-const mapDispatchToProps = { fetchRecentProjectActivity };
-
-export default connect(mapStateToProps, mapDispatchToProps)(AnalysesList);

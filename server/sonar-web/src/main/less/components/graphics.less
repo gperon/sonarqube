@@ -48,12 +48,15 @@
 .sonar-d3 .treemap-link {
   position: absolute;
   z-index: @treemap-link-z-index;
-  top: 5px; right: 5px;
+  top: 5px;
+  right: 5px;
   line-height: @iconSmallFontSize;
   opacity: 0.5;
   .link-no-underline;
 
-  &:hover { opacity: 1; }
+  &:hover {
+    opacity: 1;
+  }
 }
 
 .sonar-d3 .treemap-link i,
@@ -64,12 +67,18 @@
 }
 
 .sonar-d3 .treemap-cell-small {
-  .treemap-inner { display: none; }
+  .treemap-inner {
+    display: none;
+  }
 }
 
 .sonar-d3 .treemap-cell-very-small {
-  .treemap-inner { display: none; }
-  .treemap-link { display: none; }
+  .treemap-inner {
+    display: none;
+  }
+  .treemap-link {
+    display: none;
+  }
 }
 
 .sonar-d3 .treemap-breadcrumbs {
@@ -82,13 +91,17 @@
 .sonar-d3 .treemap-breadcrumbs-item {
   color: @secondFontColor;
 
-  & > [class^="icon-qualifier-"] { margin-right: 4px; }
+  & > [class^="icon-qualifier-"] {
+    margin-right: 4px;
+  }
 }
 
 .sonar-d3 .treemap-breadcrumbs-item + .treemap-breadcrumbs-item {
   margin-left: 10px;
 
-  & > .icon-chevron-right { margin-right: 10px; }
+  & > .icon-chevron-right {
+    margin-right: 10px;
+  }
 }
 
 .word-cloud {
@@ -106,20 +119,90 @@
 /*
  * Line Chart
  */
+@defaultSerieColor: @darkBlue;
+@serieColor1: @blue;
+@serieColor2: #24c6e0;
 
 .line-chart {
 }
 
 .line-chart-path {
   fill: none;
-  stroke: @blue;
+  stroke: @defaultSerieColor;
   stroke-width: 2px;
+
+  &.line-chart-path-1 {
+    stroke: @serieColor1;
+  }
+
+  &.line-chart-path-2 {
+    stroke: @serieColor2;
+  }
+}
+
+.line-chart-area {
+  fill: fade(@defaultSerieColor, 30%);
+  stroke-width: 0;
+
+  &.line-chart-area-1 {
+    fill: fade(@serieColor1, 30%);
+  }
+
+  &.line-chart-area-2 {
+    fill: fade(@serieColor2, 30%);
+  }
+}
+
+.line-chart-legend {
+  color: @defaultSerieColor;
+
+  &.line-chart-legend-1 {
+    color: @serieColor1;
+  }
+
+  &.line-chart-legend-2 {
+    color: @serieColor2;
+  }
+}
+
+.line-chart-dot {
+  fill: @defaultSerieColor;
+
+  &.line-chart-dot-1 {
+    fill: @serieColor1;
+  }
+
+  &.line-chart-dot-2 {
+    fill: @serieColor2;
+  }
 }
 
 .line-chart-point {
   fill: #fff;
-  stroke: @darkBlue;
+  stroke: @defaultSerieColor;
   stroke-width: 2px;
+}
+
+.line-chart-event {
+  fill: #fff;
+  stroke: @defaultSerieColor;
+  stroke-width: 2px;
+
+  &.VERSION {
+    stroke: @blue;
+  }
+
+  &.QUALITY_GATE {
+    stroke: @green;
+  }
+
+  &.QUALITY_PROFILE {
+    stroke: @orange;
+  }
+
+  &.OTHER {
+    stroke: @purple;
+  }
 }
 
 .line-chart-backdrop {
@@ -200,4 +283,69 @@
 
 .histogram-value {
   text-anchor: start;
+}
+
+/*
+ * Charts zooming
+ */
+
+.chart-zoomed {
+  .line-chart-area {
+    clip-path: url(#chart-clip);
+  }
+
+  .line-chart-path {
+    clip-path: url(#chart-clip);
+  }
+
+  .leak-chart-rect {
+    clip-path: url(#chart-clip);
+  }
+}
+
+.chart-zoom-tick {
+  fill: @secondFontColor;
+  font-size: 10px;
+  text-anchor: middle;
+  user-select: none;
+}
+
+.chart-mouse-events-overlay {
+  fill: none;
+  stroke: none;
+  pointer-events: all;
+}
+
+.chart-zoom {
+  .zoom-overlay {
+    fill: none;
+    stroke: none;
+    cursor: crosshair;
+    pointer-events: all;
+  }
+
+  .zoom-selection {
+    fill: @secondFontColor;
+    fill-opacity: 0.2;
+    stroke: @secondFontColor;
+    shape-rendering: crispEdges;
+    cursor: move;
+  }
+
+  .zoom-selection-handle {
+    cursor: ew-resize;
+    fill-opacity: 0;
+    stroke: none;
+  }
+}
+
+/*
+ * Charts tooltips
+ */
+
+.line-tooltip {
+  fill: none;
+  stroke: @secondFontColor;
+  stroke-width: 1px;
+  shape-rendering: crispEdges;
 }

@@ -2,7 +2,7 @@
 
 exports[`should show administration menu if the user has the rights 1`] = `
 <ul
-  className="nav navbar-nav"
+  className="global-navbar-menu pull-left"
 >
   <li>
     <Link
@@ -55,7 +55,11 @@ exports[`should show administration menu if the user has the rights 1`] = `
       activeClassName="active"
       onlyActiveOnIndex={false}
       style={Object {}}
-      to="/quality_gates"
+      to={
+        Object {
+          "pathname": "/quality_gates",
+        }
+      }
     >
       quality_gates.page
     </Link>
@@ -63,7 +67,7 @@ exports[`should show administration menu if the user has the rights 1`] = `
   <li>
     <Link
       activeClassName="active"
-      className="navbar-admin-link"
+      className="is-admin"
       onlyActiveOnIndex={false}
       style={Object {}}
       to="/settings"
@@ -76,7 +80,7 @@ exports[`should show administration menu if the user has the rights 1`] = `
 
 exports[`should work with extensions 1`] = `
 <ul
-  className="nav navbar-nav"
+  className="global-navbar-menu pull-left"
 >
   <li>
     <Link
@@ -129,7 +133,11 @@ exports[`should work with extensions 1`] = `
       activeClassName="active"
       onlyActiveOnIndex={false}
       style={Object {}}
-      to="/quality_gates"
+      to={
+        Object {
+          "pathname": "/quality_gates",
+        }
+      }
     >
       quality_gates.page
     </Link>

@@ -36,6 +36,7 @@ import org.sonar.db.component.SnapshotDto;
 import org.sonar.db.organization.OrganizationDto;
 import org.sonar.scanner.protocol.output.ScannerReport;
 import org.sonar.scanner.protocol.output.ScannerReport.Component.ComponentType;
+import org.sonar.scanner.protocol.output.ScannerReport.Component.FileStatus;
 import org.sonar.server.computation.task.projectanalysis.analysis.AnalysisMetadataHolderImpl;
 import org.sonar.server.computation.task.projectanalysis.analysis.MutableAnalysisMetadataHolder;
 import org.sonar.server.computation.task.projectanalysis.analysis.MutableAnalysisMetadataHolderRule;
@@ -170,11 +171,11 @@ public class BuildComponentTreeStepTest {
   @Test
   public void return_existing_uuids() {
     OrganizationDto organizationDto = dbTester.organizations().insert();
-    ComponentDto project = insertComponent(newPrivateProjectDto(organizationDto, "ABCD").setKey(REPORT_PROJECT_KEY));
-    ComponentDto module = insertComponent(newModuleDto("BCDE", project).setKey(REPORT_MODULE_KEY));
+    ComponentDto project = insertComponent(newPrivateProjectDto(organizationDto, "ABCD").setDbKey(REPORT_PROJECT_KEY));
+    ComponentDto module = insertComponent(newModuleDto("BCDE", project).setDbKey(REPORT_MODULE_KEY));
     ComponentDto directory = newDirectory(module, "CDEF", REPORT_DIR_KEY_1);
-    insertComponent(directory.setKey(REPORT_MODULE_KEY + ":" + REPORT_DIR_KEY_1));
-    insertComponent(newFileDto(module, directory, "DEFG").setKey(REPORT_MODULE_KEY + ":" + REPORT_FILE_KEY_1));
+    insertComponent(directory.setDbKey(REPORT_MODULE_KEY + ":" + REPORT_DIR_KEY_1));
+    insertComponent(newFileDto(module, directory, "DEFG").setDbKey(REPORT_MODULE_KEY + ":" + REPORT_FILE_KEY_1));
 
     reportReader.putComponent(componentWithKey(ROOT_REF, PROJECT, REPORT_PROJECT_KEY, MODULE_REF));
     reportReader.putComponent(componentWithKey(MODULE_REF, MODULE, REPORT_MODULE_KEY, DIR_REF_1));
@@ -250,10 +251,10 @@ public class BuildComponentTreeStepTest {
   @Test
   public void return_existing_uuids_when_components_were_removed() {
     OrganizationDto organizationDto = dbTester.organizations().insert();
-    ComponentDto project = insertComponent(newPrivateProjectDto(organizationDto, "ABCD").setKey(REPORT_PROJECT_KEY));
-    ComponentDto removedModule = insertComponent(newModuleDto("BCDE", project).setKey(REPORT_MODULE_KEY).setEnabled(false));
-    ComponentDto removedDirectory = insertComponent(newDirectory(removedModule, "CDEF", REPORT_DIR_KEY_1).setKey(REPORT_MODULE_KEY + ":" + REPORT_DIR_KEY_1).setEnabled(false));
-    insertComponent(newFileDto(removedModule, removedDirectory, "DEFG").setKey(REPORT_MODULE_KEY + ":" + REPORT_FILE_KEY_1).setEnabled(false));
+    ComponentDto project = insertComponent(newPrivateProjectDto(organizationDto, "ABCD").setDbKey(REPORT_PROJECT_KEY));
+    ComponentDto removedModule = insertComponent(newModuleDto("BCDE", project).setDbKey(REPORT_MODULE_KEY).setEnabled(false));
+    ComponentDto removedDirectory = insertComponent(newDirectory(removedModule, "CDEF", REPORT_DIR_KEY_1).setDbKey(REPORT_MODULE_KEY + ":" + REPORT_DIR_KEY_1).setEnabled(false));
+    insertComponent(newFileDto(removedModule, removedDirectory, "DEFG").setDbKey(REPORT_MODULE_KEY + ":" + REPORT_FILE_KEY_1).setEnabled(false));
 
     reportReader.putComponent(componentWithKey(ROOT_REF, PROJECT, REPORT_PROJECT_KEY, MODULE_REF));
     reportReader.putComponent(componentWithKey(MODULE_REF, MODULE, REPORT_MODULE_KEY, DIR_REF_1));
@@ -281,7 +282,7 @@ public class BuildComponentTreeStepTest {
   @Test
   public void set_no_base_project_snapshot_when_no_last_snapshot() throws Exception {
     OrganizationDto organizationDto = dbTester.organizations().insert();
-    ComponentDto project = insertComponent(newPrivateProjectDto(organizationDto, "ABCD").setKey(REPORT_PROJECT_KEY));
+    ComponentDto project = insertComponent(newPrivateProjectDto(organizationDto, "ABCD").setDbKey(REPORT_PROJECT_KEY));
     insertSnapshot(newAnalysis(project).setLast(false));
 
     reportReader.putComponent(componentWithKey(ROOT_REF, PROJECT, REPORT_PROJECT_KEY));
@@ -293,7 +294,7 @@ public class BuildComponentTreeStepTest {
   @Test
   public void set_base_project_snapshot_when_last_snapshot_exist() throws Exception {
     OrganizationDto organizationDto = dbTester.organizations().insert();
-    ComponentDto project = insertComponent(newPrivateProjectDto(organizationDto, "ABCD").setKey(REPORT_PROJECT_KEY));
+    ComponentDto project = insertComponent(newPrivateProjectDto(organizationDto, "ABCD").setDbKey(REPORT_PROJECT_KEY));
     insertSnapshot(newAnalysis(project).setLast(true));
 
     reportReader.putComponent(componentWithKey(ROOT_REF, PROJECT, REPORT_PROJECT_KEY));
@@ -339,6 +340,7 @@ public class BuildComponentTreeStepTest {
     ScannerReport.Component.Builder builder = ScannerReport.Component.newBuilder()
       .setType(componentType)
       .setRef(componentRef)
+      .setStatus(FileStatus.UNAVAILABLE)
       .setLines(1);
     if (key != null) {
       builder.setKey(key);

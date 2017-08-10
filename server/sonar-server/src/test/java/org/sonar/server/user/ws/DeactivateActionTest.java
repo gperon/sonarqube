@@ -23,7 +23,7 @@ import java.util.Optional;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.sonar.api.config.MapSettings;
+import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.utils.System2;
 import org.sonar.api.utils.internal.AlwaysIncreasingSystem2;
 import org.sonar.db.DbClient;
@@ -76,7 +76,7 @@ public class DeactivateActionTest {
   public DbTester db = DbTester.create(system2);
 
   @Rule
-  public EsTester esTester = new EsTester(new UserIndexDefinition(new MapSettings()));
+  public EsTester esTester = new EsTester(new UserIndexDefinition(new MapSettings().asConfig()));
 
   @Rule
   public UserSessionRule userSession = UserSessionRule.standalone();
@@ -320,6 +320,7 @@ public class DeactivateActionTest {
       .setLogin("ada.lovelace")
       .setEmail("ada.lovelace@noteg.com")
       .setName("Ada Lovelace")
+      .setLocal(true)
       .setScmAccounts(singletonList("al")));
     logInAsSystemAdministrator();
 
@@ -333,14 +334,10 @@ public class DeactivateActionTest {
   }
 
   private UserDto insertUser(UserDto user) {
-    user
-      .setCreatedAt(system2.now())
-      .setUpdatedAt(system2.now());
     dbClient.userDao().insert(dbSession, user);
     dbClient.userTokenDao().insert(dbSession, newUserToken().setLogin(user.getLogin()));
     dbClient.propertiesDao().saveProperty(dbSession, new PropertyDto().setUserId(user.getId()).setKey("foo").setValue("bar"));
-    dbSession.commit();
-    userIndexer.index(user.getLogin());
+    userIndexer.commitAndIndex(dbSession, user);
     return user;
   }
 

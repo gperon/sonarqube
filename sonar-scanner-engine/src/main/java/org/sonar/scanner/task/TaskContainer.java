@@ -23,7 +23,6 @@ import java.util.Map;
 import org.apache.commons.lang.StringUtils;
 import org.sonar.api.CoreProperties;
 import org.sonar.api.batch.InstantiationStrategy;
-import org.sonar.api.config.EmailSettings;
 import org.sonar.api.task.Task;
 import org.sonar.api.task.TaskDefinition;
 import org.sonar.api.utils.MessageException;
@@ -55,7 +54,6 @@ public class TaskContainer extends ComponentContainer {
 
   private void addCoreComponents() {
     add(new TaskProperties(taskProperties, getParent().getComponentByType(GlobalProperties.class).property(CoreProperties.ENCRYPTION_SECRET_KEY_PATH)));
-    add(EmailSettings.class);
   }
 
   private void addTaskExtensions() {
@@ -72,14 +70,21 @@ public class TaskContainer extends ComponentContainer {
 
   @Override
   public void doAfterStart() {
-    // default value is declared in CorePlugin
     String taskKey = StringUtils.defaultIfEmpty(taskProperties.get(CoreProperties.TASK), CoreProperties.SCAN_TASK);
+    boolean incremental = "true".equals(taskProperties.get("sonar.incremental"));
+    if (CoreProperties.SCAN_TASK.equals(taskKey) && incremental) {
+      taskKey = "incremental";
+    }
     // Release memory
     taskProperties.clear();
 
     TaskDefinition def = getComponentByType(Tasks.class).definition(taskKey);
     if (def == null) {
-      throw MessageException.of("Task '" + taskKey + "' does not exist. Please use '" + ListTask.KEY + "' task to see all available tasks.");
+      if (incremental) {
+        throw MessageException.of("Incremental mode is not available. Please contact your administrator.");
+      } else {
+        throw MessageException.of("Task '" + taskKey + "' does not exist. Please use '" + ListTask.KEY + "' task to see all available tasks.");
+      }
     }
     Task task = getComponentByType(def.taskClass());
     if (task != null) {

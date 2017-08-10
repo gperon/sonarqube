@@ -18,16 +18,18 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 import React from 'react';
+import PropTypes from 'prop-types';
 import { Link } from 'react-router';
 import { translate } from '../../../../helpers/l10n';
+import { getQualityGatesUrl } from '../../../../helpers/urls';
 import { isMySet } from '../../../../apps/issues/utils';
 
 export default class GlobalNavMenu extends React.PureComponent {
   static propTypes = {
-    appState: React.PropTypes.object.isRequired,
-    currentUser: React.PropTypes.object.isRequired,
-    location: React.PropTypes.shape({
-      pathname: React.PropTypes.string.isRequired
+    appState: PropTypes.object.isRequired,
+    currentUser: PropTypes.object.isRequired,
+    location: PropTypes.shape({
+      pathname: PropTypes.string.isRequired
     }).isRequired
   };
 
@@ -61,9 +63,10 @@ export default class GlobalNavMenu extends React.PureComponent {
   }
 
   renderIssuesLink() {
-    const query = this.props.currentUser.isLoggedIn && isMySet()
-      ? { resolved: 'false', myIssues: 'true' }
-      : { resolved: 'false' };
+    const query =
+      this.props.currentUser.isLoggedIn && isMySet()
+        ? { resolved: 'false', myIssues: 'true' }
+        : { resolved: 'false' };
     const active = this.props.location.pathname === 'issues';
     return (
       <li>
@@ -97,7 +100,7 @@ export default class GlobalNavMenu extends React.PureComponent {
   renderQualityGatesLink() {
     return (
       <li>
-        <Link to="/quality_gates" activeClassName="active">
+        <Link to={getQualityGatesUrl()} activeClassName="active">
           {translate('quality_gates.page')}
         </Link>
       </li>
@@ -110,7 +113,7 @@ export default class GlobalNavMenu extends React.PureComponent {
     }
     return (
       <li>
-        <Link to="/settings" className="navbar-admin-link" activeClassName="active">
+        <Link to="/settings" className="is-admin" activeClassName="active">
           {translate('layout.settings')}
         </Link>
       </li>
@@ -120,7 +123,9 @@ export default class GlobalNavMenu extends React.PureComponent {
   renderGlobalPageLink = ({ key, name }) => {
     return (
       <li key={key}>
-        <Link to={`/extension/${key}`}>{name}</Link>
+        <Link to={`/extension/${key}`}>
+          {name}
+        </Link>
       </li>
     );
   };
@@ -149,13 +154,13 @@ export default class GlobalNavMenu extends React.PureComponent {
     const { organizationsEnabled } = this.props.appState;
 
     return (
-      <ul className="nav navbar-nav">
+      <ul className="global-navbar-menu pull-left">
         {this.renderProjects()}
         {governanceInstalled && this.renderPortfolios()}
         {this.renderIssuesLink()}
         {!organizationsEnabled && this.renderRulesLink()}
         {!organizationsEnabled && this.renderProfilesLink()}
-        {this.renderQualityGatesLink()}
+        {!organizationsEnabled && this.renderQualityGatesLink()}
         {this.renderAdministrationLink()}
         {this.renderMore()}
       </ul>

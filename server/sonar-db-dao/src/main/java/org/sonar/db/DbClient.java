@@ -24,13 +24,14 @@ import java.util.Map;
 import org.sonar.db.ce.CeActivityDao;
 import org.sonar.db.ce.CeQueueDao;
 import org.sonar.db.ce.CeScannerContextDao;
+import org.sonar.db.ce.CeTaskCharacteristicDao;
 import org.sonar.db.ce.CeTaskInputDao;
 import org.sonar.db.component.ComponentDao;
 import org.sonar.db.component.ComponentKeyUpdaterDao;
 import org.sonar.db.component.ComponentLinkDao;
-import org.sonar.db.component.ResourceDao;
 import org.sonar.db.component.SnapshotDao;
 import org.sonar.db.duplication.DuplicationDao;
+import org.sonar.db.es.EsQueueDao;
 import org.sonar.db.event.EventDao;
 import org.sonar.db.issue.IssueChangeDao;
 import org.sonar.db.issue.IssueDao;
@@ -72,6 +73,7 @@ public class DbClient {
 
   private final Database database;
   private final MyBatis myBatis;
+  private final DBSessions dbSessions;
   private final SchemaMigrationDao schemaMigrationDao;
   private final AuthorizationDao authorizationDao;
   private final OrganizationDao organizationDao;
@@ -82,7 +84,6 @@ public class DbClient {
   private final InternalPropertiesDao internalPropertiesDao;
   private final SnapshotDao snapshotDao;
   private final ComponentDao componentDao;
-  private final ResourceDao resourceDao;
   private final ComponentKeyUpdaterDao componentKeyUpdaterDao;
   private final MeasureDao measureDao;
   private final UserDao userDao;
@@ -98,6 +99,7 @@ public class DbClient {
   private final CeActivityDao ceActivityDao;
   private final CeQueueDao ceQueueDao;
   private final CeTaskInputDao ceTaskInputDao;
+  private final CeTaskCharacteristicDao ceTaskCharacteristicsDao;
   private final CeScannerContextDao ceScannerContextDao;
   private final FileSourceDao fileSourceDao;
   private final ComponentLinkDao componentLinkDao;
@@ -118,10 +120,12 @@ public class DbClient {
   private final UserPermissionDao userPermissionDao;
   private final WebhookDeliveryDao webhookDeliveryDao;
   private final DefaultQProfileDao defaultQProfileDao;
+  private final EsQueueDao esQueueDao;
 
-  public DbClient(Database database, MyBatis myBatis, Dao... daos) {
+  public DbClient(Database database, MyBatis myBatis, DBSessions dbSessions, Dao... daos) {
     this.database = database;
     this.myBatis = myBatis;
+    this.dbSessions = dbSessions;
 
     Map<Class, Dao> map = new IdentityHashMap<>();
     for (Dao dao : daos) {
@@ -137,7 +141,6 @@ public class DbClient {
     internalPropertiesDao = getDao(map, InternalPropertiesDao.class);
     snapshotDao = getDao(map, SnapshotDao.class);
     componentDao = getDao(map, ComponentDao.class);
-    resourceDao = getDao(map, ResourceDao.class);
     componentKeyUpdaterDao = getDao(map, ComponentKeyUpdaterDao.class);
     measureDao = getDao(map, MeasureDao.class);
     userDao = getDao(map, UserDao.class);
@@ -153,6 +156,7 @@ public class DbClient {
     ceActivityDao = getDao(map, CeActivityDao.class);
     ceQueueDao = getDao(map, CeQueueDao.class);
     ceTaskInputDao = getDao(map, CeTaskInputDao.class);
+    ceTaskCharacteristicsDao = getDao(map, CeTaskCharacteristicDao.class);
     ceScannerContextDao = getDao(map, CeScannerContextDao.class);
     fileSourceDao = getDao(map, FileSourceDao.class);
     componentLinkDao = getDao(map, ComponentLinkDao.class);
@@ -173,10 +177,11 @@ public class DbClient {
     userPermissionDao = getDao(map, UserPermissionDao.class);
     webhookDeliveryDao = getDao(map, WebhookDeliveryDao.class);
     defaultQProfileDao = getDao(map, DefaultQProfileDao.class);
+    esQueueDao = getDao(map, EsQueueDao.class);
   }
 
   public DbSession openSession(boolean batch) {
-    return myBatis.openSession(batch);
+    return dbSessions.openSession(batch);
   }
 
   public Database getDatabase() {
@@ -231,10 +236,6 @@ public class DbClient {
     return componentDao;
   }
 
-  public ResourceDao resourceDao() {
-    return resourceDao;
-  }
-
   public ComponentKeyUpdaterDao componentKeyUpdaterDao() {
     return componentKeyUpdaterDao;
   }
@@ -285,6 +286,10 @@ public class DbClient {
 
   public CeTaskInputDao ceTaskInputDao() {
     return ceTaskInputDao;
+  }
+
+  public CeTaskCharacteristicDao ceTaskCharacteristicsDao() {
+    return ceTaskCharacteristicsDao;
   }
 
   public CeScannerContextDao ceScannerContextDao() {
@@ -365,6 +370,10 @@ public class DbClient {
 
   public DefaultQProfileDao defaultQProfileDao() {
     return defaultQProfileDao;
+  }
+
+  public EsQueueDao esQueueDao() {
+    return esQueueDao;
   }
 
   protected <K extends Dao> K getDao(Map<Class, Dao> map, Class<K> clazz) {

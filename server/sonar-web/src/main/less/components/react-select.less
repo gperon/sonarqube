@@ -117,20 +117,28 @@
 }
 
 .has-value:not(.Select--multi) > .Select-control > .Select-value .Select-value-label,
-.has-value.is-pseudo-focused:not(.Select--multi) > .Select-control > .Select-value .Select-value-label {
+.has-value.is-pseudo-focused:not(.Select--multi)
+  > .Select-control
+  > .Select-value .Select-value-label {
   color: @baseFontColor;
 }
 
 .has-value:not(.Select--multi) > .Select-control > .Select-value a.Select-value-label,
-.has-value.is-pseudo-focused:not(.Select--multi) > .Select-control > .Select-value a.Select-value-label {
+.has-value.is-pseudo-focused:not(.Select--multi)
+  > .Select-control
+  > .Select-value a.Select-value-label {
   cursor: pointer;
   text-decoration: none;
 }
 
 .has-value:not(.Select--multi) > .Select-control > .Select-value a.Select-value-label:hover,
-.has-value.is-pseudo-focused:not(.Select--multi) > .Select-control > .Select-value a.Select-value-label:hover,
+.has-value.is-pseudo-focused:not(.Select--multi)
+  > .Select-control
+  > .Select-value a.Select-value-label:hover,
 .has-value:not(.Select--multi) > .Select-control > .Select-value a.Select-value-label:focus,
-.has-value.is-pseudo-focused:not(.Select--multi) > .Select-control > .Select-value a.Select-value-label:focus {
+.has-value.is-pseudo-focused:not(.Select--multi)
+  > .Select-control
+  > .Select-value a.Select-value-label:focus {
   color: #007eff;
   outline: none;
   text-decoration: underline;
@@ -344,6 +352,29 @@
 
 .is-searchable.is-open .Select-value-label {
   opacity: 0.5;
+}
+
+.Select-big .Select-control {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+.Select-big .Select-placeholder {
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+
+.Select-big .Select-value-label {
+  display: inline-block;
+  margin-top: 5px;
+}
+
+.Select-big .Select-option {
+  padding: 4px 8px;
+}
+
+.Select-big img {
+  padding-top: 0;
 }
 
 .Select--multi .Select-value-icon,

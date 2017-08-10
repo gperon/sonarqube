@@ -32,16 +32,17 @@ import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import javax.annotation.CheckForNull;
+import org.sonar.api.batch.AnalysisMode;
 import org.sonar.api.batch.ScannerSide;
 import org.sonar.api.batch.fs.InputComponent;
 import org.sonar.api.batch.fs.InputDir;
 import org.sonar.api.batch.fs.InputFile;
+import org.sonar.api.batch.fs.InputFile.Status;
 import org.sonar.api.batch.fs.InputModule;
 import org.sonar.api.batch.fs.internal.DefaultInputDir;
 import org.sonar.api.batch.fs.internal.DefaultInputFile;
 import org.sonar.api.batch.fs.internal.DefaultInputModule;
 import org.sonar.api.batch.fs.internal.FileExtensionPredicate;
-import org.sonar.api.batch.fs.internal.FilenamePredicate;
 import org.sonar.api.scan.filesystem.PathResolver;
 
 /**
@@ -51,21 +52,24 @@ import org.sonar.api.scan.filesystem.PathResolver;
 @ScannerSide
 public class InputComponentStore {
 
-  private final PathResolver pathResolver;
   private final SortedSet<String> globalLanguagesCache = new TreeSet<>();
   private final Map<String, SortedSet<String>> languagesCache = new HashMap<>();
   private final Map<String, InputFile> globalInputFileCache = new HashMap<>();
   private final Table<String, String, InputFile> inputFileCache = TreeBasedTable.create();
   private final Map<String, InputDir> globalInputDirCache = new HashMap<>();
   private final Table<String, String, InputDir> inputDirCache = TreeBasedTable.create();
+  // indexed by key with branch
   private final Map<String, InputModule> inputModuleCache = new HashMap<>();
   private final Map<String, InputComponent> inputComponents = new HashMap<>();
   private final SetMultimap<String, InputFile> filesByNameCache = LinkedHashMultimap.create();
   private final SetMultimap<String, InputFile> filesByExtensionCache = LinkedHashMultimap.create();
-  private InputModule root;
+  private final InputModule root;
+  private final AnalysisMode mode;
 
-  public InputComponentStore(PathResolver pathResolver) {
-    this.pathResolver = pathResolver;
+  public InputComponentStore(DefaultInputModule root, AnalysisMode mode) {
+    this.root = root;
+    this.mode = mode;
+    this.put(root);
   }
 
   public Collection<InputComponent> all() {
@@ -75,7 +79,8 @@ public class InputComponentStore {
   public Iterable<DefaultInputFile> allFilesToPublish() {
     return inputFileCache.values().stream()
       .map(f -> (DefaultInputFile) f)
-      .filter(DefaultInputFile::publish)::iterator;
+      .filter(DefaultInputFile::isPublished)
+      .filter(f -> !mode.isIncremental() || f.status() != Status.SAME)::iterator;
   }
 
   public Iterable<InputFile> allFiles() {
@@ -90,7 +95,6 @@ public class InputComponentStore {
     return inputComponents.get(key);
   }
 
-  @CheckForNull
   public InputModule root() {
     return root;
   }
@@ -111,7 +115,7 @@ public class InputComponentStore {
 
   public InputComponentStore remove(InputFile inputFile) {
     DefaultInputFile file = (DefaultInputFile) inputFile;
-    inputFileCache.remove(file.moduleKey(), inputFile.relativePath());
+    inputFileCache.remove(file.moduleKey(), file.getModuleRelativePath());
     return this;
   }
 
@@ -124,10 +128,10 @@ public class InputComponentStore {
   public InputComponentStore put(InputFile inputFile) {
     DefaultInputFile file = (DefaultInputFile) inputFile;
     addToLanguageCache(file);
-    inputFileCache.put(file.moduleKey(), inputFile.relativePath(), inputFile);
-    globalInputFileCache.put(getProjectRelativePath(file), inputFile);
+    inputFileCache.put(file.moduleKey(), file.getModuleRelativePath(), inputFile);
+    globalInputFileCache.put(file.getProjectRelativePath(), inputFile);
     inputComponents.put(inputFile.key(), inputFile);
-    filesByNameCache.put(FilenamePredicate.getFilename(inputFile), inputFile);
+    filesByNameCache.put(inputFile.filename(), inputFile);
     filesByExtensionCache.put(FileExtensionPredicate.getExtension(inputFile), inputFile);
     return this;
   }
@@ -143,21 +147,18 @@ public class InputComponentStore {
   public InputComponentStore put(InputDir inputDir) {
     DefaultInputDir dir = (DefaultInputDir) inputDir;
     inputDirCache.put(dir.moduleKey(), inputDir.relativePath(), inputDir);
+    // FIXME an InputDir can be already indexed by another module
     globalInputDirCache.put(getProjectRelativePath(dir), inputDir);
     inputComponents.put(inputDir.key(), inputDir);
     return this;
   }
 
-  private String getProjectRelativePath(DefaultInputFile file) {
-    return pathResolver.relativePath(getProjectBaseDir(), file.path());
-  }
-
   private String getProjectRelativePath(DefaultInputDir dir) {
-    return pathResolver.relativePath(getProjectBaseDir(), dir.path());
+    return PathResolver.relativize(getProjectBaseDir(), dir.path()).orElseThrow(() -> new IllegalStateException("Dir " + dir.path() + " should be relative to project baseDir"));
   }
 
   private Path getProjectBaseDir() {
-    return ((DefaultInputModule) root).definition().getBaseDir().toPath();
+    return ((DefaultInputModule) root).getBaseDir();
   }
 
   @CheckForNull
@@ -181,22 +182,18 @@ public class InputComponentStore {
   }
 
   @CheckForNull
-  public InputModule getModule(String moduleKey) {
-    return inputModuleCache.get(moduleKey);
+  public InputModule getModule(String moduleKeyWithBranch) {
+    return inputModuleCache.get(moduleKeyWithBranch);
   }
 
   public void put(DefaultInputModule inputModule) {
     String key = inputModule.key();
+    String keyWithBranch = inputModule.getKeyWithBranch();
+    Preconditions.checkNotNull(inputModule);
     Preconditions.checkState(!inputComponents.containsKey(key), "Module '%s' already indexed", key);
-    Preconditions.checkState(!inputModuleCache.containsKey(key), "Module '%s' already indexed", key);
+    Preconditions.checkState(!inputModuleCache.containsKey(keyWithBranch), "Module '%s' already indexed", keyWithBranch);
     inputComponents.put(key, inputModule);
-    inputModuleCache.put(key, inputModule);
-    if (inputModule.definition().getParent() == null) {
-      if (root != null) {
-        throw new IllegalStateException("Root module already indexed: '" + root.key() + "', '" + key + "'");
-      }
-      root = inputModule;
-    }
+    inputModuleCache.put(keyWithBranch, inputModule);
   }
 
   public Iterable<InputFile> getFilesByName(String filename) {

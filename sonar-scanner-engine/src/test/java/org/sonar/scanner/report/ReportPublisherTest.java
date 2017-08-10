@@ -34,9 +34,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.sonar.api.CoreProperties;
 import org.sonar.api.batch.bootstrap.ProjectDefinition;
-import org.sonar.api.config.MapSettings;
+import org.sonar.api.batch.fs.internal.DefaultInputModule;
+import org.sonar.api.batch.fs.internal.InputModuleHierarchy;
 import org.sonar.api.config.PropertyDefinitions;
-import org.sonar.api.config.Settings;
+import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.platform.Server;
 import org.sonar.api.utils.MessageException;
 import org.sonar.api.utils.TempFolder;
@@ -45,7 +46,6 @@ import org.sonar.api.utils.log.LoggerLevel;
 import org.sonar.core.config.CorePropertyDefinitions;
 import org.sonar.scanner.analysis.DefaultAnalysisMode;
 import org.sonar.scanner.bootstrap.ScannerWsClient;
-import org.sonar.scanner.scan.ImmutableProjectReactor;
 import org.sonarqube.ws.WsCe;
 import org.sonarqube.ws.client.HttpException;
 import org.sonarqube.ws.client.WsRequest;
@@ -71,25 +71,26 @@ public class ReportPublisherTest {
   public ExpectedException exception = ExpectedException.none();
 
   DefaultAnalysisMode mode = mock(DefaultAnalysisMode.class);
-  Settings settings = new MapSettings(new PropertyDefinitions(CorePropertyDefinitions.all()));
+  MapSettings settings = new MapSettings(new PropertyDefinitions(CorePropertyDefinitions.all()));
   ScannerWsClient wsClient;
   Server server = mock(Server.class);
-  ImmutableProjectReactor reactor = mock(ImmutableProjectReactor.class);
-  ProjectDefinition root;
+  InputModuleHierarchy moduleHierarchy = mock(InputModuleHierarchy.class);
+  DefaultInputModule root;
   AnalysisContextReportPublisher contextPublisher = mock(AnalysisContextReportPublisher.class);
 
   @Before
-  public void setUp() {
+  public void setUp() throws IOException {
     wsClient = mock(ScannerWsClient.class, Mockito.RETURNS_DEEP_STUBS);
-    root = ProjectDefinition.create().setKey("struts").setWorkDir(temp.getRoot());
-    when(reactor.getRoot()).thenReturn(root);
+    root = new DefaultInputModule(ProjectDefinition.create().setKey("struts").setBaseDir(temp.newFolder()).setWorkDir(temp.getRoot()));
+    when(moduleHierarchy.root()).thenReturn(root);
     when(server.getPublicRootUrl()).thenReturn("https://localhost");
     when(server.getVersion()).thenReturn("6.4");
   }
 
   @Test
   public void log_and_dump_information_about_report_uploading() throws IOException {
-    ReportPublisher underTest = new ReportPublisher(settings, wsClient, server, contextPublisher, reactor, mode, mock(TempFolder.class), new ReportPublisherStep[0]);
+    ReportPublisher underTest = new ReportPublisher(settings.asConfig(), wsClient, server, contextPublisher, moduleHierarchy, mode, mock(TempFolder.class),
+      new ReportPublisherStep[0]);
     settings.setProperty(CoreProperties.PROJECT_ORGANIZATION_PROPERTY, "MyOrg");
 
     underTest.logSuccess("TASK-123");
@@ -112,7 +113,8 @@ public class ReportPublisherTest {
 
   @Test
   public void parse_upload_error_message() throws IOException {
-    ReportPublisher underTest = new ReportPublisher(settings, wsClient, server, contextPublisher, reactor, mode, mock(TempFolder.class), new ReportPublisherStep[0]);
+    ReportPublisher underTest = new ReportPublisher(settings.asConfig(), wsClient, server, contextPublisher, moduleHierarchy, mode, mock(TempFolder.class),
+      new ReportPublisherStep[0]);
     HttpException ex = new HttpException("url", 404, "{\"errors\":[{\"msg\":\"Organization with key 'MyOrg' does not exist\"}]}");
     WsResponse response = mock(WsResponse.class);
     when(response.failIfNotSuccessful()).thenThrow(ex);
@@ -126,7 +128,8 @@ public class ReportPublisherTest {
   @Test
   public void log_public_url_if_defined() throws IOException {
     when(server.getPublicRootUrl()).thenReturn("https://publicserver/sonarqube");
-    ReportPublisher underTest = new ReportPublisher(settings, wsClient, server, contextPublisher, reactor, mode, mock(TempFolder.class), new ReportPublisherStep[0]);
+    ReportPublisher underTest = new ReportPublisher(settings.asConfig(), wsClient, server, contextPublisher, moduleHierarchy, mode, mock(TempFolder.class),
+      new ReportPublisherStep[0]);
 
     underTest.logSuccess("TASK-123");
 
@@ -147,7 +150,8 @@ public class ReportPublisherTest {
   @Test
   public void fail_if_public_url_malformed() throws IOException {
     when(server.getPublicRootUrl()).thenReturn("invalid");
-    ReportPublisher underTest = new ReportPublisher(settings, wsClient, server, contextPublisher, reactor, mode, mock(TempFolder.class), new ReportPublisherStep[0]);
+    ReportPublisher underTest = new ReportPublisher(settings.asConfig(), wsClient, server, contextPublisher, moduleHierarchy, mode, mock(TempFolder.class),
+      new ReportPublisherStep[0]);
 
     exception.expect(MessageException.class);
     exception.expectMessage("Failed to parse public URL set in SonarQube server: invalid");
@@ -156,7 +160,8 @@ public class ReportPublisherTest {
 
   @Test
   public void log_but_not_dump_information_when_report_is_not_uploaded() {
-    ReportPublisher underTest = new ReportPublisher(settings, wsClient, server, contextPublisher, reactor, mode, mock(TempFolder.class), new ReportPublisherStep[0]);
+    ReportPublisher underTest = new ReportPublisher(settings.asConfig(), wsClient, server, contextPublisher, moduleHierarchy, mode, mock(TempFolder.class),
+      new ReportPublisherStep[0]);
 
     underTest.logSuccess(/* report not uploaded, no server task */null);
 
@@ -170,10 +175,11 @@ public class ReportPublisherTest {
 
   @Test
   public void should_not_delete_report_if_property_is_set() throws IOException {
-    settings.setProperty("sonar.batch.keepReport", true);
-    Path reportDir = temp.getRoot().toPath().resolve("batch-report");
+    settings.setProperty("sonar.scanner.keepReport", true);
+    Path reportDir = temp.getRoot().toPath().resolve("scanner-report");
     Files.createDirectory(reportDir);
-    ReportPublisher underTest = new ReportPublisher(settings, wsClient, server, contextPublisher, reactor, mode, mock(TempFolder.class), new ReportPublisherStep[0]);
+    ReportPublisher underTest = new ReportPublisher(settings.asConfig(), wsClient, server, contextPublisher, moduleHierarchy, mode, mock(TempFolder.class),
+      new ReportPublisherStep[0]);
 
     underTest.start();
     underTest.stop();
@@ -182,9 +188,9 @@ public class ReportPublisherTest {
 
   @Test
   public void should_delete_report_by_default() throws IOException {
-    Path reportDir = temp.getRoot().toPath().resolve("batch-report");
+    Path reportDir = temp.getRoot().toPath().resolve("scanner-report");
     Files.createDirectory(reportDir);
-    ReportPublisher job = new ReportPublisher(settings, wsClient, server, contextPublisher, reactor, mode, mock(TempFolder.class), new ReportPublisherStep[0]);
+    ReportPublisher job = new ReportPublisher(settings.asConfig(), wsClient, server, contextPublisher, moduleHierarchy, mode, mock(TempFolder.class), new ReportPublisherStep[0]);
 
     job.start();
     job.stop();
@@ -193,7 +199,8 @@ public class ReportPublisherTest {
 
   @Test
   public void test_ws_parameters() throws Exception {
-    ReportPublisher underTest = new ReportPublisher(settings, wsClient, server, contextPublisher, reactor, mode, mock(TempFolder.class), new ReportPublisherStep[0]);
+    ReportPublisher underTest = new ReportPublisher(settings.asConfig(), wsClient, server, contextPublisher, moduleHierarchy, mode, mock(TempFolder.class),
+      new ReportPublisherStep[0]);
 
     settings.setProperty(CoreProperties.PROJECT_ORGANIZATION_PROPERTY, "MyOrg");
 
@@ -217,6 +224,37 @@ public class ReportPublisherTest {
     assertThat(wsRequest.getParams()).containsOnly(
       entry("organization", "MyOrg"),
       entry("projectKey", "struts"));
+  }
+  
+  @Test
+  public void test_send_characteristics() throws Exception {
+    ReportPublisher underTest = new ReportPublisher(settings.asConfig(), wsClient, server, contextPublisher, moduleHierarchy, mode, mock(TempFolder.class),
+      new ReportPublisherStep[0]);
+    
+    when(mode.isIncremental()).thenReturn(true);
+    settings.setProperty(CoreProperties.PROJECT_ORGANIZATION_PROPERTY, "MyOrg");
+    
+    WsResponse response = mock(WsResponse.class);
+
+    PipedOutputStream out = new PipedOutputStream();
+    PipedInputStream in = new PipedInputStream(out);
+    WsCe.SubmitResponse.newBuilder().build().writeTo(out);
+    out.close();
+
+    when(response.failIfNotSuccessful()).thenReturn(response);
+    when(response.contentStream()).thenReturn(in);
+
+    when(wsClient.call(any(WsRequest.class))).thenReturn(response);
+    underTest.upload(temp.newFile());
+
+    ArgumentCaptor<WsRequest> capture = ArgumentCaptor.forClass(WsRequest.class);
+    verify(wsClient).call(capture.capture());
+
+    WsRequest wsRequest = capture.getValue();
+    assertThat(wsRequest.getParams()).containsOnly(
+      entry("organization", "MyOrg"),
+      entry("projectKey", "struts"),
+      entry("characteristic", "incremental=true"));
   }
 
 }

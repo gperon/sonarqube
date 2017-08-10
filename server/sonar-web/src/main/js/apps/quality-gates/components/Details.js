@@ -17,7 +17,8 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-import React, { Component } from 'react';
+import React from 'react';
+import PropTypes from 'prop-types';
 import Helmet from 'react-helmet';
 import {
   fetchQualityGate,
@@ -29,8 +30,9 @@ import DetailsContent from './DetailsContent';
 import RenameView from '../views/rename-view';
 import CopyView from '../views/copy-view';
 import DeleteView from '../views/delete-view';
+import { getQualityGatesUrl, getQualityGateUrl } from '../../../helpers/urls';
 
-export default class Details extends Component {
+export default class Details extends React.PureComponent {
   componentDidMount() {
     this.fetchDetails();
   }
@@ -62,14 +64,14 @@ export default class Details extends Component {
   }
 
   handleCopyClick() {
-    const { qualityGate, onCopy } = this.props;
+    const { qualityGate, onCopy, organization } = this.props;
     const { router } = this.context;
 
     new CopyView({
       qualityGate,
       onCopy: newQualityGate => {
         onCopy(newQualityGate);
-        router.push(`/quality_gates/show/${newQualityGate.id}`);
+        router.push(getQualityGateUrl(newQualityGate.id, organization && organization.key));
       }
     }).render();
   }
@@ -85,14 +87,13 @@ export default class Details extends Component {
   }
 
   handleDeleteClick() {
-    const { qualityGate, onDelete } = this.props;
+    const { qualityGate, onDelete, organization } = this.props;
     const { router } = this.context;
-
     new DeleteView({
       qualityGate,
       onDelete: qualityGate => {
         onDelete(qualityGate);
-        router.replace('/quality_gates');
+        router.replace(getQualityGatesUrl(organization && organization.key));
       }
     }).render();
   }
@@ -102,18 +103,11 @@ export default class Details extends Component {
     const { onAddCondition, onDeleteCondition, onSaveCondition } = this.props;
 
     if (!qualityGate) {
-      return (
-        <div className="search-navigator-workspace">
-          <div className="search-navigator-workspace-header" style={{ top: 30 }}>
-            <h2 className="search-navigator-header-component">&nbsp;</h2>
-          </div>
-          <div className="search-navigator-workspace-details" />
-        </div>
-      );
+      return null;
     }
 
     return (
-      <div className="search-navigator-workspace">
+      <div className="layout-page-main">
         <Helmet title={qualityGate.name} />
         <DetailsHeader
           qualityGate={qualityGate}
@@ -122,6 +116,7 @@ export default class Details extends Component {
           onCopy={this.handleCopyClick.bind(this)}
           onSetAsDefault={this.handleSetAsDefaultClick.bind(this)}
           onDelete={this.handleDeleteClick.bind(this)}
+          organization={this.props.organization}
         />
 
         <DetailsContent
@@ -138,5 +133,5 @@ export default class Details extends Component {
 }
 
 Details.contextTypes = {
-  router: React.PropTypes.object.isRequired
+  router: PropTypes.object.isRequired
 };

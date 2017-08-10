@@ -236,17 +236,6 @@ public class DatabaseUtils {
     }
   }
 
-  public static String repeatCondition(String sql, int count, String separator) {
-    StringBuilder sb = new StringBuilder();
-    for (int i = 0; i < count; i++) {
-      sb.append(sql);
-      if (i < count - 1) {
-        sb.append(" ").append(separator).append(" ");
-      }
-    }
-    return sb.toString();
-  }
-
   /**
    * Logback does not log exceptions associated to {@link java.sql.SQLException#getNextException()}.
    * See http://jira.qos.ch/browse/LOGBACK-775

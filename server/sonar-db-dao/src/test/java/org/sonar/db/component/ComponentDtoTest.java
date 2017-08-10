@@ -32,7 +32,7 @@ public class ComponentDtoTest {
   public void setters_and_getters() {
     ComponentDto componentDto = new ComponentDto()
       .setId(1L)
-      .setKey("org.struts:struts-core:src/org/struts/RequestContext.java")
+      .setDbKey("org.struts:struts-core:src/org/struts/RequestContext.java")
       .setDeprecatedKey("org.struts:struts-core:src/org/struts/RequestContext.java")
       .setName("RequestContext.java")
       .setLongName("org.struts.RequestContext")
@@ -43,12 +43,10 @@ public class ComponentDtoTest {
       .setPath("src/org/struts/RequestContext.java")
       .setCopyComponentUuid("uuid_5")
       .setRootUuid("uuid_3")
-      .setDeveloperUuid("uuid_6")
-      .setAuthorizationUpdatedAt(123456789L)
-      ;
+      .setDeveloperUuid("uuid_6");
 
     assertThat(componentDto.getId()).isEqualTo(1L);
-    assertThat(componentDto.key()).isEqualTo("org.struts:struts-core:src/org/struts/RequestContext.java");
+    assertThat(componentDto.getDbKey()).isEqualTo("org.struts:struts-core:src/org/struts/RequestContext.java");
     assertThat(componentDto.deprecatedKey()).isEqualTo("org.struts:struts-core:src/org/struts/RequestContext.java");
     assertThat(componentDto.name()).isEqualTo("RequestContext.java");
     assertThat(componentDto.longName()).isEqualTo("org.struts.RequestContext");
@@ -60,7 +58,6 @@ public class ComponentDtoTest {
     assertThat(componentDto.getRootUuid()).isEqualTo("uuid_3");
     assertThat(componentDto.getCopyResourceUuid()).isEqualTo("uuid_5");
     assertThat(componentDto.getDeveloperUuid()).isEqualTo("uuid_6");
-    assertThat(componentDto.getAuthorizationUpdatedAt()).isEqualTo(123456789L);
     assertThat(componentDto.isPrivate()).isFalse();
   }
 

@@ -19,6 +19,7 @@
  */
 // @flow
 import React from 'react';
+import PropTypes from 'prop-types';
 import { groupBy, sortBy } from 'lodash';
 import DefinitionsList from './DefinitionsList';
 import EmailForm from './EmailForm';
@@ -26,8 +27,8 @@ import { getSubCategoryName, getSubCategoryDescription } from '../utils';
 
 export default class SubCategoryDefinitionsList extends React.PureComponent {
   static propTypes = {
-    component: React.PropTypes.object,
-    settings: React.PropTypes.array.isRequired
+    component: PropTypes.object,
+    settings: PropTypes.array.isRequired
   };
 
   renderEmailForm(subCategoryKey: string) {
@@ -51,9 +52,11 @@ export default class SubCategoryDefinitionsList extends React.PureComponent {
 
     return (
       <ul className="settings-sub-categories-list">
-        {sortedSubCategories.map(subCategory => (
+        {sortedSubCategories.map(subCategory =>
           <li key={subCategory.key}>
-            <h2 className="settings-sub-category-name">{subCategory.name}</h2>
+            <h2 className="settings-sub-category-name">
+              {subCategory.name}
+            </h2>
             {subCategory.description != null &&
               <div
                 className="settings-sub-category-description markdown"
@@ -65,7 +68,7 @@ export default class SubCategoryDefinitionsList extends React.PureComponent {
             />
             {this.renderEmailForm(subCategory.key)}
           </li>
-        ))}
+        )}
       </ul>
     );
   }

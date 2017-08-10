@@ -21,8 +21,7 @@ package org.sonar.server.ui.ws;
 
 import org.junit.Rule;
 import org.junit.Test;
-import org.sonar.api.config.MapSettings;
-import org.sonar.api.config.Settings;
+import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.web.page.Page;
 import org.sonar.api.web.page.PageDefinition;
 import org.sonar.core.config.WebConstants;
@@ -41,7 +40,7 @@ public class SettingsActionTest {
   @Rule
   public UserSessionRule userSessionRule = UserSessionRule.standalone();
 
-  private Settings settings = new MapSettings();
+  private MapSettings settings = new MapSettings();
 
   private WsActionTester ws;
 
@@ -87,7 +86,7 @@ public class SettingsActionTest {
         context.addPage(page);
       }
     }});
-    ws = new WsActionTester(new SettingsAction(pageRepository, settings, userSessionRule));
+    ws = new WsActionTester(new SettingsAction(pageRepository, settings.asConfig(), userSessionRule));
     pageRepository.start();
   }
 

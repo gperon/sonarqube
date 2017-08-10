@@ -38,17 +38,16 @@ import org.sonar.db.issue.IssueDto;
 import org.sonar.db.issue.IssueTesting;
 import org.sonar.db.rule.RuleDefinitionDto;
 import org.sonar.db.rule.RuleTesting;
-import org.sonar.server.es.ProjectIndexer;
+import org.sonar.server.es.TestProjectIndexers;
 
 import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.sonar.db.component.ComponentTesting.newFileDto;
 import static org.sonar.db.component.ComponentTesting.newPrivateProjectDto;
+import static org.sonar.server.es.ProjectIndexer.Cause.PROJECT_DELETION;
 
 public class ComponentCleanerServiceTest {
 
@@ -62,9 +61,9 @@ public class ComponentCleanerServiceTest {
 
   private DbClient dbClient = db.getDbClient();
   private DbSession dbSession = db.getSession();
-  private ProjectIndexer projectIndexer = mock(ProjectIndexer.class);
+  private TestProjectIndexers projectIndexers = new TestProjectIndexers();
   private ResourceTypes mockResourceTypes = mock(ResourceTypes.class);
-  private ComponentCleanerService underTest = new ComponentCleanerService(dbClient, mockResourceTypes, projectIndexer);
+  private ComponentCleanerService underTest = new ComponentCleanerService(dbClient, mockResourceTypes, projectIndexers);
 
   @Test
   public void delete_project_from_db_and_index() {
@@ -131,7 +130,7 @@ public class ComponentCleanerServiceTest {
   private DbData insertData(int id) {
     String suffix = String.valueOf(id);
     ComponentDto project = newPrivateProjectDto(db.organizations().insert(), "project-uuid-" + suffix)
-      .setKey("project-key-" + suffix);
+      .setDbKey("project-key-" + suffix);
     RuleDefinitionDto rule = RuleTesting.newRule(RuleKey.of("sonarqube", "rule-" + suffix));
     dbClient.ruleDao().insert(dbSession, rule);
     IssueDto issue = IssueTesting.newIssue(rule, project, project).setKee("issue-key-" + suffix).setUpdatedAt(new Date().getTime());
@@ -151,12 +150,13 @@ public class ComponentCleanerServiceTest {
 
   private void assertNotExists(DbData data) {
     assertDataInDb(data, false);
-    verify(projectIndexer).deleteProject(data.project.uuid());
+
+    assertThat(projectIndexers.hasBeenCalled(data.project.uuid(), PROJECT_DELETION)).isTrue();
   }
 
   private void assertExists(DbData data) {
     assertDataInDb(data, true);
-    verify(projectIndexer, never()).deleteProject(data.project.uuid());
+    assertThat(projectIndexers.hasBeenCalled(data.project.uuid(), PROJECT_DELETION)).isFalse();
   }
 
   private void assertDataInDb(DbData data, boolean exists) {

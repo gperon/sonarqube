@@ -20,11 +20,13 @@
 package org.sonar.server.qualityprofile;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.sonar.api.resources.Language;
+import org.sonar.api.utils.System2;
 import org.sonar.api.utils.internal.AlwaysIncreasingSystem2;
 import org.sonar.api.utils.log.LogTester;
 import org.sonar.api.utils.log.LoggerLevel;
@@ -38,14 +40,16 @@ import org.sonar.server.language.LanguageTesting;
 import org.sonar.server.tester.UserSessionRule;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 import static org.sonar.db.qualityprofile.QualityProfileTesting.newRuleProfileDto;
 
 public class RegisterQualityProfilesTest {
   private static final Language FOO_LANGUAGE = LanguageTesting.newLanguage("foo");
   private static final Language BAR_LANGUAGE = LanguageTesting.newLanguage("bar");
 
+  private System2 system2 = new AlwaysIncreasingSystem2();
   @Rule
-  public DbTester db = DbTester.create(new AlwaysIncreasingSystem2());
+  public DbTester db = DbTester.create(system2);
   @Rule
   public UserSessionRule userSessionRule = UserSessionRule.standalone();
   @Rule
@@ -58,10 +62,7 @@ public class RegisterQualityProfilesTest {
   private DbClient dbClient = db.getDbClient();
   private DummyBuiltInQProfileInsert insert = new DummyBuiltInQProfileInsert();
   private DummyBuiltInQProfileUpdate update = new DummyBuiltInQProfileUpdate();
-  private RegisterQualityProfiles underTest = new RegisterQualityProfiles(
-    builtInQProfileRepositoryRule,
-    dbClient,
-    insert, update);
+  private RegisterQualityProfiles underTest = new RegisterQualityProfiles(builtInQProfileRepositoryRule, dbClient, insert, update, mock(BuiltInQualityProfilesUpdateListener.class), system2);
 
   @Test
   public void start_fails_if_BuiltInQProfileRepository_has_not_been_initialized() {
@@ -139,9 +140,9 @@ public class RegisterQualityProfilesTest {
 
   private void insertRulesProfile(BuiltInQProfile builtIn) {
     RulesProfileDto dto = newRuleProfileDto(rp -> rp
-        .setIsBuiltIn(true)
-        .setLanguage(builtIn.getLanguage())
-        .setName(builtIn.getName()));
+      .setIsBuiltIn(true)
+      .setLanguage(builtIn.getLanguage())
+      .setName(builtIn.getName()));
     dbClient.qualityProfileDao().insert(db.getSession(), dto);
     db.commit();
   }
@@ -159,8 +160,9 @@ public class RegisterQualityProfilesTest {
     private final List<BuiltInQProfile> callLogs = new ArrayList<>();
 
     @Override
-    public void update(DbSession dbSession, BuiltInQProfile builtIn, RulesProfileDto ruleProfile) {
+    public List<ActiveRuleChange> update(DbSession dbSession, BuiltInQProfile builtIn, RulesProfileDto ruleProfile) {
       callLogs.add(builtIn);
+      return Collections.emptyList();
     }
   }
 }

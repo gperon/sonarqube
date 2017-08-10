@@ -55,13 +55,14 @@ export default class PageHeader extends React.PureComponent {
     const canApplyPermissionTemplate =
       configuration != null && configuration.canApplyPermissionTemplate;
 
-    const description = ['VW', 'SVW'].includes(component.qualifier)
+    const description = ['VW', 'SVW', 'APP'].includes(component.qualifier)
       ? translate('roles.page.description_portfolio')
       : translate('roles.page.description2');
 
-    const visibilityDescription = component.qualifier === 'TRK'
-      ? translate('visibility', component.visibility, 'description')
-      : null;
+    const visibilityDescription =
+      component.qualifier === 'TRK'
+        ? translate('visibility', component.visibility, 'description')
+        : null;
 
     return (
       <header className="page-header">
@@ -79,8 +80,13 @@ export default class PageHeader extends React.PureComponent {
           </div>}
 
         <div className="page-description">
-          <p>{description}</p>
-          {visibilityDescription != null && <p>{visibilityDescription}</p>}
+          <p>
+            {description}
+          </p>
+          {visibilityDescription != null &&
+            <p>
+              {visibilityDescription}
+            </p>}
         </div>
       </header>
     );

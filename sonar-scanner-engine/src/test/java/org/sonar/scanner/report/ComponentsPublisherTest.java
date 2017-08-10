@@ -22,13 +22,13 @@ package org.sonar.scanner.report;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
-
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.sonar.api.CoreProperties;
 import org.sonar.api.batch.bootstrap.ProjectDefinition;
+import org.sonar.api.batch.fs.InputFile;
 import org.sonar.api.batch.fs.InputFile.Type;
 import org.sonar.api.batch.fs.internal.DefaultInputDir;
 import org.sonar.api.batch.fs.internal.DefaultInputFile;
@@ -40,11 +40,11 @@ import org.sonar.scanner.ProjectAnalysisInfo;
 import org.sonar.scanner.protocol.output.FileStructure;
 import org.sonar.scanner.protocol.output.ScannerReport;
 import org.sonar.scanner.protocol.output.ScannerReport.Component;
+import org.sonar.scanner.protocol.output.ScannerReport.Component.FileStatus;
 import org.sonar.scanner.protocol.output.ScannerReport.ComponentLink.ComponentLinkType;
-import org.sonar.scanner.report.ComponentsPublisher;
-import org.sonar.scanner.scan.DefaultComponentTree;
 import org.sonar.scanner.protocol.output.ScannerReportReader;
 import org.sonar.scanner.protocol.output.ScannerReportWriter;
+import org.sonar.scanner.scan.DefaultComponentTree;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -79,13 +79,17 @@ public class ComponentsPublisherTest {
       .setKey("foo")
       .setProperty(CoreProperties.PROJECT_VERSION_PROPERTY, "1.0")
       .setName("Root project")
-      .setDescription("Root description");
+      .setDescription("Root description")
+      .setBaseDir(temp.newFolder())
+      .setWorkDir(temp.newFolder());
     DefaultInputModule root = new DefaultInputModule(rootDef, 1);
 
     ProjectDefinition module1Def = ProjectDefinition.create()
       .setKey("module1")
       .setName("Module1")
-      .setDescription("Module description");
+      .setDescription("Module description")
+      .setBaseDir(temp.newFolder())
+      .setWorkDir(temp.newFolder());
     rootDef.addSubProject(module1Def);
 
     DefaultInputModule module1 = new DefaultInputModule(module1Def, 2);
@@ -98,16 +102,16 @@ public class ComponentsPublisherTest {
     DefaultInputDir dir = new DefaultInputDir("module1", "src", 3);
     tree.index(dir, module1);
 
-    DefaultInputFile file = new TestInputFileBuilder("module1", "src/Foo.java", 4).setLines(2).build();
+    DefaultInputFile file = new TestInputFileBuilder("module1", "src/Foo.java", 4).setLines(2).setStatus(InputFile.Status.SAME).build();
     tree.index(file, dir);
 
     DefaultInputFile file2 = new TestInputFileBuilder("module1", "src/Foo2.java", 5).setPublish(false).setLines(2).build();
     tree.index(file2, dir);
 
-    DefaultInputFile fileWithoutLang = new TestInputFileBuilder("module1", "src/make", 6).setLines(10).build();
+    DefaultInputFile fileWithoutLang = new TestInputFileBuilder("module1", "src/make", 6).setLines(10).setStatus(InputFile.Status.CHANGED).build();
     tree.index(fileWithoutLang, dir);
 
-    DefaultInputFile testFile = new TestInputFileBuilder("module1", "test/FooTest.java", 7).setType(Type.TEST).setLines(4).build();
+    DefaultInputFile testFile = new TestInputFileBuilder("module1", "test/FooTest.java", 7).setType(Type.TEST).setStatus(InputFile.Status.ADDED).setLines(4).build();
     tree.index(testFile, dir);
 
     ComponentsPublisher publisher = new ComponentsPublisher(moduleHierarchy, tree);
@@ -136,10 +140,14 @@ public class ComponentsPublisherTest {
     assertThat(module1Protobuf.getKey()).isEqualTo("module1");
     assertThat(module1Protobuf.getDescription()).isEqualTo("Module description");
     assertThat(module1Protobuf.getVersion()).isEqualTo("1.0");
+
+    assertThat(reader.readComponent(4).getStatus()).isEqualTo(FileStatus.SAME);
+    assertThat(reader.readComponent(6).getStatus()).isEqualTo(FileStatus.CHANGED);
+    assertThat(reader.readComponent(7).getStatus()).isEqualTo(FileStatus.ADDED);
   }
 
   @Test
-  public void should_skip_dir_without_published_files() {
+  public void should_skip_dir_without_published_files() throws IOException {
     ProjectAnalysisInfo projectAnalysisInfo = mock(ProjectAnalysisInfo.class);
     when(projectAnalysisInfo.analysisDate()).thenReturn(DateUtils.parseDate("2012-12-12"));
 
@@ -147,7 +155,9 @@ public class ComponentsPublisherTest {
       .setKey("foo")
       .setProperty(CoreProperties.PROJECT_VERSION_PROPERTY, "1.0")
       .setName("Root project")
-      .setDescription("Root description");
+      .setDescription("Root description")
+      .setBaseDir(temp.newFolder())
+      .setWorkDir(temp.newFolder());
     DefaultInputModule root = new DefaultInputModule(rootDef, 1);
 
     moduleHierarchy = mock(InputModuleHierarchy.class);
@@ -167,7 +177,7 @@ public class ComponentsPublisherTest {
     tree.index(dir3, root);
     writeIssue(4);
 
-    DefaultInputFile file = new TestInputFileBuilder("module1", "src/Foo.java", 5).setLines(2).build();
+    DefaultInputFile file = new TestInputFileBuilder("module1", "src/Foo.java", 5).setLines(2).setStatus(InputFile.Status.SAME).build();
     tree.index(file, dir);
 
     DefaultInputFile file2 = new TestInputFileBuilder("module1", "src2/Foo2.java", 6).setPublish(false).setLines(2).build();
@@ -198,12 +208,16 @@ public class ComponentsPublisherTest {
 
     ProjectDefinition rootDef = ProjectDefinition.create()
       .setKey("foo")
-      .setDescription("Root description");
+      .setDescription("Root description")
+      .setBaseDir(temp.newFolder())
+      .setWorkDir(temp.newFolder());
     DefaultInputModule root = new DefaultInputModule(rootDef, 1);
 
     ProjectDefinition module1Def = ProjectDefinition.create()
       .setKey("module1")
-      .setDescription("Module description");
+      .setDescription("Module description")
+      .setBaseDir(temp.newFolder())
+      .setWorkDir(temp.newFolder());
     rootDef.addSubProject(module1Def);
     DefaultInputModule module1 = new DefaultInputModule(module1Def, 2);
 
@@ -215,13 +229,13 @@ public class ComponentsPublisherTest {
     DefaultInputDir dir = new DefaultInputDir("module1", "src", 3);
     tree.index(dir, module1);
 
-    DefaultInputFile file = new TestInputFileBuilder("module1", "src/Foo.java", 4).setLines(2).build();
+    DefaultInputFile file = new TestInputFileBuilder("module1", "src/Foo.java", 4).setLines(2).setStatus(InputFile.Status.SAME).build();
     tree.index(file, dir);
 
-    DefaultInputFile fileWithoutLang = new TestInputFileBuilder("module1", "src/make", 5).setLines(10).build();
+    DefaultInputFile fileWithoutLang = new TestInputFileBuilder("module1", "src/make", 5).setLines(10).setStatus(InputFile.Status.SAME).build();
     tree.index(fileWithoutLang, dir);
 
-    DefaultInputFile testFile = new TestInputFileBuilder("module1", "test/FooTest.java", 6).setType(Type.TEST).setLines(4).build();
+    DefaultInputFile testFile = new TestInputFileBuilder("module1", "test/FooTest.java", 6).setType(Type.TEST).setStatus(InputFile.Status.SAME).setLines(4).build();
     tree.index(testFile, dir);
 
     ComponentsPublisher publisher = new ComponentsPublisher(moduleHierarchy, tree);
@@ -263,14 +277,18 @@ public class ComponentsPublisherTest {
       .setProperty(CoreProperties.PROJECT_BRANCH_PROPERTY, "my_branch")
       .setName("Root project")
       .setProperty(CoreProperties.LINKS_HOME_PAGE, "http://home")
-      .setDescription("Root description");
+      .setDescription("Root description")
+      .setBaseDir(temp.newFolder())
+      .setWorkDir(temp.newFolder());
     DefaultInputModule root = new DefaultInputModule(rootDef, 1);
 
     ProjectDefinition module1Def = ProjectDefinition.create()
       .setKey("module1")
       .setName("Module1")
       .setProperty(CoreProperties.LINKS_CI, "http://ci")
-      .setDescription("Module description");
+      .setDescription("Module description")
+      .setBaseDir(temp.newFolder())
+      .setWorkDir(temp.newFolder());
     rootDef.addSubProject(module1Def);
     DefaultInputModule module1 = new DefaultInputModule(module1Def, 2);
 
@@ -282,7 +300,7 @@ public class ComponentsPublisherTest {
     DefaultInputDir dir = new DefaultInputDir("module1", "src", 3);
     tree.index(dir, module1);
 
-    DefaultInputFile file = new TestInputFileBuilder("module1", "src/Foo.java", 4).setLines(2).build();
+    DefaultInputFile file = new TestInputFileBuilder("module1", "src/Foo.java", 4).setLines(2).setStatus(InputFile.Status.SAME).build();
     tree.index(file, dir);
 
     ComponentsPublisher publisher = new ComponentsPublisher(moduleHierarchy, tree);

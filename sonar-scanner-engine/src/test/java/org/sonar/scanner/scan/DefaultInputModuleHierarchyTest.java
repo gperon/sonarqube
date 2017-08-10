@@ -19,33 +19,40 @@
  */
 package org.sonar.scanner.scan;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import org.junit.Before;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
+import org.sonar.api.batch.bootstrap.ProjectDefinition;
 import org.sonar.api.batch.fs.internal.DefaultInputModule;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 public class DefaultInputModuleHierarchyTest {
+
+  @Rule
+  public TemporaryFolder temp = new TemporaryFolder();
+
   private DefaultInputModuleHierarchy moduleHierarchy;
 
-  @Before
-  public void setUp() {
-    moduleHierarchy = new DefaultInputModuleHierarchy();
-  }
-
   @Test
-  public void test() {
-    DefaultInputModule root = new DefaultInputModule("root");
-    DefaultInputModule mod1 = new DefaultInputModule("mod1");
-    DefaultInputModule mod2 = new DefaultInputModule("mod2");
-    DefaultInputModule mod3 = new DefaultInputModule("mod3");
-    DefaultInputModule mod4 = new DefaultInputModule("mod4");
+  public void test() throws IOException {
+    DefaultInputModule root = new DefaultInputModule(ProjectDefinition.create().setKey("root").setBaseDir(temp.newFolder()).setWorkDir(temp.newFolder()));
+    DefaultInputModule mod1 = new DefaultInputModule(ProjectDefinition.create().setKey("mod1").setBaseDir(temp.newFolder()).setWorkDir(temp.newFolder()));
+    DefaultInputModule mod2 = new DefaultInputModule(ProjectDefinition.create().setKey("mod2").setBaseDir(temp.newFolder()).setWorkDir(temp.newFolder()));
+    DefaultInputModule mod3 = new DefaultInputModule(ProjectDefinition.create().setKey("mod3").setBaseDir(temp.newFolder()).setWorkDir(temp.newFolder()));
+    DefaultInputModule mod4 = new DefaultInputModule(ProjectDefinition.create().setKey("mod4").setBaseDir(temp.newFolder()).setWorkDir(temp.newFolder()));
 
-    moduleHierarchy.setRoot(root);
-    moduleHierarchy.index(mod1, root);
-    moduleHierarchy.index(mod2, mod1);
-    moduleHierarchy.index(mod3, root);
-    moduleHierarchy.index(mod4, root);
+    Map<DefaultInputModule, DefaultInputModule> parents = new HashMap<>();
+
+    parents.put(mod1, root);
+    parents.put(mod2, mod1);
+    parents.put(mod3, root);
+    parents.put(mod4, root);
+
+    moduleHierarchy = new DefaultInputModuleHierarchy(parents);
 
     assertThat(moduleHierarchy.children(root)).containsOnly(mod1, mod3, mod4);
     assertThat(moduleHierarchy.children(mod4)).isEmpty();
@@ -56,6 +63,30 @@ public class DefaultInputModuleHierarchyTest {
     assertThat(moduleHierarchy.parent(mod1)).isEqualTo(root);
     assertThat(moduleHierarchy.parent(root)).isNull();
 
+    assertThat(moduleHierarchy.root()).isEqualTo(root);
+  }
+
+  @Test
+  public void testOnlyRoot() throws IOException {
+    DefaultInputModule root = new DefaultInputModule(ProjectDefinition.create().setKey("root").setBaseDir(temp.newFolder()).setWorkDir(temp.newFolder()));
+    moduleHierarchy = new DefaultInputModuleHierarchy(root);
+
+    assertThat(moduleHierarchy.children(root)).isEmpty();
+    assertThat(moduleHierarchy.parent(root)).isNull();
+    assertThat(moduleHierarchy.root()).isEqualTo(root);
+  }
+
+  @Test
+  public void testParentChild() throws IOException {
+    DefaultInputModule root = new DefaultInputModule(ProjectDefinition.create().setKey("root").setBaseDir(temp.newFolder()).setWorkDir(temp.newFolder()));
+    DefaultInputModule mod1 = new DefaultInputModule(ProjectDefinition.create().setKey("mod1").setBaseDir(temp.newFolder()).setWorkDir(temp.newFolder()));
+    moduleHierarchy = new DefaultInputModuleHierarchy(root, mod1);
+
+    assertThat(moduleHierarchy.children(root)).containsOnly(mod1);
+    assertThat(moduleHierarchy.children(mod1)).isEmpty();
+
+    assertThat(moduleHierarchy.parent(mod1)).isEqualTo(root);
+    assertThat(moduleHierarchy.parent(root)).isNull();
     assertThat(moduleHierarchy.root()).isEqualTo(root);
   }
 }

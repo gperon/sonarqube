@@ -29,7 +29,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.sonar.api.config.MapSettings;
+import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.rule.RuleKey;
 import org.sonar.api.rule.RuleStatus;
 import org.sonar.api.utils.System2;
@@ -44,7 +44,6 @@ import org.sonar.server.es.Facets;
 import org.sonar.server.es.SearchIdResult;
 import org.sonar.server.es.SearchOptions;
 import org.sonar.server.qualityprofile.index.ActiveRuleIndexer;
-import org.sonar.server.qualityprofile.index.ActiveRuleIteratorFactory;
 
 import static com.google.common.collect.ImmutableSet.of;
 import static java.util.Arrays.asList;
@@ -91,11 +90,11 @@ public class RuleIndexTest {
   private System2 system2 = new AlwaysIncreasingSystem2();
 
   @Rule
-  public EsTester es = new EsTester(RuleIndexDefinition.createForTest(new MapSettings()));
+  public EsTester es = new EsTester(RuleIndexDefinition.createForTest(new MapSettings().asConfig()));
   @Rule
   public DbTester db = DbTester.create(system2);
   @Rule
-  public ExpectedException thrown = ExpectedException.none();
+  public ExpectedException expectedException = ExpectedException.none();
 
   private RuleIndex underTest;
   private RuleIndexer ruleIndexer;
@@ -104,7 +103,7 @@ public class RuleIndexTest {
   @Before
   public void setUp() {
     ruleIndexer = new RuleIndexer(es.client(), db.getDbClient());
-    activeRuleIndexer = new ActiveRuleIndexer(db.getDbClient(), es.client(), new ActiveRuleIteratorFactory(db.getDbClient()));
+    activeRuleIndexer = new ActiveRuleIndexer(db.getDbClient(), es.client());
     underTest = new RuleIndex(es.client());
   }
 
@@ -383,6 +382,32 @@ public class RuleIndexTest {
     assertThat(underTest.search(query, new SearchOptions()).getIds()).hasSize(2);
   }
 
+  @Test
+  public void compare_to_another_profile() {
+    String xoo = "xoo";
+    QProfileDto profile = db.qualityProfiles().insert(db.getDefaultOrganization(), p -> p.setLanguage(xoo));
+    QProfileDto anotherProfile = db.qualityProfiles().insert(db.getDefaultOrganization(), p -> p.setLanguage(xoo));
+    RuleDefinitionDto commonRule = db.rules().insertRule(r -> r.setLanguage(xoo)).getDefinition();
+    RuleDefinitionDto profileRule1 = db.rules().insertRule(r -> r.setLanguage(xoo)).getDefinition();
+    RuleDefinitionDto profileRule2 = db.rules().insertRule(r -> r.setLanguage(xoo)).getDefinition();
+    RuleDefinitionDto profileRule3 = db.rules().insertRule(r -> r.setLanguage(xoo)).getDefinition();
+    RuleDefinitionDto anotherProfileRule1 = db.rules().insertRule(r -> r.setLanguage(xoo)).getDefinition();
+    RuleDefinitionDto anotherProfileRule2 = db.rules().insertRule(r -> r.setLanguage(xoo)).getDefinition();
+    db.qualityProfiles().activateRule(profile, commonRule);
+    db.qualityProfiles().activateRule(profile, profileRule1);
+    db.qualityProfiles().activateRule(profile, profileRule2);
+    db.qualityProfiles().activateRule(profile, profileRule3);
+    db.qualityProfiles().activateRule(anotherProfile, commonRule);
+    db.qualityProfiles().activateRule(anotherProfile, anotherProfileRule1);
+    db.qualityProfiles().activateRule(anotherProfile, anotherProfileRule2);
+    index();
+
+    verifySearch(newRuleQuery().setActivation(false).setQProfile(profile).setCompareToQProfile(anotherProfile), anotherProfileRule1, anotherProfileRule2);
+    verifySearch(newRuleQuery().setActivation(true).setQProfile(profile).setCompareToQProfile(anotherProfile), commonRule);
+    verifySearch(newRuleQuery().setActivation(true).setQProfile(profile).setCompareToQProfile(profile), commonRule, profileRule1, profileRule2, profileRule3);
+    verifySearch(newRuleQuery().setActivation(false).setQProfile(profile).setCompareToQProfile(profile));
+  }
+
   @SafeVarargs
   private final RuleDefinitionDto createRule(Consumer<RuleDefinitionDto>... consumers) {
     return db.rules().insert(consumers);
@@ -615,6 +640,16 @@ public class RuleIndexTest {
   }
 
   @Test
+  public void fail_to_list_tags_when_size_greater_than_500() {
+    OrganizationDto organization = db.organizations().insert();
+
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("Page size must be lower than or equals to 500");
+
+    underTest.listTags(organization, null, 501);
+  }
+
+  @Test
   public void available_since() {
     RuleDefinitionDto ruleOld = createRule(setCreatedAt(1_000L));
     RuleDefinitionDto ruleOlder = createRule(setCreatedAt(2_000L));
@@ -816,7 +851,7 @@ public class RuleIndexTest {
     RuleQuery query = new RuleQuery();
     SearchOptions options = new SearchOptions().addFacets(singletonList(FACET_TAGS));
 
-    thrown.expectMessage("Cannot use tags facet, if no organization is specified.");
+    expectedException.expectMessage("Cannot use tags facet, if no organization is specified.");
     underTest.search(query, options);
   }
 

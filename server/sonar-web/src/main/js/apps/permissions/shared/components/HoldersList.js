@@ -18,6 +18,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 import React from 'react';
+import PropTypes from 'prop-types';
 import UserHolder from './UserHolder';
 import GroupHolder from './GroupHolder';
 import Tooltip from '../../../../components/controls/Tooltip';
@@ -25,14 +26,14 @@ import { translate } from '../../../../helpers/l10n';
 
 export default class HoldersList extends React.PureComponent {
   static propTypes = {
-    permissions: React.PropTypes.array.isRequired,
-    users: React.PropTypes.array.isRequired,
-    groups: React.PropTypes.array.isRequired,
-    selectedPermission: React.PropTypes.string,
-    showPublicProjectsWarning: React.PropTypes.bool,
-    onSelectPermission: React.PropTypes.func.isRequired,
-    onToggleUser: React.PropTypes.func.isRequired,
-    onToggleGroup: React.PropTypes.func.isRequired
+    permissions: PropTypes.array.isRequired,
+    users: PropTypes.array.isRequired,
+    groups: PropTypes.array.isRequired,
+    selectedPermission: PropTypes.string,
+    showPublicProjectsWarning: PropTypes.bool,
+    onSelectPermission: PropTypes.func.isRequired,
+    onToggleUser: PropTypes.func.isRequired,
+    onToggleGroup: PropTypes.func.isRequired
   };
 
   static defaultProps = {
@@ -46,19 +47,19 @@ export default class HoldersList extends React.PureComponent {
   };
 
   renderTooltip = permission =>
-    (this.props.showPublicProjectsWarning &&
-      (permission.key === 'user' || permission.key === 'codeviewer')
+    this.props.showPublicProjectsWarning &&
+    (permission.key === 'user' || permission.key === 'codeviewer')
       ? <div>
           {permission.description}
           <div className="alert alert-warning spacer-top">
             {translate('projects_role.public_projects_warning')}
           </div>
         </div>
-      : permission.description);
+      : permission.description;
 
   renderTableHeader() {
     const { selectedPermission } = this.props;
-    const cells = this.props.permissions.map(p => (
+    const cells = this.props.permissions.map(p =>
       <th
         key={p.key}
         className="permission-column text-center"
@@ -67,14 +68,16 @@ export default class HoldersList extends React.PureComponent {
         }}>
         <div className="permission-column-inner">
           <Tooltip overlay={`Filter by "${p.name}" permission`}>
-            <a data-key={p.key} href="#" onClick={this.handlePermissionClick}>{p.name}</a>
+            <a data-key={p.key} href="#" onClick={this.handlePermissionClick}>
+              {p.name}
+            </a>
           </Tooltip>
           <Tooltip overlay={this.renderTooltip(p)}>
             <i className="icon-help little-spacer-left" />
           </Tooltip>
         </div>
       </th>
-    ));
+    );
     return (
       <thead>
         <tr>
@@ -99,7 +102,7 @@ export default class HoldersList extends React.PureComponent {
   }
 
   render() {
-    const users = this.props.users.map(user => (
+    const users = this.props.users.map(user =>
       <UserHolder
         key={'user-' + user.login}
         user={user}
@@ -108,9 +111,9 @@ export default class HoldersList extends React.PureComponent {
         permissionsOrder={this.props.permissions}
         onToggle={this.props.onToggleUser}
       />
-    ));
+    );
 
-    const groups = this.props.groups.map(group => (
+    const groups = this.props.groups.map(group =>
       <GroupHolder
         key={'group-' + group.id}
         group={group}
@@ -119,7 +122,7 @@ export default class HoldersList extends React.PureComponent {
         permissionsOrder={this.props.permissions}
         onToggle={this.props.onToggleGroup}
       />
-    ));
+    );
 
     return (
       <table className="data zebra permissions-table">

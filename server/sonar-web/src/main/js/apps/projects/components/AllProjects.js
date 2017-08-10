@@ -21,29 +21,31 @@
 import React from 'react';
 import Helmet from 'react-helmet';
 import PageHeaderContainer from './PageHeaderContainer';
-import ProjectsOptionBarContainer from './ProjectsOptionBarContainer';
 import ProjectsListContainer from './ProjectsListContainer';
 import ProjectsListFooterContainer from './ProjectsListFooterContainer';
 import PageSidebar from './PageSidebar';
 import VisualizationsContainer from '../visualizations/VisualizationsContainer';
 import { parseUrlQuery } from '../store/utils';
 import { translate } from '../../../helpers/l10n';
-import { SORTING_SWITCH, parseSorting } from '../utils';
+import * as utils from '../utils';
+import * as storage from '../../../helpers/storage';
+import type { RawQuery } from '../../../helpers/query';
 import '../styles.css';
 
-type Props = {
+type Props = {|
   isFavorite: boolean,
-  location: { pathname: string, query: { [string]: string } },
+  location: { pathname: string, query: RawQuery },
   fetchProjects: (query: string, isFavorite: boolean, organization?: {}) => Promise<*>,
-  optionBarOpen: boolean,
-  optionBarToggle: (open: boolean) => void,
   organization?: { key: string },
-  router: { push: ({ pathname: string, query?: {} }) => void },
+  router: {
+    push: ({ pathname: string, query?: {} }) => void,
+    replace: ({ pathname: string, query?: {} }) => void
+  },
   currentUser?: { isLoggedIn: boolean }
-};
+|};
 
 type State = {
-  query: { [string]: string }
+  query: RawQuery
 };
 
 export default class AllProjects extends React.PureComponent {
@@ -51,14 +53,14 @@ export default class AllProjects extends React.PureComponent {
   state: State = { query: {} };
 
   componentDidMount() {
-    this.handleQueryChange();
+    this.handleQueryChange(true);
     const footer = document.getElementById('footer');
     footer && footer.classList.add('search-navigator-footer');
   }
 
   componentDidUpdate(prevProps: Props) {
     if (prevProps.location.query !== this.props.location.query) {
-      this.handleQueryChange();
+      this.handleQueryChange(false);
     }
   }
 
@@ -67,10 +69,26 @@ export default class AllProjects extends React.PureComponent {
     footer && footer.classList.remove('search-navigator-footer');
   }
 
-  openOptionBar = (evt: Event & { currentTarget: HTMLElement }) => {
-    evt.currentTarget.blur();
-    evt.preventDefault();
-    this.props.optionBarToggle(true);
+  getView = () => this.state.query.view || 'overall';
+
+  getVisualization = () => this.state.query.visualization || 'risk';
+
+  getSort = () => this.state.query.sort || 'name';
+
+  isFiltered = () => Object.keys(this.state.query).some(key => this.state.query[key] != null);
+
+  getSavedOptions = () => {
+    const options = {};
+    if (storage.getSort()) {
+      options.sort = storage.getSort();
+    }
+    if (storage.getView()) {
+      options.view = storage.getView();
+    }
+    if (storage.getVisualization()) {
+      options.visualization = storage.getVisualization();
+    }
+    return options;
   };
 
   handlePerspectiveChange = ({ view, visualization }: { view: string, visualization?: string }) => {
@@ -81,24 +99,39 @@ export default class AllProjects extends React.PureComponent {
 
     if (this.state.query.view === 'leak' || view === 'leak') {
       if (this.state.query.sort) {
-        const sort = parseSorting(this.state.query.sort);
-        if (SORTING_SWITCH[sort.sortValue]) {
-          query.sort = (sort.sortDesc ? '-' : '') + SORTING_SWITCH[sort.sortValue];
+        const sort = utils.parseSorting(this.state.query.sort);
+        if (utils.SORTING_SWITCH[sort.sortValue]) {
+          query.sort = (sort.sortDesc ? '-' : '') + utils.SORTING_SWITCH[sort.sortValue];
         }
       }
       this.props.router.push({ pathname: this.props.location.pathname, query });
     } else {
       this.updateLocationQuery(query);
     }
+
+    storage.saveSort(query.sort);
+    storage.saveView(query.view);
+    storage.saveVisualization(visualization);
   };
 
-  handleSortChange = (sort: string, desc: boolean) =>
-    this.updateLocationQuery({ sort: (desc ? '-' : '') + sort });
+  handleSortChange = (sort: string, desc: boolean) => {
+    const asString = (desc ? '-' : '') + sort;
+    this.updateLocationQuery({ sort: asString });
+    storage.saveSort(asString);
+  };
 
-  handleQueryChange() {
+  handleQueryChange(initialMount: boolean) {
     const query = parseUrlQuery(this.props.location.query);
-    this.setState({ query });
-    this.props.fetchProjects(query, this.props.isFavorite, this.props.organization);
+    const savedOptions = this.getSavedOptions();
+    const savedOptionsSet = savedOptions.sort || savedOptions.view || savedOptions.visualization;
+
+    // if there is no filter, but there are saved preferences in the localStorage
+    if (initialMount && !this.isFiltered() && savedOptionsSet) {
+      this.props.router.replace({ pathname: this.props.location.pathname, query: savedOptions });
+    } else {
+      this.setState({ query });
+      this.props.fetchProjects(query, this.props.isFavorite, this.props.organization);
+    }
   }
 
   updateLocationQuery = (newQuery: { [string]: ?string }) => {
@@ -111,78 +144,76 @@ export default class AllProjects extends React.PureComponent {
     });
   };
 
+  renderSide = () =>
+    <div className="layout-page-side-outer">
+      <div
+        className="layout-page-side projects-page-side"
+        style={{ top: this.props.organization ? 95 : 30 }}>
+        <div className="layout-page-side-inner">
+          <div className="layout-page-filters">
+            <PageSidebar
+              isFavorite={this.props.isFavorite}
+              organization={this.props.organization}
+              query={this.state.query}
+              view={this.getView()}
+              visualization={this.getVisualization()}
+            />
+          </div>
+        </div>
+      </div>
+    </div>;
+
+  renderHeader = () =>
+    <div className="layout-page-header-panel layout-page-main-header">
+      <div className="layout-page-header-panel-inner layout-page-main-header-inner">
+        <div className="layout-page-main-inner">
+          <PageHeaderContainer
+            query={this.state.query}
+            isFavorite={this.props.isFavorite}
+            organization={this.props.organization}
+            onPerspectiveChange={this.handlePerspectiveChange}
+            onSortChange={this.handleSortChange}
+            selectedSort={this.getSort()}
+            currentUser={this.props.currentUser}
+            view={this.getView()}
+            visualization={this.getVisualization()}
+          />
+        </div>
+      </div>
+    </div>;
+
+  renderMain = () =>
+    this.getView() === 'visualizations'
+      ? <div className="layout-page-main-inner">
+          <VisualizationsContainer
+            sort={this.state.query.sort}
+            visualization={this.getVisualization()}
+          />
+        </div>
+      : <div className="layout-page-main-inner">
+          <ProjectsListContainer
+            isFavorite={this.props.isFavorite}
+            isFiltered={this.isFiltered()}
+            organization={this.props.organization}
+            cardType={this.getView()}
+          />
+          <ProjectsListFooterContainer
+            query={this.state.query}
+            isFavorite={this.props.isFavorite}
+            organization={this.props.organization}
+          />
+        </div>;
+
   render() {
-    const { isFavorite, organization, optionBarOpen } = this.props;
-    const { query } = this.state;
-    const isFiltered = Object.keys(query).some(key => query[key] != null);
-
-    const view = query.view || 'overall';
-    const visualization = query.visualization || 'risk';
-    const selectedSort = query.sort || 'name';
-
-    const sideBarTop = (organization ? 95 : 30) + (optionBarOpen ? 45 : 0);
-    const contentTop = optionBarOpen ? 65 : 20;
-
     return (
-      <div>
+      <div className="layout-page projects-page">
         <Helmet title={translate('projects.page')} />
 
-        <ProjectsOptionBarContainer
-          onPerspectiveChange={this.handlePerspectiveChange}
-          onSortChange={this.handleSortChange}
-          onToggleOptionBar={this.props.optionBarToggle}
-          open={optionBarOpen}
-          selectedSort={selectedSort}
-          currentUser={this.props.currentUser}
-          view={view}
-          visualization={visualization}
-        />
+        {this.renderSide()}
 
-        <div className="layout-page projects-page">
-          <div className="layout-page-side-outer">
-            <div className="layout-page-side projects-page-side" style={{ top: sideBarTop }}>
-              <div className="layout-page-side-inner">
-                <div className="layout-page-filters">
-                  <PageSidebar
-                    isFavorite={isFavorite}
-                    organization={organization}
-                    query={query}
-                    view={view}
-                    visualization={visualization}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div
-            className="layout-page-main projects-page-content"
-            style={{ paddingTop: contentTop }}>
-            <div className="layout-page-main-inner">
-              <PageHeaderContainer
-                query={query}
-                isFavorite={isFavorite}
-                organization={organization}
-                onOpenOptionBar={this.openOptionBar}
-                optionBarOpen={optionBarOpen}
-              />
-              {view !== 'visualizations' &&
-                <ProjectsListContainer
-                  isFavorite={isFavorite}
-                  isFiltered={isFiltered}
-                  organization={organization}
-                  cardType={view}
-                />}
-              {view !== 'visualizations' &&
-                <ProjectsListFooterContainer
-                  query={query}
-                  isFavorite={isFavorite}
-                  organization={organization}
-                />}
-              {view === 'visualizations' &&
-                <VisualizationsContainer sort={query.sort} visualization={visualization} />}
-            </div>
-          </div>
+        <div className="layout-page-main projects-page-content">
+          {this.renderHeader()}
+          {this.renderMain()}
         </div>
       </div>
     );

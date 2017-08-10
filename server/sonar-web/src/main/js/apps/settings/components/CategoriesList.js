@@ -49,9 +49,8 @@ export default class CategoriesList extends React.PureComponent {
       query.id = this.props.component.key;
     }
 
-    const className = category.key.toLowerCase() === this.props.selectedCategory.toLowerCase()
-      ? 'active'
-      : '';
+    const className =
+      category.key.toLowerCase() === this.props.selectedCategory.toLowerCase() ? 'active' : '';
 
     const pathname = this.props.component ? '/project/settings' : '/settings';
 
@@ -70,12 +69,12 @@ export default class CategoriesList extends React.PureComponent {
     const sortedCategories = sortBy(categoriesWithName, category => category.name.toLowerCase());
 
     return (
-      <ul className="settings-menu">
-        {sortedCategories.map(category => (
+      <ul className="side-tabs-menu">
+        {sortedCategories.map(category =>
           <li key={category.key}>
             {this.renderLink(category)}
           </li>
-        ))}
+        )}
       </ul>
     );
   }

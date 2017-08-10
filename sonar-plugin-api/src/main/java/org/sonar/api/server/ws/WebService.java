@@ -20,17 +20,14 @@
 package org.sonar.api.server.ws;
 
 import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -52,6 +49,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
+import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -89,7 +87,7 @@ import static java.util.Objects.requireNonNull;
  *   }
  * }
  * </pre>
- *
+ * <p>
  * Since version 5.5, a web service can call another web service to get some data. See {@link Request#localConnector()}
  * provided by {@link RequestHandler#handle(Request, Response)}.
  *
@@ -100,7 +98,7 @@ import static java.util.Objects.requireNonNull;
 public interface WebService extends Definable<WebService.Context> {
 
   class Context {
-    private final Map<String, Controller> controllers = Maps.newHashMap();
+    private final Map<String, Controller> controllers = new HashMap<>();
 
     /**
      * Create a new controller.
@@ -130,7 +128,7 @@ public interface WebService extends Definable<WebService.Context> {
     }
 
     public List<Controller> controllers() {
-      return ImmutableList.copyOf(controllers.values());
+      return Collections.unmodifiableList(new ArrayList<>(controllers.values()));
     }
   }
 
@@ -139,7 +137,7 @@ public interface WebService extends Definable<WebService.Context> {
     private final String path;
     private String description;
     private String since;
-    private final Map<String, NewAction> actions = Maps.newHashMap();
+    private final Map<String, NewAction> actions = new HashMap<>();
 
     private NewController(Context context, String path) {
       if (StringUtils.isBlank(path)) {
@@ -199,11 +197,11 @@ public interface WebService extends Definable<WebService.Context> {
       this.path = newController.path;
       this.description = newController.description;
       this.since = newController.since;
-      ImmutableMap.Builder<String, Action> mapBuilder = ImmutableMap.builder();
+      Map<String, Action> mapBuilder = new HashMap<>();
       for (NewAction newAction : newController.actions.values()) {
         mapBuilder.put(newAction.key, new Action(this, newAction));
       }
-      this.actions = mapBuilder.build();
+      this.actions = Collections.unmodifiableMap(mapBuilder);
     }
 
     public String path() {
@@ -254,7 +252,7 @@ public interface WebService extends Definable<WebService.Context> {
     private boolean post = false;
     private boolean isInternal = false;
     private RequestHandler handler;
-    private Map<String, NewParam> newParams = Maps.newHashMap();
+    private Map<String, NewParam> newParams = new HashMap<>();
     private URL responseExample = null;
     private List<Change> changelog = new ArrayList<>();
 
@@ -337,7 +335,7 @@ public interface WebService extends Definable<WebService.Context> {
      * @since 6.4
      */
     public NewAction setChangelog(Change... changes) {
-      this.changelog = Arrays.stream(requireNonNull(changes))
+      this.changelog = stream(requireNonNull(changes))
         .filter(Objects::nonNull)
         .collect(Collectors.toList());
 
@@ -374,27 +372,25 @@ public interface WebService extends Definable<WebService.Context> {
      * Note the maximum is a documentation only feature. It does not check anything.
      */
     public NewAction addPagingParams(int defaultPageSize, int maxPageSize) {
-      addPageParam();
-      addPageSize(defaultPageSize, maxPageSize);
+      createPageParam();
+      createPageSize(defaultPageSize, maxPageSize);
       return this;
     }
 
-    public NewAction addPageParam() {
-      createParam(Param.PAGE)
+    public NewParam createPageParam() {
+      return createParam(Param.PAGE)
         .setDescription("1-based page number")
         .setExampleValue("42")
         .setDeprecatedKey("pageIndex", "5.2")
         .setDefaultValue("1");
-      return this;
     }
 
-    public NewAction addPageSize(int defaultPageSize, int maxPageSize) {
-      createParam(Param.PAGE_SIZE)
+    public NewParam createPageSize(int defaultPageSize, int maxPageSize) {
+      return createParam(Param.PAGE_SIZE)
         .setDescription("Page size. Must be greater than 0 and less than " + maxPageSize)
         .setExampleValue("20")
         .setDeprecatedKey("pageSize", "5.2")
         .setDefaultValue(String.valueOf(defaultPageSize));
-      return this;
     }
 
     /**
@@ -413,7 +409,6 @@ public interface WebService extends Definable<WebService.Context> {
     }
 
     /**
-     *
      * Creates the parameter {@link org.sonar.api.server.ws.WebService.Param#TEXT_QUERY}, which is
      * used to search for a subset of fields containing the supplied string.
      * <p>
@@ -421,11 +416,23 @@ public interface WebService extends Definable<WebService.Context> {
      * </p>
      */
     public NewAction addSearchQuery(String exampleValue, String... pluralFields) {
+      createSearchQuery(exampleValue, pluralFields);
+      return this;
+    }
+
+    /**
+     * Creates the parameter {@link org.sonar.api.server.ws.WebService.Param#TEXT_QUERY}, which is
+     * used to search for a subset of fields containing the supplied string.
+     * <p>
+     * The fields must be in the <strong>plural</strong> form (ex: "names", "keys").
+     * </p>
+     */
+    public NewParam createSearchQuery(String exampleValue, String... pluralFields) {
       String actionDescription = format("Limit search to %s that contain the supplied string.", Joiner.on(" or ").join(pluralFields));
-      createParam(Param.TEXT_QUERY)
+
+      return createParam(Param.TEXT_QUERY)
         .setDescription(actionDescription)
         .setExampleValue(exampleValue);
-      return this;
     }
 
     /**
@@ -500,11 +507,11 @@ public interface WebService extends Definable<WebService.Context> {
       logWarningIf(isNullOrEmpty(this.since), "Since is not set on action " + path);
       logWarningIf(!this.post && this.responseExample == null, "The response example is not set on action " + path);
 
-      ImmutableMap.Builder<String, Param> paramsBuilder = ImmutableMap.builder();
+      Map<String, Param> paramsBuilder = new HashMap<>();
       for (NewParam newParam : newAction.newParams.values()) {
         paramsBuilder.put(newParam.key, new Param(this, newParam));
       }
-      this.params = paramsBuilder.build();
+      this.params = Collections.unmodifiableMap(paramsBuilder);
     }
 
     private static void logWarningIf(boolean condition, String message) {
@@ -650,9 +657,9 @@ public interface WebService extends Definable<WebService.Context> {
     }
 
     /**
+     * @see #setDeprecatedKey(String, String)
      * @since 5.0
      * @deprecated since 6.4
-     * @see #setDeprecatedKey(String, String) 
      */
     @Deprecated
     public NewParam setDeprecatedKey(@Nullable String s) {
@@ -661,7 +668,6 @@ public interface WebService extends Definable<WebService.Context> {
     }
 
     /**
-     *
      * @param deprecatedSince Version when the old key was replaced/deprecated. Ex: 5.6
      * @since 6.4
      */
@@ -741,7 +747,7 @@ public interface WebService extends Definable<WebService.Context> {
       if (values == null || values.isEmpty()) {
         this.possibleValues = null;
       } else {
-        this.possibleValues = Sets.newLinkedHashSet();
+        this.possibleValues = new LinkedHashSet<>();
         for (Object value : values) {
           this.possibleValues.add(value.toString());
         }
@@ -776,7 +782,8 @@ public interface WebService extends Definable<WebService.Context> {
 
     private final String paramValue;
 
-    private static final Map<String, SelectionMode> BY_VALUE = Maps.uniqueIndex(asList(values()), input -> input.paramValue);
+    private static final Map<String, SelectionMode> BY_VALUE = stream(values())
+      .collect(Collectors.toMap(v -> v.paramValue, v -> v));
 
     SelectionMode(String paramValue) {
       this.paramValue = paramValue;
@@ -897,8 +904,8 @@ public interface WebService extends Definable<WebService.Context> {
     /**
      * Is the parameter internal ?
      *
-     * @since 6.2
      * @see NewParam#setInternal(boolean)
+     * @since 6.2
      */
     public boolean isInternal() {
       return internal;

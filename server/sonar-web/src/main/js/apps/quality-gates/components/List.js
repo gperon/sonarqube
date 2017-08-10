@@ -20,14 +20,15 @@
 import React from 'react';
 import { Link } from 'react-router';
 import { translate } from '../../../helpers/l10n';
+import { getQualityGateUrl } from '../../../helpers/urls';
 
-export default function List({ qualityGates }) {
+export default function List({ organization, qualityGates }) {
   return (
     <div className="list-group">
-      {qualityGates.map(qualityGate => (
+      {qualityGates.map(qualityGate =>
         <Link
           key={qualityGate.id}
-          to={`/quality_gates/show/${qualityGate.id}`}
+          to={getQualityGateUrl(qualityGate.id, organization && organization.key)}
           activeClassName="active"
           className="list-group-item"
           data-id={qualityGate.id}>
@@ -39,13 +40,15 @@ export default function List({ qualityGates }) {
                 </td>
                 <td className="text-top thin nowrap spacer-left">
                   {qualityGate.isDefault &&
-                    <span className="badge pull-right">{translate('default')}</span>}
+                    <span className="badge pull-right">
+                      {translate('default')}
+                    </span>}
                 </td>
               </tr>
             </tbody>
           </table>
         </Link>
-      ))}
+      )}
     </div>
   );
 }

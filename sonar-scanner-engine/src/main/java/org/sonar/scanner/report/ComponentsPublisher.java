@@ -21,7 +21,6 @@ package org.sonar.scanner.report;
 
 import java.util.Collection;
 import java.util.stream.Collectors;
-
 import javax.annotation.CheckForNull;
 import org.apache.commons.lang.StringUtils;
 import org.sonar.api.CoreProperties;
@@ -29,8 +28,8 @@ import org.sonar.api.batch.bootstrap.ProjectDefinition;
 import org.sonar.api.batch.fs.InputComponent;
 import org.sonar.api.batch.fs.InputDir;
 import org.sonar.api.batch.fs.InputFile;
+import org.sonar.api.batch.fs.InputFile.Status;
 import org.sonar.api.batch.fs.InputModule;
-import org.sonar.api.batch.fs.InputPath;
 import org.sonar.api.batch.fs.internal.DefaultInputComponent;
 import org.sonar.api.batch.fs.internal.DefaultInputFile;
 import org.sonar.api.batch.fs.internal.DefaultInputModule;
@@ -38,11 +37,12 @@ import org.sonar.api.batch.fs.internal.InputComponentTree;
 import org.sonar.api.batch.fs.internal.InputModuleHierarchy;
 import org.sonar.core.util.CloseableIterator;
 import org.sonar.scanner.protocol.output.ScannerReport;
-import org.sonar.scanner.protocol.output.ScannerReportReader;
 import org.sonar.scanner.protocol.output.ScannerReport.Component.ComponentType;
+import org.sonar.scanner.protocol.output.ScannerReport.Component.FileStatus;
 import org.sonar.scanner.protocol.output.ScannerReport.ComponentLink;
 import org.sonar.scanner.protocol.output.ScannerReport.ComponentLink.ComponentLinkType;
 import org.sonar.scanner.protocol.output.ScannerReport.Issue;
+import org.sonar.scanner.protocol.output.ScannerReportReader;
 import org.sonar.scanner.protocol.output.ScannerReportWriter;
 
 /**
@@ -109,6 +109,7 @@ public class ComponentsPublisher implements ReportPublisherStep {
       DefaultInputFile file = (DefaultInputFile) component;
       builder.setIsTest(file.type() == InputFile.Type.TEST);
       builder.setLines(file.lines());
+      builder.setStatus(convert(file.status()));
 
       String lang = getLanguageKey(file);
       if (lang != null) {
@@ -129,6 +130,19 @@ public class ComponentsPublisher implements ReportPublisherStep {
     return true;
   }
 
+  private FileStatus convert(Status status) {
+    switch (status) {
+      case ADDED:
+        return FileStatus.ADDED;
+      case CHANGED:
+        return FileStatus.CHANGED;
+      case SAME:
+        return FileStatus.SAME;
+      default:
+        throw new IllegalArgumentException("Unexpected status: " + status);
+    }
+  }
+
   private boolean shouldSkipComponent(DefaultInputComponent component, Collection<InputComponent> children) {
     if (component instanceof InputDir && children.isEmpty()) {
       try (CloseableIterator<Issue> componentIssuesIt = reader.readComponentIssues(component.batchId())) {
@@ -140,7 +154,7 @@ public class ComponentsPublisher implements ReportPublisherStep {
     } else if (component instanceof DefaultInputFile) {
       // skip files not marked for publishing
       DefaultInputFile inputFile = (DefaultInputFile) component;
-      return !inputFile.publish();
+      return !inputFile.isPublished();
     }
     return false;
   }
@@ -155,8 +169,11 @@ public class ComponentsPublisher implements ReportPublisherStep {
 
   @CheckForNull
   private String getPath(InputComponent component) {
-    if (component instanceof InputPath) {
-      InputPath inputPath = (InputPath) component;
+    if (component instanceof InputFile) {
+      DefaultInputFile inputPath = (DefaultInputFile) component;
+      return inputPath.getModuleRelativePath();
+    } else if (component instanceof InputDir) {
+      InputDir inputPath = (InputDir) component;
       if (StringUtils.isEmpty(inputPath.relativePath())) {
         return "/";
       } else {

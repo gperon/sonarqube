@@ -24,7 +24,8 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.sonar.api.rule.RuleKey;
-import org.sonar.db.rule.RuleMetadataDto;
+import org.sonar.db.rule.RuleExtensionForIndexingDto;
+import org.sonar.db.rule.RuleForIndexingDto;
 import org.sonar.server.es.BaseDoc;
 
 public class RuleExtensionDoc extends BaseDoc {
@@ -39,12 +40,12 @@ public class RuleExtensionDoc extends BaseDoc {
 
   @Override
   public String getId() {
-    return getRuleKey() + "|" + getScope().getScope();
+    return idOf(getRuleKey(), getScope());
   }
 
   @Override
   public String getRouting() {
-    return null;
+    return getRuleKey().toString();
   }
 
   @Override
@@ -53,11 +54,11 @@ public class RuleExtensionDoc extends BaseDoc {
   }
 
   public RuleKey getRuleKey() {
-    return getField(RuleIndexDefinition.FIELD_RULE_EXTENSION_RULE_KEY);
+    return RuleKey.parse(getField(RuleIndexDefinition.FIELD_RULE_EXTENSION_RULE_KEY));
   }
 
   public RuleExtensionDoc setRuleKey(RuleKey ruleKey) {
-    setField(RuleIndexDefinition.FIELD_RULE_EXTENSION_RULE_KEY, ruleKey);
+    setField(RuleIndexDefinition.FIELD_RULE_EXTENSION_RULE_KEY, String.valueOf(ruleKey));
     return this;
   }
 
@@ -79,11 +80,22 @@ public class RuleExtensionDoc extends BaseDoc {
     return this;
   }
 
-  public static RuleExtensionDoc of(RuleKey key, RuleExtensionScope scope, RuleMetadataDto ruleExtension) {
+  public static RuleExtensionDoc of(RuleForIndexingDto rule) {
     return new RuleExtensionDoc()
-      .setRuleKey(key)
-      .setScope(scope)
-      .setTags(ruleExtension.getTags());
+      .setRuleKey(rule.getRuleKey())
+      .setScope(RuleExtensionScope.system())
+      .setTags(rule.getSystemTagsAsSet());
+  }
+
+  public static RuleExtensionDoc of(RuleExtensionForIndexingDto rule) {
+    return new RuleExtensionDoc()
+      .setRuleKey(rule.getRuleKey())
+      .setScope(RuleExtensionScope.organization(rule.getOrganizationUuid()))
+      .setTags(rule.getTagsAsSet());
+  }
+
+  public static String idOf(RuleKey ruleKey, RuleExtensionScope scope) {
+    return ruleKey + "|" + scope.getScope();
   }
 
   @Override

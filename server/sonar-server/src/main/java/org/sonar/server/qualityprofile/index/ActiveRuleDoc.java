@@ -27,6 +27,7 @@ import org.sonar.server.es.BaseDoc;
 import org.sonar.server.qualityprofile.ActiveRule;
 
 import static org.apache.commons.lang.StringUtils.containsIgnoreCase;
+import static org.sonar.server.rule.index.RuleIndexDefinition.FIELD_ACTIVE_RULE_ID;
 import static org.sonar.server.rule.index.RuleIndexDefinition.FIELD_ACTIVE_RULE_INHERITANCE;
 import static org.sonar.server.rule.index.RuleIndexDefinition.FIELD_ACTIVE_RULE_PROFILE_UUID;
 import static org.sonar.server.rule.index.RuleIndexDefinition.FIELD_ACTIVE_RULE_REPOSITORY;
@@ -35,9 +36,9 @@ import static org.sonar.server.rule.index.RuleIndexDefinition.FIELD_ACTIVE_RULE_
 
 public class ActiveRuleDoc extends BaseDoc {
 
-  public ActiveRuleDoc(String id) {
-    super(Maps.newHashMapWithExpectedSize(9));
-    setField("_id", id);
+  public ActiveRuleDoc(long id) {
+    super(Maps.newHashMapWithExpectedSize(10));
+    setField(FIELD_ACTIVE_RULE_ID, String.valueOf(id));
   }
 
   public ActiveRuleDoc(Map<String,Object> source) {
@@ -46,12 +47,12 @@ public class ActiveRuleDoc extends BaseDoc {
 
   @Override
   public String getId() {
-    return getField("_id");
+    return getField(FIELD_ACTIVE_RULE_ID);
   }
 
   @Override
   public String getRouting() {
-    return null;
+    return getRuleKeyAsString();
   }
 
   @Override
@@ -60,7 +61,11 @@ public class ActiveRuleDoc extends BaseDoc {
   }
 
   RuleKey getRuleKey() {
-    return RuleKey.parse(getField(FIELD_ACTIVE_RULE_RULE_KEY));
+    return RuleKey.parse(getRuleKeyAsString());
+  }
+
+  private String getRuleKeyAsString() {
+    return getField(FIELD_ACTIVE_RULE_RULE_KEY);
   }
 
   String getRuleRepository() {

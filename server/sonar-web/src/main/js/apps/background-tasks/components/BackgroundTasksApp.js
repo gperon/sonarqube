@@ -19,6 +19,7 @@
  */
 // @flow
 import React from 'react';
+import PropTypes from 'prop-types';
 import Helmet from 'react-helmet';
 import { debounce, uniq } from 'lodash';
 import { connect } from 'react-redux';
@@ -45,7 +46,7 @@ import { translate } from '../../../helpers/l10n';
 type Props = {
   component: Object,
   location: Object,
-  fetchOrganizations: Array<string> => string
+  fetchOrganizations: (Array<string>) => string
 };
 
 type State = {
@@ -63,7 +64,7 @@ class BackgroundTasksApp extends React.PureComponent {
   props: Props;
 
   static contextTypes = {
-    router: React.PropTypes.object.isRequired
+    router: PropTypes.object.isRequired
   };
 
   state: State = {
@@ -198,7 +199,7 @@ class BackgroundTasksApp extends React.PureComponent {
 
     if (!types) {
       return (
-        <div className="page">
+        <div className="page page-limited">
           <i className="spinner" />
         </div>
       );
@@ -214,7 +215,7 @@ class BackgroundTasksApp extends React.PureComponent {
     return (
       <div className="page page-limited">
         <Helmet title={translate('background_tasks.page')} />
-        <Header />
+        <Header component={component} />
 
         <Stats
           component={component}

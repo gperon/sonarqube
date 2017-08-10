@@ -19,16 +19,12 @@
  */
 package org.sonar.scanner.mediumtest.fs;
 
-import org.junit.rules.ExpectedException;
-
+import java.io.File;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.FileFilterUtils;
-import java.io.File;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
 import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 import org.sonar.scanner.mediumtest.ScannerMediumTester;
 import org.sonar.scanner.mediumtest.issuesmode.IssueModeAndReportsMediumTest;
@@ -40,19 +36,9 @@ public class NoLanguagesPluginsMediumTest {
   @Rule
   public ExpectedException exception = ExpectedException.none();
 
-  public ScannerMediumTester tester = ScannerMediumTester.builder()
-    .setPreviousAnalysisDate(null)
-    .build();
-
-  @Before
-  public void prepare() {
-    tester.start();
-  }
-
-  @After
-  public void stop() {
-    tester.stop();
-  }
+  @Rule
+  public ScannerMediumTester tester = new ScannerMediumTester()
+    .setPreviousAnalysisDate(null);
 
   @Test
   public void testNoLanguagePluginsInstalled() throws Exception {
@@ -63,7 +49,7 @@ public class NoLanguagesPluginsMediumTest {
 
     tester
       .newScanTask(new File(projectDir, "sonar-project.properties"))
-      .start();
+      .execute();
   }
 
   private File copyProject(String path) throws Exception {

@@ -19,8 +19,8 @@
  */
 import OrganizationPage from './components/OrganizationPage';
 import OrganizationPageExtension from '../../app/components/extensions/OrganizationPageExtension';
+import OrganizationContainer from './components/OrganizationContainer';
 import OrganizationProjects from './components/OrganizationProjects';
-import OrganizationProjectsContainer from './components/OrganizationProjectsContainer';
 import OrganizationFavoriteProjects from './components/OrganizationFavoriteProjects';
 import OrganizationRules from './components/OrganizationRules';
 import OrganizationAdmin from './components/OrganizationAdmin';
@@ -31,7 +31,9 @@ import OrganizationPermissions from './components/OrganizationPermissions';
 import OrganizationPermissionTemplates from './components/OrganizationPermissionTemplates';
 import OrganizationProjectsManagement from './components/OrganizationProjectsManagement';
 import OrganizationDelete from './components/OrganizationDelete';
+import qualityGatesRoutes from '../quality-gates/routes';
 import qualityProfilesRoutes from '../quality-profiles/routes';
+import issuesRoutes from '../issues/routes';
 
 const routes = [
   {
@@ -48,7 +50,7 @@ const routes = [
       },
       {
         path: 'projects',
-        component: OrganizationProjectsContainer,
+        component: OrganizationContainer,
         childRoutes: [
           {
             indexRoute: {
@@ -62,6 +64,11 @@ const routes = [
         ]
       },
       {
+        path: 'issues',
+        component: OrganizationContainer,
+        childRoutes: issuesRoutes
+      },
+      {
         path: 'members',
         component: OrganizationMembersContainer
       },
@@ -72,6 +79,11 @@ const routes = [
       {
         path: 'quality_profiles',
         childRoutes: qualityProfilesRoutes
+      },
+      {
+        path: 'quality_gates',
+        component: OrganizationContainer,
+        childRoutes: qualityGatesRoutes
       },
       {
         path: 'extension/:pluginKey/:extensionKey',

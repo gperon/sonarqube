@@ -47,10 +47,8 @@ public class IssueIteratorFactoryTest {
     assertThat(issue.resolution()).isEqualTo("FIXED");
     assertThat(issue.status()).isEqualTo("RESOLVED");
     assertThat(issue.severity()).isEqualTo("BLOCKER");
-    assertThat(issue.isManualSeverity()).isFalse();
     assertThat(issue.assignee()).isEqualTo("guy1");
     assertThat(issue.authorLogin()).isEqualTo("guy2");
-    assertThat(issue.checksum()).isEqualTo("FFFFF");
     assertThat(issue.line()).isEqualTo(444);
     assertThat(issue.ruleKey()).isEqualTo(RuleKey.of("squid", "AvoidCycles"));
     assertThat(issue.componentUuid()).isEqualTo("FILE1");
@@ -59,10 +57,8 @@ public class IssueIteratorFactoryTest {
     assertThat(issue.modulePath()).isEqualTo(".PROJECT1.");
     assertThat(issue.directoryPath()).isEqualTo("src/main/java");
     assertThat(issue.filePath()).isEqualTo("src/main/java/Action.java");
-    assertThat(issue.tags()).containsOnly("tag1", "tag2", "tag3");
+    assertThat(issue.getTags()).containsOnly("tag1", "tag2", "tag3");
     assertThat(issue.effort().toMinutes()).isGreaterThan(0L);
-    assertThat(issue.gap()).isEqualTo(2d);
-    assertThat(issue.attribute("JIRA")).isEqualTo("http://jira.com");
     assertThat(issue.type().getDbConstant()).isEqualTo(2);
   }
 
@@ -82,7 +78,7 @@ public class IssueIteratorFactoryTest {
     assertThat(issue.modulePath()).isEqualTo(".PROJECT1.");
     assertThat(issue.directoryPath()).isEqualTo("src/main/java");
     assertThat(issue.filePath()).isEqualTo("src/main/java/Action.java");
-    assertThat(issue.tags()).containsOnly("tag1", "tag2", "tag3");
+    assertThat(issue.getTags()).containsOnly("tag1", "tag2", "tag3");
     assertThat(issue.effort().toMinutes()).isGreaterThan(0L);
     assertThat(issue.type().getDbConstant()).isEqualTo(1);
 
@@ -95,7 +91,7 @@ public class IssueIteratorFactoryTest {
     assertThat(issue.modulePath()).isEqualTo(".PROJECT1.MODULE1.");
     assertThat(issue.directoryPath()).isNull();
     assertThat(issue.filePath()).isNull();
-    assertThat(issue.tags()).containsOnly("tag1", "tag2", "tag3");
+    assertThat(issue.getTags()).containsOnly("tag1", "tag2", "tag3");
     assertThat(issue.effort().toMinutes()).isGreaterThan(0L);
     assertThat(issue.type().getDbConstant()).isEqualTo(2);
 
@@ -108,7 +104,7 @@ public class IssueIteratorFactoryTest {
     assertThat(issue.modulePath()).isEqualTo(".PROJECT1.");
     assertThat(issue.directoryPath()).isEqualTo("src/main/java");
     assertThat(issue.filePath()).isEqualTo("src/main/java/Action.java");
-    assertThat(issue.tags()).isEmpty();
+    assertThat(issue.getTags()).isEmpty();
     assertThat(issue.effort().toMinutes()).isGreaterThan(0L);
     assertThat(issue.type().getDbConstant()).isEqualTo(1);
 
@@ -121,7 +117,7 @@ public class IssueIteratorFactoryTest {
     assertThat(issue.modulePath()).isEqualTo(".PROJECT1.MODULE1.");
     assertThat(issue.directoryPath()).isEqualTo("src/main/java");
     assertThat(issue.filePath()).isEqualTo("src/main/java");
-    assertThat(issue.tags()).isEmpty();
+    assertThat(issue.getTags()).isEmpty();
     assertThat(issue.effort().toMinutes()).isGreaterThan(0L);
     assertThat(issue.type().getDbConstant()).isEqualTo(1);
   }

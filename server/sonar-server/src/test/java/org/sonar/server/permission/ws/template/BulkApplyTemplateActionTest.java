@@ -31,15 +31,15 @@ import org.sonar.db.permission.PermissionQuery;
 import org.sonar.db.permission.template.PermissionTemplateDto;
 import org.sonar.db.user.GroupDto;
 import org.sonar.db.user.UserDto;
+import org.sonar.server.es.ProjectIndexers;
+import org.sonar.server.es.TestProjectIndexers;
 import org.sonar.server.exceptions.BadRequestException;
 import org.sonar.server.exceptions.NotFoundException;
 import org.sonar.server.i18n.I18nRule;
 import org.sonar.server.permission.PermissionTemplateService;
-import org.sonar.server.permission.index.PermissionIndexer;
 import org.sonar.server.permission.ws.BasePermissionWsTest;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
 import static org.sonar.db.component.ComponentTesting.newView;
 import static org.sonarqube.ws.client.permission.PermissionsWsParameters.PARAM_ORGANIZATION;
 import static org.sonarqube.ws.client.permission.PermissionsWsParameters.PARAM_QUALIFIER;
@@ -58,12 +58,12 @@ public class BulkApplyTemplateActionTest extends BasePermissionWsTest<BulkApplyT
   private OrganizationDto organization;
   private PermissionTemplateDto template1;
   private PermissionTemplateDto template2;
-  private PermissionIndexer issuePermissionIndexer = mock(PermissionIndexer.class);
+  private ProjectIndexers projectIndexers = new TestProjectIndexers();
 
   @Override
   protected BulkApplyTemplateAction buildWsAction() {
     PermissionTemplateService permissionTemplateService = new PermissionTemplateService(db.getDbClient(),
-      issuePermissionIndexer, userSession, defaultTemplatesResolver);
+      projectIndexers, userSession, defaultTemplatesResolver);
     return new BulkApplyTemplateAction(db.getDbClient(), userSession, permissionTemplateService, newPermissionWsSupport(), new I18nRule(), newRootResourceTypes());
   }
 
@@ -159,12 +159,12 @@ public class BulkApplyTemplateActionTest extends BasePermissionWsTest<BulkApplyT
 
   @Test
   public void apply_template_by_query_on_name_and_key_public_project() throws Exception {
-    ComponentDto publicProjectFoundByKey = ComponentTesting.newPublicProjectDto(organization).setKey("sonar");
+    ComponentDto publicProjectFoundByKey = ComponentTesting.newPublicProjectDto(organization).setDbKey("sonar");
     db.components().insertProjectAndSnapshot(publicProjectFoundByKey);
     ComponentDto publicProjectFoundByName = ComponentTesting.newPublicProjectDto(organization).setName("name-sonar-name");
     db.components().insertProjectAndSnapshot(publicProjectFoundByName);
     // match must be exact on key
-    ComponentDto projectUntouched = ComponentTesting.newPublicProjectDto(organization).setKey("new-sonar").setName("project-name");
+    ComponentDto projectUntouched = ComponentTesting.newPublicProjectDto(organization).setDbKey("new-sonar").setName("project-name");
     db.components().insertProjectAndSnapshot(projectUntouched);
     loginAsAdmin(organization);
 
@@ -180,12 +180,12 @@ public class BulkApplyTemplateActionTest extends BasePermissionWsTest<BulkApplyT
 
   @Test
   public void apply_template_by_query_on_name_and_key() throws Exception {
-    ComponentDto privateProjectFoundByKey = ComponentTesting.newPrivateProjectDto(organization).setKey("sonar");
+    ComponentDto privateProjectFoundByKey = ComponentTesting.newPrivateProjectDto(organization).setDbKey("sonar");
     db.components().insertProjectAndSnapshot(privateProjectFoundByKey);
     ComponentDto privateProjectFoundByName = ComponentTesting.newPrivateProjectDto(organization).setName("name-sonar-name");
     db.components().insertProjectAndSnapshot(privateProjectFoundByName);
     // match must be exact on key
-    ComponentDto projectUntouched = ComponentTesting.newPublicProjectDto(organization).setKey("new-sonar").setName("project-name");
+    ComponentDto projectUntouched = ComponentTesting.newPublicProjectDto(organization).setDbKey("new-sonar").setName("project-name");
     db.components().insertProjectAndSnapshot(projectUntouched);
     loginAsAdmin(organization);
 

@@ -20,6 +20,7 @@
 import moment from 'moment';
 import React from 'react';
 import { Link } from 'react-router';
+import Tooltip from '../../../components/controls/Tooltip';
 import enhance from './enhance';
 import { getMetricName } from '../helpers/metrics';
 import { translate, translateWithParameters } from '../../../helpers/l10n';
@@ -46,11 +47,11 @@ class CodeSmells extends React.PureComponent {
     const tooltip = translateWithParameters('widget.as_calculated_on_x', formattedAnalysisDate);
 
     return (
-      <Link to={getComponentIssuesUrl(component.key, params)}>
-        <span title={tooltip} data-toggle="tooltip">
+      <Tooltip overlay={tooltip} placement="top">
+        <Link to={getComponentIssuesUrl(component.key, params)}>
           {formatMeasure(value, 'SHORT_WORK_DUR')}
-        </span>
-      </Link>
+        </Link>
+      </Tooltip>
     );
   }
 
@@ -99,7 +100,7 @@ class CodeSmells extends React.PureComponent {
               {this.props.renderIssues('new_code_smells', 'CODE_SMELL')}
             </div>
             <div className="overview-domain-measure-label">
-              <span className="little-spacer-right"><CodeSmellIcon /></span>
+              <CodeSmellIcon className="little-spacer-right" />
               {getMetricName('new_code_smells')}
             </div>
           </div>
@@ -114,7 +115,6 @@ class CodeSmells extends React.PureComponent {
     return (
       <div className="overview-domain-nutshell">
         <div className="overview-domain-measures">
-
           <div className="overview-domain-measure">
             <div className="display-inline-block text-middle" style={{ paddingLeft: 56 }}>
               <div className="overview-domain-measure-value">
@@ -123,6 +123,7 @@ class CodeSmells extends React.PureComponent {
               </div>
               <div className="overview-domain-measure-label">
                 {getMetricName('effort')}
+                {this.props.renderHistoryLink('sqale_index')}
               </div>
             </div>
           </div>
@@ -133,8 +134,9 @@ class CodeSmells extends React.PureComponent {
                 {this.props.renderIssues('code_smells', 'CODE_SMELL')}
               </div>
               <div className="overview-domain-measure-label">
-                <span className="little-spacer-right"><CodeSmellIcon /></span>
+                <CodeSmellIcon className="little-spacer-right " />
                 {getMetricName('code_smells')}
+                {this.props.renderHistoryLink('code_smells')}
               </div>
             </div>
           </div>

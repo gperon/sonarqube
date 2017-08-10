@@ -23,6 +23,7 @@ import moment from 'moment';
 
 export default class FormattedDate extends React.PureComponent {
   props: {
+    className?: string,
     date: string | number,
     format?: string,
     tooltipFormat?: string
@@ -33,14 +34,14 @@ export default class FormattedDate extends React.PureComponent {
   };
 
   render() {
-    const { date, format, tooltipFormat } = this.props;
+    const { className, date, format, tooltipFormat } = this.props;
 
     const m = moment(date);
 
     const title = tooltipFormat ? m.format(tooltipFormat) : undefined;
 
     return (
-      <time dateTime={m.format()} title={title}>
+      <time className={className} dateTime={m.format()} title={title}>
         {m.format(format)}
       </time>
     );

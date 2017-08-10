@@ -19,12 +19,15 @@
  */
 package org.sonar.server.issue.index;
 
-import org.sonar.api.config.Settings;
+import com.google.common.annotations.VisibleForTesting;
+import org.sonar.api.config.Configuration;
 import org.sonar.server.es.IndexDefinition;
 import org.sonar.server.es.IndexType;
 import org.sonar.server.es.NewIndex;
 
 import static org.sonar.server.es.DefaultIndexSettingsElement.SORTABLE_ANALYZER;
+import static org.sonar.server.es.NewIndex.SettingsConfiguration.MANUAL_REFRESH_INTERVAL;
+import static org.sonar.server.es.NewIndex.SettingsConfiguration.newBuilder;
 
 /**
  * Definition of ES index "issues", including settings and fields.
@@ -33,11 +36,9 @@ public class IssueIndexDefinition implements IndexDefinition {
 
   public static final IndexType INDEX_TYPE_ISSUE = new IndexType("issues", "issue");
   public static final String FIELD_ISSUE_ASSIGNEE = "assignee";
-  public static final String FIELD_ISSUE_ATTRIBUTES = "attributes";
   public static final String FIELD_ISSUE_AUTHOR_LOGIN = "authorLogin";
   public static final String FIELD_ISSUE_COMPONENT_UUID = "component";
   public static final String FIELD_ISSUE_EFFORT = "effort";
-  public static final String FIELD_ISSUE_GAP = "gap";
   public static final String FIELD_ISSUE_FILE_PATH = "filePath";
   /**
    * Functional date
@@ -54,7 +55,6 @@ public class IssueIndexDefinition implements IndexDefinition {
   public static final String FIELD_ISSUE_KEY = "key";
   public static final String FIELD_ISSUE_LANGUAGE = "language";
   public static final String FIELD_ISSUE_LINE = "line";
-  public static final String FIELD_ISSUE_MESSAGE = "message";
   public static final String FIELD_ISSUE_MODULE_UUID = "module";
   public static final String FIELD_ISSUE_MODULE_PATH = "modulePath";
   public static final String FIELD_ISSUE_ORGANIZATION_UUID = "organization";
@@ -64,58 +64,66 @@ public class IssueIndexDefinition implements IndexDefinition {
   public static final String FIELD_ISSUE_RULE_KEY = "ruleKey";
   public static final String FIELD_ISSUE_SEVERITY = "severity";
   public static final String FIELD_ISSUE_SEVERITY_VALUE = "severityValue";
-  public static final String FIELD_ISSUE_MANUAL_SEVERITY = "manualSeverity";
   public static final String FIELD_ISSUE_STATUS = "status";
-  public static final String FIELD_ISSUE_CHECKSUM = "checksum";
   public static final String FIELD_ISSUE_TAGS = "tags";
   public static final String FIELD_ISSUE_TYPE = "type";
+
+  private final Configuration config;
+  private final boolean enableSource;
+
+  public IssueIndexDefinition(Configuration config) {
+    this(config, false);
+  }
+
+  private IssueIndexDefinition(Configuration config, boolean enableSource) {
+    this.config = config;
+    this.enableSource = enableSource;
+  }
+
   /**
-   * Technical date
+   * Keep the document sources in index so that indexer tests can verify content
+   * of indexed documents.
    */
-  public static final String FIELD_ISSUE_TECHNICAL_UPDATED_AT = "updatedAt";
-
-  private final Settings settings;
-
-  public IssueIndexDefinition(Settings settings) {
-    this.settings = settings;
+  @VisibleForTesting
+  public static IssueIndexDefinition createForTest(Configuration config) {
+    return new IssueIndexDefinition(config, true);
   }
 
   @Override
   public void define(IndexDefinitionContext context) {
-    NewIndex index = context.create(INDEX_TYPE_ISSUE.getIndex());
-
-    index.refreshHandledByIndexer();
-    index.configureShards(settings, 5);
+    NewIndex index = context.create(
+      INDEX_TYPE_ISSUE.getIndex(),
+      newBuilder(config)
+        .setRefreshInterval(MANUAL_REFRESH_INTERVAL)
+        .setDefaultNbOfShards(5)
+        .build());
 
     NewIndex.NewIndexType type = index.createType(INDEX_TYPE_ISSUE.getType());
     type.requireProjectAuthorization();
+    type.setEnableSource(enableSource);
 
-    type.stringFieldBuilder(FIELD_ISSUE_ASSIGNEE).disableNorms().addSubFields(SORTABLE_ANALYZER).build();
-    type.stringFieldBuilder(FIELD_ISSUE_ATTRIBUTES).disableNorms().disableSearch().build();
-    type.stringFieldBuilder(FIELD_ISSUE_AUTHOR_LOGIN).disableNorms().build();
-    type.stringFieldBuilder(FIELD_ISSUE_COMPONENT_UUID).disableNorms().build();
+    type.keywordFieldBuilder(FIELD_ISSUE_ASSIGNEE).disableNorms().addSubFields(SORTABLE_ANALYZER).build();
+    type.keywordFieldBuilder(FIELD_ISSUE_AUTHOR_LOGIN).disableNorms().build();
+    type.keywordFieldBuilder(FIELD_ISSUE_COMPONENT_UUID).disableNorms().build();
     type.createLongField(FIELD_ISSUE_EFFORT);
-    type.createDoubleField(FIELD_ISSUE_GAP);
-    type.stringFieldBuilder(FIELD_ISSUE_FILE_PATH).disableNorms().addSubFields(SORTABLE_ANALYZER).build();
+    type.keywordFieldBuilder(FIELD_ISSUE_FILE_PATH).disableNorms().addSubFields(SORTABLE_ANALYZER).build();
     type.createDateTimeField(FIELD_ISSUE_FUNC_CREATED_AT);
     type.createDateTimeField(FIELD_ISSUE_FUNC_UPDATED_AT);
     type.createDateTimeField(FIELD_ISSUE_FUNC_CLOSED_AT);
-    type.stringFieldBuilder(FIELD_ISSUE_KEY).disableNorms().addSubFields(SORTABLE_ANALYZER).build();
-    type.stringFieldBuilder(FIELD_ISSUE_LANGUAGE).disableNorms().build();
+    type.keywordFieldBuilder(FIELD_ISSUE_KEY).disableNorms().addSubFields(SORTABLE_ANALYZER).build();
+    type.keywordFieldBuilder(FIELD_ISSUE_LANGUAGE).disableNorms().build();
     type.createIntegerField(FIELD_ISSUE_LINE);
-    type.stringFieldBuilder(FIELD_ISSUE_MESSAGE).disableNorms().build();
-    type.stringFieldBuilder(FIELD_ISSUE_MODULE_UUID).disableNorms().build();
+    type.keywordFieldBuilder(FIELD_ISSUE_MODULE_UUID).disableNorms().build();
     type.createUuidPathField(FIELD_ISSUE_MODULE_PATH);
-    type.stringFieldBuilder(FIELD_ISSUE_ORGANIZATION_UUID).disableNorms().build();
-    type.stringFieldBuilder(FIELD_ISSUE_PROJECT_UUID).disableNorms().addSubFields(SORTABLE_ANALYZER).build();
-    type.stringFieldBuilder(FIELD_ISSUE_DIRECTORY_PATH).disableNorms().build();
-    type.stringFieldBuilder(FIELD_ISSUE_RESOLUTION).disableNorms().build();
-    type.stringFieldBuilder(FIELD_ISSUE_RULE_KEY).disableNorms().build();
-    type.stringFieldBuilder(FIELD_ISSUE_SEVERITY).disableNorms().build();
+    type.keywordFieldBuilder(FIELD_ISSUE_ORGANIZATION_UUID).disableNorms().build();
+    type.keywordFieldBuilder(FIELD_ISSUE_PROJECT_UUID).disableNorms().addSubFields(SORTABLE_ANALYZER).build();
+    type.keywordFieldBuilder(FIELD_ISSUE_DIRECTORY_PATH).disableNorms().build();
+    type.keywordFieldBuilder(FIELD_ISSUE_RESOLUTION).disableNorms().build();
+    type.keywordFieldBuilder(FIELD_ISSUE_RULE_KEY).disableNorms().build();
+    type.keywordFieldBuilder(FIELD_ISSUE_SEVERITY).disableNorms().build();
     type.createByteField(FIELD_ISSUE_SEVERITY_VALUE);
-    type.stringFieldBuilder(FIELD_ISSUE_STATUS).disableNorms().addSubFields(SORTABLE_ANALYZER).build();
-    type.stringFieldBuilder(FIELD_ISSUE_TAGS).disableNorms().build();
-    type.createDateTimeField(FIELD_ISSUE_TECHNICAL_UPDATED_AT);
-    type.stringFieldBuilder(FIELD_ISSUE_TYPE).disableNorms().build();
+    type.keywordFieldBuilder(FIELD_ISSUE_STATUS).disableNorms().addSubFields(SORTABLE_ANALYZER).build();
+    type.keywordFieldBuilder(FIELD_ISSUE_TAGS).disableNorms().build();
+    type.keywordFieldBuilder(FIELD_ISSUE_TYPE).disableNorms().build();
   }
 }

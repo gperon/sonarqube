@@ -58,15 +58,20 @@ import EmptySearch from '../../../components/common/EmptySearch';
 import { translate, translateWithParameters } from '../../../helpers/l10n';
 import { scrollToElement } from '../../../helpers/scrolling';
 import type { Issue } from '../../../components/issue/types';
+import type { RawQuery } from '../../../helpers/query';
 import '../styles.css';
 
 export type Props = {
   component?: Component,
   currentUser: CurrentUser,
-  fetchIssues: ({}) => Promise<*>,
-  location: { pathname: string, query: { [string]: string } },
+  fetchIssues: (query: RawQuery) => Promise<*>,
+  location: { pathname: string, query: RawQuery },
   onRequestFail: Error => void,
-  router: { push: ({}) => void, replace: ({}) => void }
+  organization?: { key: string },
+  router: {
+    push: ({ pathname: string, query?: RawQuery }) => void,
+    replace: ({ pathname: string, query?: RawQuery }) => void
+  }
 };
 
 export type State = {
@@ -338,7 +343,7 @@ export default class App extends React.PureComponent {
   };
 
   fetchIssues = (additional?: {}, requestFacets?: boolean = false): Promise<*> => {
-    const { component } = this.props;
+    const { component, organization } = this.props;
     const { myIssues, openFacets, query } = this.state;
 
     const facets = requestFacets
@@ -350,6 +355,7 @@ export default class App extends React.PureComponent {
       s: 'FILE_LINE',
       ...serializeQuery(query),
       ps: 100,
+      organization: organization && organization.key,
       facets,
       ...additional
     };
@@ -381,9 +387,8 @@ export default class App extends React.PureComponent {
           referencedLanguages: keyBy(other.languages, 'key'),
           referencedRules: keyBy(other.rules, 'key'),
           referencedUsers: keyBy(other.users, 'login'),
-          selected: issues.length > 0
-            ? openIssue != null ? openIssue.key : issues[0].key
-            : undefined,
+          selected:
+            issues.length > 0 ? (openIssue != null ? openIssue.key : issues[0].key) : undefined,
           selectedFlowIndex: null,
           selectedLocationIndex: null
         });
@@ -664,6 +669,7 @@ export default class App extends React.PureComponent {
             onClose={this.closeBulkChange}
             onDone={this.handleBulkChangeDone}
             onRequestFail={this.props.onRequestFail}
+            organization={this.props.organization}
           />}
       </div>
     );
@@ -688,6 +694,7 @@ export default class App extends React.PureComponent {
           onFacetToggle={this.handleFacetToggle}
           onFilterChange={this.handleFilterChange}
           openFacets={this.state.openFacets}
+          organization={this.props.organization}
           query={query}
           referencedComponents={this.state.referencedComponents}
           referencedLanguages={this.state.referencedLanguages}
@@ -727,7 +734,7 @@ export default class App extends React.PureComponent {
   }
 
   renderSide(openIssue: ?Issue) {
-    const top = this.props.component ? 95 : 30;
+    const top = this.props.component || this.props.organization ? 95 : 30;
 
     return (
       <div className="layout-page-side-outer">
@@ -741,7 +748,7 @@ export default class App extends React.PureComponent {
   }
 
   renderList() {
-    const { component, currentUser } = this.props;
+    const { component, currentUser, organization } = this.props;
     const { issues, openIssue, paging } = this.state;
     const selectedIndex = this.getSelectedIndex();
     const selectedIssue = selectedIndex != null ? issues[selectedIndex] : null;
@@ -761,6 +768,7 @@ export default class App extends React.PureComponent {
             onIssueChange={this.handleIssueChange}
             onIssueCheck={currentUser.isLoggedIn ? this.handleIssueCheck : undefined}
             onIssueClick={this.openIssue}
+            organization={organization}
             selectedIssue={selectedIssue}
           />}
 
@@ -781,7 +789,9 @@ export default class App extends React.PureComponent {
     return (
       <div className="pull-right note">
         <span className="shortcut-button little-spacer-right">alt</span>
-        <span className="little-spacer-right">{'+'}</span>
+        <span className="little-spacer-right">
+          {'+'}
+        </span>
         <span className="shortcut-button little-spacer-right">↑</span>
         <span className="shortcut-button little-spacer-right">↓</span>
         {hasSeveralFlows &&
@@ -804,13 +814,17 @@ export default class App extends React.PureComponent {
         {this.renderSide(openIssue)}
 
         <div className="layout-page-main">
-          <div className="issues-header-panel issues-main-header">
-            <div className="issues-header-panel-inner issues-main-header-inner">
+          <div className="layout-page-header-panel layout-page-main-header issues-main-header">
+            <div className="layout-page-header-panel-inner layout-page-main-header-inner">
               <div className="layout-page-main-inner">
                 {this.renderBulkChange(openIssue)}
                 {openIssue != null
                   ? <div className="pull-left width-60">
-                      <ComponentBreadcrumbs component={component} issue={openIssue} />
+                      <ComponentBreadcrumbs
+                        component={component}
+                        issue={openIssue}
+                        organization={this.props.organization}
+                      />
                     </div>
                   : <PageActions
                       loading={this.state.loading}

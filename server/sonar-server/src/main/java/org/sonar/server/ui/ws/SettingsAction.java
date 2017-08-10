@@ -19,7 +19,7 @@
  */
 package org.sonar.server.ui.ws;
 
-import org.sonar.api.config.Settings;
+import org.sonar.api.config.Configuration;
 import org.sonar.api.server.ws.Request;
 import org.sonar.api.server.ws.Response;
 import org.sonar.api.server.ws.WebService.NewController;
@@ -32,12 +32,12 @@ import org.sonar.server.user.UserSession;
 public class SettingsAction implements NavigationWsAction {
 
   private final PageRepository pageRepository;
-  private final Settings settings;
+  private final Configuration config;
   private final UserSession userSession;
 
-  public SettingsAction(PageRepository pageRepository, Settings settings, UserSession userSession) {
+  public SettingsAction(PageRepository pageRepository, Configuration config, UserSession userSession) {
     this.pageRepository = pageRepository;
-    this.settings = settings;
+    this.config = config;
     this.userSession = userSession;
   }
 
@@ -59,20 +59,20 @@ public class SettingsAction implements NavigationWsAction {
   public void handle(Request request, Response response) throws Exception {
     boolean isSysAdmin = userSession.isSystemAdministrator();
 
-    JsonWriter json = response.newJsonWriter().beginObject();
-    json.prop("showUpdateCenter", isSysAdmin && settings.getBoolean(WebConstants.SONAR_UPDATECENTER_ACTIVATE));
+    try (JsonWriter json = response.newJsonWriter()) {
+      json.beginObject();
+      json.prop("showUpdateCenter", isSysAdmin && config.getBoolean(WebConstants.SONAR_UPDATECENTER_ACTIVATE).orElse(false));
 
-    json.name("extensions").beginArray();
-    if (isSysAdmin) {
-      for (Page page : pageRepository.getGlobalPages(true)) {
-        json.beginObject()
-          .prop("key", page.getKey())
-          .prop("name", page.getName())
-          .endObject();
+      json.name("extensions").beginArray();
+      if (isSysAdmin) {
+        for (Page page : pageRepository.getGlobalPages(true)) {
+          json.beginObject()
+            .prop("key", page.getKey())
+            .prop("name", page.getName())
+            .endObject();
+        }
       }
+      json.endArray().endObject();
     }
-    json.endArray();
-
-    json.endObject().close();
   }
 }

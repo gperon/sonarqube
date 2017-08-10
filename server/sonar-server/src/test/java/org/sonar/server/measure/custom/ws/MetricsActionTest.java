@@ -23,7 +23,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.sonar.api.config.MapSettings;
+import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.measures.Metric;
 import org.sonar.api.utils.System2;
 import org.sonar.api.web.UserRole;
@@ -54,7 +54,7 @@ public class MetricsActionTest {
   private static final String DEFAULT_PROJECT_KEY = "project-key";
 
   @Rule
-  public EsTester es = new EsTester(new UserIndexDefinition(new MapSettings()));
+  public EsTester es = new EsTester(new UserIndexDefinition(new MapSettings().asConfig()));
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
   @Rule
@@ -229,7 +229,7 @@ public class MetricsActionTest {
 
   private ComponentDto insertProject(String projectUuid, String projectKey) {
     ComponentDto project = ComponentTesting.newPrivateProjectDto(db.getDefaultOrganization(), projectUuid)
-      .setKey(projectKey);
+      .setDbKey(projectKey);
     dbClient.componentDao().insert(dbSession, project);
     dbSession.commit();
 

@@ -47,11 +47,11 @@ import org.sonar.scanner.protocol.output.ScannerReport;
 import org.sonar.scanner.protocol.output.ScannerReport.Component;
 import org.sonar.scanner.protocol.output.ScannerReport.Metadata;
 import org.sonar.scanner.protocol.output.ScannerReport.Symbol;
+import org.sonar.scanner.protocol.output.ScannerReportReader;
 import org.sonar.scanner.report.ReportPublisher;
 import org.sonar.scanner.report.ScannerReportUtils;
 import org.sonar.scanner.scan.ProjectScanContainer;
 import org.sonar.scanner.scan.filesystem.InputComponentStore;
-import org.sonar.scanner.protocol.output.ScannerReportReader;
 
 import static org.apache.commons.lang.StringUtils.isNotEmpty;
 
@@ -73,7 +73,7 @@ public class TaskResult implements org.sonar.scanner.mediumtest.ScanTaskObserver
     }
 
     ReportPublisher reportPublisher = container.getComponentByType(ReportPublisher.class);
-    reader = new ScannerReportReader(reportPublisher.getReportDir());
+    reader = new ScannerReportReader(reportPublisher.getReportDir().toFile());
     if (!container.getComponentByType(AnalysisMode.class).isIssues()) {
       Metadata readMetadata = getReportReader().readMetadata();
       int rootComponentRef = readMetadata.getRootComponentRef();
@@ -104,7 +104,7 @@ public class TaskResult implements org.sonar.scanner.mediumtest.ScanTaskObserver
   private void storeFs(ProjectScanContainer container) {
     InputComponentStore inputFileCache = container.getComponentByType(InputComponentStore.class);
     for (InputFile inputPath : inputFileCache.allFiles()) {
-      inputFiles.put(inputPath.relativePath(), inputPath);
+      inputFiles.put(((DefaultInputFile) inputPath).getProjectRelativePath(), inputPath);
     }
     for (InputDir inputPath : inputFileCache.allDirs()) {
       inputDirs.put(inputPath.relativePath(), inputPath);
@@ -189,7 +189,7 @@ public class TaskResult implements org.sonar.scanner.mediumtest.ScanTaskObserver
         }
       }
     } catch (Exception e) {
-      throw new IllegalStateException("Can't read syntax highlighting for " + file.absolutePath(), e);
+      throw new IllegalStateException("Can't read syntax highlighting for " + file, e);
     }
     return result;
   }

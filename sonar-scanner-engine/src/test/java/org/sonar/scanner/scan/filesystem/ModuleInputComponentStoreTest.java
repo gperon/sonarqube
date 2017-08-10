@@ -24,11 +24,12 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.sonar.api.batch.AnalysisMode;
 import org.sonar.api.batch.fs.InputFile;
 import org.sonar.api.batch.fs.InputModule;
+import org.sonar.api.batch.fs.internal.DefaultInputModule;
+import org.sonar.api.batch.fs.internal.SensorStrategy;
 import org.sonar.api.batch.fs.internal.TestInputFileBuilder;
-import org.sonar.api.scan.filesystem.PathResolver;
-import org.sonar.scanner.sensor.SensorStrategy;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Matchers.any;
@@ -46,8 +47,8 @@ public class ModuleInputComponentStoreTest {
 
   @Before
   public void setUp() throws IOException {
-    componentStore = new InputComponentStore(new PathResolver());
-    componentStore.put(TestInputFileBuilder.newDefaultInputModule(moduleKey, temp.newFolder()));
+    DefaultInputModule root = TestInputFileBuilder.newDefaultInputModule(moduleKey, temp.newFolder());
+    componentStore = new InputComponentStore(root, mock(AnalysisMode.class));
   }
 
   @Test

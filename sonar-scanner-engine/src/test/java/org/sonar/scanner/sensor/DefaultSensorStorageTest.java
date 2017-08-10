@@ -20,6 +20,7 @@
 package org.sonar.scanner.sensor;
 
 import com.google.common.collect.ImmutableMap;
+import java.io.IOException;
 import java.util.Map;
 import org.junit.Before;
 import org.junit.Rule;
@@ -27,6 +28,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 import org.mockito.ArgumentCaptor;
+import org.sonar.api.batch.bootstrap.ProjectDefinition;
 import org.sonar.api.batch.fs.InputFile;
 import org.sonar.api.batch.fs.internal.DefaultInputModule;
 import org.sonar.api.batch.fs.internal.TestInputFileBuilder;
@@ -34,8 +36,7 @@ import org.sonar.api.batch.measure.MetricFinder;
 import org.sonar.api.batch.sensor.highlighting.internal.DefaultHighlighting;
 import org.sonar.api.batch.sensor.measure.internal.DefaultMeasure;
 import org.sonar.api.batch.sensor.symbol.internal.DefaultSymbolTable;
-import org.sonar.api.config.MapSettings;
-import org.sonar.api.config.Settings;
+import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.measures.CoreMetrics;
 import org.sonar.api.utils.KeyValueFormat;
 import org.sonar.core.metric.ScannerMetrics;
@@ -45,11 +46,9 @@ import org.sonar.scanner.protocol.output.ScannerReportWriter;
 import org.sonar.scanner.report.ReportPublisher;
 import org.sonar.scanner.repository.ContextPropertiesCache;
 import org.sonar.scanner.scan.measure.MeasureCache;
-import org.sonar.scanner.sensor.coverage.CoverageExclusions;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.data.MapEntry.entry;
-import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -63,7 +62,7 @@ public class DefaultSensorStorageTest {
   public ExpectedException thrown = ExpectedException.none();
 
   private DefaultSensorStorage underTest;
-  private Settings settings;
+  private MapSettings settings;
   private ModuleIssues moduleIssues;
   private MeasureCache measureCache;
   private ContextPropertiesCache contextPropertiesCache = new ContextPropertiesCache();
@@ -76,12 +75,10 @@ public class DefaultSensorStorageTest {
     settings = new MapSettings();
     moduleIssues = mock(ModuleIssues.class);
     measureCache = mock(MeasureCache.class);
-    CoverageExclusions coverageExclusions = mock(CoverageExclusions.class);
-    when(coverageExclusions.isExcluded(any(InputFile.class))).thenReturn(false);
     ReportPublisher reportPublisher = mock(ReportPublisher.class);
     when(reportPublisher.getWriter()).thenReturn(new ScannerReportWriter(temp.newFolder()));
     underTest = new DefaultSensorStorage(metricFinder,
-      moduleIssues, settings, coverageExclusions, reportPublisher, measureCache,
+      moduleIssues, settings.asConfig(), reportPublisher, measureCache,
       mock(SonarCpdBlockIndex.class), contextPropertiesCache, new ScannerMetrics());
   }
 
@@ -115,9 +112,9 @@ public class DefaultSensorStorageTest {
   }
 
   @Test
-  public void shouldSaveProjectMeasureToSensorContext() {
+  public void shouldSaveProjectMeasureToSensorContext() throws IOException {
     String projectKey = "myProject";
-    DefaultInputModule module = new DefaultInputModule(projectKey);
+    DefaultInputModule module = new DefaultInputModule(ProjectDefinition.create().setKey(projectKey).setBaseDir(temp.newFolder()).setWorkDir(temp.newFolder()));
 
     ArgumentCaptor<DefaultMeasure> argumentCaptor = ArgumentCaptor.forClass(DefaultMeasure.class);
     when(measureCache.put(eq(module.key()), eq(CoreMetrics.NCLOC_KEY), argumentCaptor.capture())).thenReturn(null);

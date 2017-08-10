@@ -19,10 +19,12 @@
  */
 package org.sonar.api.batch.sensor.coverage;
 
-import com.google.common.collect.ImmutableSet;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.Set;
 import org.sonar.api.measures.Metric;
 
+import static java.util.Arrays.asList;
 import static org.sonar.api.measures.CoreMetrics.CONDITIONS_BY_LINE;
 import static org.sonar.api.measures.CoreMetrics.CONDITIONS_TO_COVER;
 import static org.sonar.api.measures.CoreMetrics.COVERAGE_LINE_HITS_DATA;
@@ -77,7 +79,8 @@ public enum CoverageType {
     this.uncoveredConditions = uncoveredConditions;
     this.coveredConditionsByLine = coveredConditionsByLine;
     this.conditionsByLine = conditionsByLine;
-    this.all = ImmutableSet.of(linesToCover, uncoveredLines, lineHitsData, conditionsToCover, uncoveredConditions, coveredConditionsByLine, conditionsByLine);
+    this.all = Collections.unmodifiableSet(new LinkedHashSet<>(
+      asList(linesToCover, uncoveredLines, lineHitsData, conditionsToCover, uncoveredConditions, coveredConditionsByLine, conditionsByLine)));
   }
 
   public Set<Metric> allMetrics() {

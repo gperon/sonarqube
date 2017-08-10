@@ -23,16 +23,15 @@ import { connect } from 'react-redux';
 import { withRouter } from 'react-router';
 import AllProjectsContainer from './AllProjectsContainer';
 import { getCurrentUser } from '../../../store/rootReducer';
-import { isFavoriteSet, isAllSet } from '../utils';
+import { isFavoriteSet, isAllSet } from '../../../helpers/storage';
 import { searchProjects } from '../../../api/components';
+import type { RawQuery } from '../../../helpers/query';
 
 type Props = {
   currentUser: { isLoggedIn: boolean },
   location: { query: {} },
-  optionBarOpen: boolean,
-  optionBarToggle: (open: boolean) => void,
   router: {
-    replace: (location: { pathname?: string, query?: { [string]: string } }) => void
+    replace: (location: { pathname?: string, query?: RawQuery }) => void
   }
 };
 
@@ -107,8 +106,6 @@ class DefaultPageSelector extends React.PureComponent {
         <AllProjectsContainer
           isFavorite={false}
           location={this.props.location}
-          optionBarOpen={this.props.optionBarOpen}
-          optionBarToggle={this.props.optionBarToggle}
           currentUser={this.props.currentUser}
         />
       );

@@ -19,16 +19,10 @@
  */
 package org.sonar.scanner.mediumtest.issuesmode;
 
+import com.google.common.collect.ImmutableMap;
+import java.io.File;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.FileFilterUtils;
-
-import java.io.File;
-
-import static org.assertj.core.api.Assertions.assertThat;
-
-import com.google.common.collect.ImmutableMap;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -39,6 +33,8 @@ import org.sonar.scanner.mediumtest.TaskResult;
 import org.sonar.xoo.XooPlugin;
 import org.sonar.xoo.rule.XooRulesDefinition;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 public class NoPreviousAnalysisTest {
   @Rule
   public TemporaryFolder temp = new TemporaryFolder();
@@ -46,24 +42,14 @@ public class NoPreviousAnalysisTest {
   @Rule
   public LogTester logTester = new LogTester();
 
-  public ScannerMediumTester tester = ScannerMediumTester.builder()
+  @Rule
+  public ScannerMediumTester tester = new ScannerMediumTester()
     .bootstrapProperties(ImmutableMap.of(CoreProperties.ANALYSIS_MODE, CoreProperties.ANALYSIS_MODE_ISSUES))
     .registerPlugin("xoo", new XooPlugin())
     .addRules(new XooRulesDefinition())
     .addDefaultQProfile("xoo", "Sonar Way")
     .addActiveRule("xoo", "OneIssuePerLine", null, "One issue per line", "MAJOR", "my/internal/key", "xoo")
-    .setPreviousAnalysisDate(null)
-    .build();
-
-  @Before
-  public void prepare() {
-    tester.start();
-  }
-
-  @After
-  public void stop() {
-    tester.stop();
-  }
+    .setPreviousAnalysisDate(null);
 
   @Test
   public void testIssueTrackingWithIssueOnEmptyFile() throws Exception {
@@ -71,12 +57,12 @@ public class NoPreviousAnalysisTest {
 
     TaskResult result = tester
       .newScanTask(new File(projectDir, "sonar-project.properties"))
-      .start();
-    
+      .execute();
+
     assertThat(result.trackedIssues()).hasSize(14);
-    
+
   }
-  
+
   private File copyProject(String path) throws Exception {
     File projectDir = temp.newFolder();
     File originalProjectDir = new File(IssueModeAndReportsMediumTest.class.getResource(path).toURI());

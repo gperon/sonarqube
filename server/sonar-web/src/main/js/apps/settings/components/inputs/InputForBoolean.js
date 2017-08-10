@@ -18,6 +18,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 import React from 'react';
+import PropTypes from 'prop-types';
 import Toggle from '../../../../components/controls/Toggle';
 import { defaultInputPropTypes } from '../../propTypes';
 import { translate } from '../../../../helpers/l10n';
@@ -25,7 +26,7 @@ import { translate } from '../../../../helpers/l10n';
 export default class InputForBoolean extends React.PureComponent {
   static propTypes = {
     ...defaultInputPropTypes,
-    value: React.PropTypes.oneOfType([React.PropTypes.bool, React.PropTypes.string])
+    value: PropTypes.oneOfType([PropTypes.bool, PropTypes.string])
   };
 
   render() {
@@ -36,7 +37,10 @@ export default class InputForBoolean extends React.PureComponent {
       <div className="display-inline-block text-top">
         <Toggle name={this.props.name} value={displayedValue} onChange={this.props.onChange} />
 
-        {!hasValue && <span className="spacer-left note">{translate('settings.not_set')}</span>}
+        {!hasValue &&
+          <span className="spacer-left note">
+            {translate('settings.not_set')}
+          </span>}
       </div>
     );
   }

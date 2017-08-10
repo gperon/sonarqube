@@ -19,7 +19,7 @@
  */
 package org.sonar.server.platform.cluster;
 
-import org.sonar.api.config.Settings;
+import org.sonar.api.config.Configuration;
 import org.sonar.api.utils.log.Loggers;
 import org.sonar.process.ProcessProperties;
 
@@ -30,10 +30,10 @@ public class ClusterImpl implements Cluster {
   private final boolean enabled;
   private final boolean startupLeader;
 
-  public ClusterImpl(Settings settings) {
-    this.enabled = settings.getBoolean(ProcessProperties.CLUSTER_ENABLED);
+  public ClusterImpl(Configuration config) {
+    this.enabled = config.getBoolean(ProcessProperties.CLUSTER_ENABLED).orElse(false);
     if (this.enabled) {
-      this.startupLeader = settings.getBoolean(CLUSTER_WEB_LEADER);
+      this.startupLeader = config.getBoolean(CLUSTER_WEB_LEADER).orElse(false);
       Loggers.get(ClusterImpl.class).info("Cluster enabled (startup {})", startupLeader ? "leader" : "follower");
     } else {
       this.startupLeader = true;

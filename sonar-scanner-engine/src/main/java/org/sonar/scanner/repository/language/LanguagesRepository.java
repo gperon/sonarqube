@@ -19,17 +19,19 @@
  */
 package org.sonar.scanner.repository.language;
 
-import org.sonar.api.batch.ScannerSide;
+import java.util.Collection;
 
 import javax.annotation.CheckForNull;
+import javax.annotation.concurrent.Immutable;
 
-import java.util.Collection;
+import org.sonar.api.batch.ScannerSide;
 
 /**
  * Languages repository
  * @since 4.4
  */
 @ScannerSide
+@Immutable
 public interface LanguagesRepository {
 
   /**

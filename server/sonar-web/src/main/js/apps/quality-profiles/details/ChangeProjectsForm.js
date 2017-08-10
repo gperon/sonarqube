@@ -22,6 +22,7 @@ import React from 'react';
 import Modal from 'react-modal';
 import escapeHtml from 'escape-html';
 import type { Profile } from '../propTypes';
+import SelectList from '../../../components/SelectList';
 import { translate } from '../../../helpers/l10n';
 
 type Props = {
@@ -34,22 +35,18 @@ export default class ChangeProjectsForm extends React.PureComponent {
   container: HTMLElement;
   props: Props;
 
-  componentDidMount() {
-    this.renderSelectList();
-  }
-
   handleCloseClick = (event: Event) => {
     event.preventDefault();
     this.props.onClose();
   };
 
-  renderSelectList() {
+  renderSelectList = () => {
     const { key } = this.props.profile;
 
     const searchUrl =
       window.baseUrl + '/api/qualityprofiles/projects?key=' + encodeURIComponent(key);
 
-    new window.SelectList({
+    new SelectList({
       searchUrl,
       el: this.container,
       width: '100%',
@@ -72,7 +69,7 @@ export default class ChangeProjectsForm extends React.PureComponent {
         deselect: translate('quality_profiles.projects.deselect_hint')
       }
     });
-  }
+  };
 
   render() {
     const header = translate('projects');
@@ -82,11 +79,13 @@ export default class ChangeProjectsForm extends React.PureComponent {
         isOpen={true}
         contentLabel={header}
         className="modal"
+        onAfterOpen={this.renderSelectList}
         overlayClassName="modal-overlay"
         onRequestClose={this.props.onClose}>
-
         <div className="modal-head">
-          <h2>{header}</h2>
+          <h2>
+            {header}
+          </h2>
         </div>
 
         <div className="modal-body">
@@ -94,9 +93,10 @@ export default class ChangeProjectsForm extends React.PureComponent {
         </div>
 
         <div className="modal-foot">
-          <a href="#" onClick={this.handleCloseClick}>{translate('close')}</a>
+          <a href="#" onClick={this.handleCloseClick}>
+            {translate('close')}
+          </a>
         </div>
-
       </Modal>
     );
   }

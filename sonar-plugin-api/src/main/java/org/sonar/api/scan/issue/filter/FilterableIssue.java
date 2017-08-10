@@ -20,14 +20,14 @@
 package org.sonar.api.scan.issue.filter;
 
 import java.util.Date;
-
 import javax.annotation.CheckForNull;
-
+import javax.annotation.concurrent.ThreadSafe;
 import org.sonar.api.rule.RuleKey;
 
 /**
  * @since 5.3
  */
+@ThreadSafe
 public interface FilterableIssue {
 
   String componentKey();
@@ -53,6 +53,10 @@ public interface FilterableIssue {
   @CheckForNull
   Double gap();
 
+  /**
+   * @deprecated since 6.6 useless
+   */
+  @Deprecated
   Date creationDate();
 
   String projectKey();
