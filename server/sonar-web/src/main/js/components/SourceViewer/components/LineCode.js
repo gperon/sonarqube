@@ -24,11 +24,12 @@ import LineIssuesList from './LineIssuesList';
 import LocationIndex from '../../common/LocationIndex';
 import LocationMessage from '../../common/LocationMessage';
 import { splitByTokens, highlightSymbol, highlightIssueLocations } from '../helpers/highlight';
-import type { Tokens } from '../helpers/highlight';
-import type { SourceLine } from '../types';
-import type { LinearIssueLocation } from '../helpers/indexing';
-import type { Issue } from '../../issue/types';
+/*:: import type { Tokens } from '../helpers/highlight'; */
+/*:: import type { SourceLine } from '../types'; */
+/*:: import type { LinearIssueLocation } from '../helpers/indexing'; */
+/*:: import type { Issue } from '../../issue/types'; */
 
+/*::
 type Props = {|
   highlightedLocationMessage?: { index: number, text: string },
   highlightedSymbols?: Array<string>,
@@ -39,6 +40,8 @@ type Props = {|
   onIssueSelect: (issueKey: string) => void,
   onLocationSelect?: number => void,
   onSymbolClick: (Array<string>) => void,
+  onPopupToggle: (issue: string, popupName: string, open: ?boolean ) => void,
+  openPopup: ?{ issue: string, name: string},
   scroll?: HTMLElement => void,
   secondaryIssueLocations: Array<{
     from: number,
@@ -50,19 +53,22 @@ type Props = {|
   selectedIssue: string | null,
   showIssues: boolean
 |};
+*/
 
+/*::
 type State = {
   tokens: Tokens
 };
+*/
 
 export default class LineCode extends React.PureComponent {
-  activeMarkerNode: ?HTMLElement;
-  codeNode: HTMLElement;
-  props: Props;
-  state: State;
-  symbols: NodeList<HTMLElement>;
+  /*:: activeMarkerNode: ?HTMLElement; */
+  /*:: codeNode: HTMLElement; */
+  /*:: props: Props; */
+  /*:: state: State; */
+  /*:: symbols: NodeList<HTMLElement>; */
 
-  constructor(props: Props) {
+  constructor(props /*: Props */) {
     super(props);
     this.state = {
       tokens: splitByTokens(props.line.code || '')
@@ -76,7 +82,7 @@ export default class LineCode extends React.PureComponent {
     }
   }
 
-  componentWillReceiveProps(nextProps: Props) {
+  componentWillReceiveProps(nextProps /*: Props */) {
     if (nextProps.line.code !== this.props.line.code) {
       this.setState({
         tokens: splitByTokens(nextProps.line.code || '')
@@ -88,7 +94,7 @@ export default class LineCode extends React.PureComponent {
     this.detachEvents();
   }
 
-  componentDidUpdate(prevProps: Props) {
+  componentDidUpdate(prevProps /*: Props */) {
     this.attachEvents();
     if (
       this.props.highlightedLocationMessage &&
@@ -119,7 +125,7 @@ export default class LineCode extends React.PureComponent {
     }
   }
 
-  handleSymbolClick = (e: Object) => {
+  handleSymbolClick = (e /*: Object */) => {
     e.preventDefault();
     const keys = e.currentTarget.className.match(/sym-\d+/g);
     if (keys.length > 0) {
@@ -127,7 +133,7 @@ export default class LineCode extends React.PureComponent {
     }
   };
 
-  renderMarker(index: number, message: ?string) {
+  renderMarker(index /*: number */, message /*: ?string */) {
     const { onLocationSelect } = this.props;
     const onClick = onLocationSelect ? () => onLocationSelect(index) : undefined;
     const ref = message != null ? node => (this.activeMarkerNode = node) : undefined;
@@ -217,6 +223,8 @@ export default class LineCode extends React.PureComponent {
             issues={issues}
             onIssueChange={this.props.onIssueChange}
             onIssueClick={onIssueSelect}
+            onPopupToggle={this.props.onPopupToggle}
+            openPopup={this.props.openPopup}
             selectedIssue={selectedIssue}
           />}
       </td>

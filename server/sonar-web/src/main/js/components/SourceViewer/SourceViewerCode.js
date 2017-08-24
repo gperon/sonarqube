@@ -23,9 +23,9 @@ import { intersection } from 'lodash';
 import Line from './components/Line';
 import { translate } from '../../helpers/l10n';
 import { getLinearLocations } from './helpers/issueLocations';
-import type { Duplication, SourceLine } from './types';
-import type { Issue, FlowLocation } from '../issue/types';
-import type { LinearIssueLocation } from './helpers/indexing';
+/*:: import type { Duplication, SourceLine } from './types'; */
+/*:: import type { Issue, FlowLocation } from '../issue/types'; */
+/*:: import type { LinearIssueLocation } from './helpers/indexing'; */
 
 const EMPTY_ARRAY = [];
 
@@ -36,7 +36,7 @@ const ZERO_LINE = {
 };
 
 export default class SourceViewerCode extends React.PureComponent {
-  props: {|
+  /*:: props: {|
     displayAllIssues: boolean,
     duplications?: Array<Duplication>,
     duplicationsByLine: { [number]: Array<number> },
@@ -68,27 +68,30 @@ export default class SourceViewerCode extends React.PureComponent {
     onSCMClick: (SourceLine, HTMLElement) => void,
     onSymbolClick: (Array<string>) => void,
     openIssuesByLine: { [number]: boolean },
+    onPopupToggle: (issue: string, popupName: string, open: ?boolean ) => void,
+    openPopup: ?{ issue: string, name: string},
     scroll?: HTMLElement => void,
     selectedIssue: string | null,
     sources: Array<SourceLine>,
     symbolsByLine: { [number]: Array<string> }
   |};
+*/
 
-  getDuplicationsForLine(line: SourceLine) {
+  getDuplicationsForLine(line /*: SourceLine */) {
     return this.props.duplicationsByLine[line.line] || EMPTY_ARRAY;
   }
 
-  getIssuesForLine(line: SourceLine): Array<Issue> {
+  getIssuesForLine(line /*: SourceLine */) /*: Array<Issue> */ {
     return this.props.issuesByLine[line.line] || EMPTY_ARRAY;
   }
 
-  getIssueLocationsForLine(line: SourceLine) {
+  getIssueLocationsForLine(line /*: SourceLine */) {
     return this.props.issueLocationsByLine[line.line] || EMPTY_ARRAY;
   }
 
   getSecondaryIssueLocationsForLine(
-    line: SourceLine
-  ): Array<{ from: number, to: number, line: number, index: number, startLine: number }> {
+    line /*: SourceLine */
+  ) /*: Array<{ from: number, to: number, line: number, index: number, startLine: number }> */ {
     const { highlightedLocations } = this.props;
     if (!highlightedLocations) {
       return EMPTY_ARRAY;
@@ -102,12 +105,12 @@ export default class SourceViewerCode extends React.PureComponent {
   }
 
   renderLine = (
-    line: SourceLine,
-    index: number,
-    displayCoverage: boolean,
-    displayDuplications: boolean,
-    displayFiltered: boolean,
-    displayIssues: boolean
+    line /*: SourceLine */,
+    index /*: number */,
+    displayCoverage /*: boolean */,
+    displayDuplications /*: boolean */,
+    displayFiltered /*: boolean */,
+    displayIssues /*: boolean */
   ) => {
     const { filterLine, highlightedLocationMessage, selectedIssue, sources } = this.props;
     const filtered = filterLine ? filterLine(line) : null;
@@ -173,6 +176,8 @@ export default class SourceViewerCode extends React.PureComponent {
         onSCMClick={this.props.onSCMClick}
         onSymbolClick={this.props.onSymbolClick}
         openIssues={this.props.openIssuesByLine[line.line] || false}
+        onPopupToggle={this.props.onPopupToggle}
+        openPopup={this.props.openPopup}
         previousLine={index > 0 ? sources[index - 1] : undefined}
         scroll={this.props.scroll}
         secondaryIssueLocations={optimizedSecondaryIssueLocations}

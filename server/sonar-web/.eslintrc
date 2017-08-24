@@ -27,7 +27,7 @@
   "rules": {
     "array-bracket-spacing": 2,
     "array-callback-return": 2,
-    "arrow-parens": [2, "as-needed"],
+    // "arrow-parens": [2, "as-needed"],
     "arrow-spacing": 2,
     "block-scoped-var": 2,
     "block-spacing": 2,
@@ -98,7 +98,7 @@
     "flowtype/space-before-type-colon": 2,
     "flowtype/union-intersection-spacing": 2,
 
-    "import/no-unresolved": 2,
+    "import/no-unresolved": 0,
     "import/named": 2,
     "import/default": 2,
     "import/namespace": 2,

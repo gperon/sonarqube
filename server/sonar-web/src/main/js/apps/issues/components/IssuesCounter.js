@@ -22,13 +22,16 @@ import React from 'react';
 import { translate } from '../../../helpers/l10n';
 import { formatMeasure } from '../../../helpers/measures';
 
+/*::
 type Props = {
+  className? : string,
   current: ?number,
   total: number
 };
+*/
 
-const IssuesCounter = (props: Props) =>
-  <span>
+const IssuesCounter = (props /*: Props */) =>
+  <span className={props.className}>
     <strong>
       {props.current != null &&
         <span>

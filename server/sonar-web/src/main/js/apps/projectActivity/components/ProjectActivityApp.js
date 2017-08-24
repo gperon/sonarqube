@@ -26,8 +26,9 @@ import ProjectActivityAnalysesList from './ProjectActivityAnalysesList';
 import ProjectActivityGraphs from './ProjectActivityGraphs';
 import { translate } from '../../../helpers/l10n';
 import './projectActivity.css';
-import type { Analysis, MeasureHistory, Metric, Query } from '../types';
+/*:: import type { Analysis, MeasureHistory, Metric, Query } from '../types'; */
 
+/*::
 type Props = {
   addCustomEvent: (analysis: string, name: string, category?: string) => Promise<*>,
   addVersion: (analysis: string, version: string) => Promise<*>,
@@ -37,7 +38,7 @@ type Props = {
   deleteAnalysis: (analysis: string) => Promise<*>,
   deleteEvent: (analysis: string, event: string) => Promise<*>,
   graphLoading: boolean,
-  loading: boolean,
+  initializing: boolean,
   project: {
     configuration?: { showHistory: boolean },
     key: string,
@@ -49,8 +50,9 @@ type Props = {
   query: Query,
   updateQuery: (newQuery: Query) => void
 };
+*/
 
-export default function ProjectActivityApp(props: Props) {
+export default function ProjectActivityApp(props /*: Props */) {
   const { analyses, measuresHistory, query } = props;
   const { configuration } = props.project;
   const canAdmin = configuration ? configuration.showHistory : false;
@@ -78,7 +80,7 @@ export default function ProjectActivityApp(props: Props) {
             changeEvent={props.changeEvent}
             deleteAnalysis={props.deleteAnalysis}
             deleteEvent={props.deleteEvent}
-            loading={props.loading}
+            initializing={props.initializing}
             project={props.project}
             query={props.query}
             updateQuery={props.updateQuery}

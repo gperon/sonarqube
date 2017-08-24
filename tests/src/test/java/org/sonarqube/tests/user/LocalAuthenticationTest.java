@@ -21,14 +21,15 @@ package org.sonarqube.tests.user;
 
 import com.codeborne.selenide.Condition;
 import com.sonar.orchestrator.Orchestrator;
-import org.sonarqube.tests.Category4Suite;
 import java.util.UUID;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
+import org.sonarqube.pageobjects.LoginPage;
+import org.sonarqube.pageobjects.Navigation;
+import org.sonarqube.tests.Category4Suite;
 import org.sonarqube.tests.Tester;
 import org.sonarqube.ws.WsUserTokens;
 import org.sonarqube.ws.client.GetRequest;
@@ -42,14 +43,11 @@ import org.sonarqube.ws.client.usertoken.GenerateWsRequest;
 import org.sonarqube.ws.client.usertoken.RevokeWsRequest;
 import org.sonarqube.ws.client.usertoken.SearchWsRequest;
 import org.sonarqube.ws.client.usertoken.UserTokensService;
-import org.sonarqube.pageobjects.LoginPage;
-import org.sonarqube.pageobjects.Navigation;
 
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
 import static util.ItUtils.resetSettings;
 import static util.ItUtils.setServerProperty;
-import static util.selenium.Selenese.runSelenese;
 
 public class LocalAuthenticationTest {
 
@@ -134,9 +132,18 @@ public class LocalAuthenticationTest {
   }
 
   @Test
-  @Ignore
   public void web_login_form_should_support_utf8_passwords() {
-    // TODO selenium
+    String login = "user_with_utf8_password";
+    // see http://www.cl.cam.ac.uk/~mgk25/ucs/examples/UTF-8-test.txt
+    String password = "κόσμε";
+
+    // create user with a UTF-8 password
+    tester.users().generate(u -> u.setLogin(login).setPassword(password));
+
+    tester.openBrowser()
+      .logIn()
+      .submitCredentials(login, password)
+      .shouldBeLoggedIn();
   }
 
   @Test
@@ -161,7 +168,7 @@ public class LocalAuthenticationTest {
 
   @Test
   public void authentication_through_ui() {
-    runSelenese(orchestrator,
+    tester.runHtmlTests(
       "/user/LocalAuthenticationTest/login_successful.html",
       "/user/LocalAuthenticationTest/login_wrong_password.html",
       "/user/LocalAuthenticationTest/should_not_be_unlogged_when_going_to_login_page.html",
@@ -174,7 +181,7 @@ public class LocalAuthenticationTest {
 
     setServerProperty(orchestrator, "sonar.forceAuthentication", "true");
 
-    runSelenese(orchestrator,
+    tester.runHtmlTests(
       // SONAR-3473
       "/user/LocalAuthenticationTest/force-authentication.html");
   }

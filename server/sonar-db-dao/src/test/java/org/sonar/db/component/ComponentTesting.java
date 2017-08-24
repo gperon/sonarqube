@@ -69,12 +69,13 @@ public class ComponentTesting {
   }
 
   public static ComponentDto newSubView(ComponentDto viewOrSubView, String uuid, String key) {
-    return newChildComponent(uuid, viewOrSubView, viewOrSubView)
+    return newModuleDto(uuid, viewOrSubView)
       .setDbKey(key)
       .setName(key)
       .setLongName(key)
       .setScope(Scopes.PROJECT)
-      .setQualifier(Qualifiers.SUBVIEW);
+      .setQualifier(Qualifiers.SUBVIEW)
+      .setPath(null);
   }
 
   public static ComponentDto newSubView(ComponentDto viewOrSubView) {
@@ -158,10 +159,13 @@ public class ComponentTesting {
       .setQualifier(Qualifiers.APP);
   }
 
+  public static ComponentDto newProjectCopy(ComponentDto project, ComponentDto view) {
+    return newProjectCopy(Uuids.createFast(), project, view);
+  }
+
   public static ComponentDto newProjectCopy(String uuid, ComponentDto project, ComponentDto view) {
     checkNotNull(project.getId(), "The project need to be persisted before creating this technical project.");
     return newChildComponent(uuid, view, view)
-      .setUuid(uuid)
       .setDbKey(view.getDbKey() + project.getDbKey())
       .setName(project.name())
       .setLongName(project.longName())

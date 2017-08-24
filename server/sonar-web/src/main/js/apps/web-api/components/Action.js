@@ -27,32 +27,37 @@ import ResponseExample from './ResponseExample';
 import ActionChangelog from './ActionChangelog';
 import DeprecatedBadge from './DeprecatedBadge';
 import InternalBadge from './InternalBadge';
+import LinkIcon from '../../../components/icons-components/LinkIcon';
 import { TooltipsContainer } from '../../../components/mixins/tooltips-mixin';
-import type { Action as ActionType, Domain as DomainType } from '../../../api/web-api';
+/*:: import type { Action as ActionType, Domain as DomainType } from '../../../api/web-api'; */
 
+/*::
 type Props = {
   action: ActionType,
   domain: DomainType,
   showDeprecated: boolean,
   showInternal: boolean
 };
+*/
 
+/*::
 type State = {
   showChangelog: boolean,
   showParams: boolean,
   showResponse: boolean
 };
+*/
 
 export default class Action extends React.PureComponent {
-  props: Props;
+  /*:: props: Props; */
 
-  state: State = {
+  state /*: State */ = {
     showChangelog: false,
     showParams: false,
     showResponse: false
   };
 
-  handleShowParamsClick = (e: SyntheticInputEvent) => {
+  handleShowParamsClick = (e /*: SyntheticInputEvent */) => {
     e.preventDefault();
     this.setState({
       showChangelog: false,
@@ -61,7 +66,7 @@ export default class Action extends React.PureComponent {
     });
   };
 
-  handleShowResponseClick = (e: SyntheticInputEvent) => {
+  handleShowResponseClick = (e /*: SyntheticInputEvent */) => {
     e.preventDefault();
     this.setState({
       showChangelog: false,
@@ -70,7 +75,7 @@ export default class Action extends React.PureComponent {
     });
   };
 
-  handleChangelogClick = (e: SyntheticInputEvent) => {
+  handleChangelogClick = (e /*: SyntheticInputEvent */) => {
     e.preventDefault();
     this.setState({
       showChangelog: !this.state.showChangelog,
@@ -89,7 +94,11 @@ export default class Action extends React.PureComponent {
       <div id={actionKey} className="web-api-action">
         <TooltipsContainer>
           <header className="web-api-action-header">
-            <Link to={{ pathname: '/web_api/' + actionKey }} className="spacer-right icon-link" />
+            <Link
+              to={{ pathname: '/web_api/' + actionKey }}
+              className="spacer-right link-no-underline">
+              <LinkIcon />
+            </Link>
 
             <h3 className="web-api-action-title">
               {verb}&nbsp;{actionKey}

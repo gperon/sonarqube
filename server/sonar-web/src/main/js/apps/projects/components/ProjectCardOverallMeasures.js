@@ -20,18 +20,20 @@
 //@flow
 import React from 'react';
 import ProjectCardLanguages from './ProjectCardLanguages';
-import Measure from '../../component-measures/components/Measure';
+import Measure from '../../../components/measure/Measure';
 import Rating from '../../../components/ui/Rating';
 import CoverageRating from '../../../components/ui/CoverageRating';
 import DuplicationsRating from '../../../components/ui/DuplicationsRating';
 import SizeRating from '../../../components/ui/SizeRating';
 import { translate } from '../../../helpers/l10n';
 
+/*::
 type Props = {
   measures?: { [string]: string }
 };
+*/
 
-export default function ProjectCardOverallMeasures({ measures }: Props) {
+export default function ProjectCardOverallMeasures({ measures } /*: Props */) {
   if (measures == null) {
     return null;
   }
@@ -79,8 +81,10 @@ export default function ProjectCardOverallMeasures({ measures }: Props) {
                 <CoverageRating value={measures['coverage']} />
               </span>}
             <Measure
-              measure={{ value: measures['coverage'] }}
-              metric={{ key: 'coverage', type: 'PERCENT' }}
+              measure={{
+                metric: { key: 'coverage', name: 'coverage', type: 'PERCENT' },
+                value: measures['coverage']
+              }}
             />
           </div>
           <div className="project-card-measure-label">
@@ -97,8 +101,14 @@ export default function ProjectCardOverallMeasures({ measures }: Props) {
                 <DuplicationsRating value={Number(measures['duplicated_lines_density'])} />
               </span>}
             <Measure
-              measure={{ value: measures['duplicated_lines_density'] }}
-              metric={{ key: 'duplicated_lines_density', type: 'PERCENT' }}
+              measure={{
+                metric: {
+                  key: 'duplicated_lines_density',
+                  name: 'duplicated_lines_density',
+                  type: 'PERCENT'
+                },
+                value: measures['duplicated_lines_density']
+              }}
             />
           </div>
           <div className="project-card-measure-label">
@@ -115,8 +125,10 @@ export default function ProjectCardOverallMeasures({ measures }: Props) {
                 <SizeRating value={Number(measures['ncloc'])} />
               </span>
               <Measure
-                measure={{ value: measures['ncloc'] }}
-                metric={{ key: 'ncloc', type: 'SHORT_INT' }}
+                measure={{
+                  metric: { key: 'ncloc', name: 'ncloc', type: 'SHORT_INT' },
+                  value: measures['ncloc']
+                }}
               />
             </div>
             <div className="project-card-measure-label">

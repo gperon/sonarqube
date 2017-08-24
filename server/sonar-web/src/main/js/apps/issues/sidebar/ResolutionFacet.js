@@ -20,12 +20,14 @@
 // @flow
 import React from 'react';
 import { orderBy, without } from 'lodash';
-import FacetBox from './components/FacetBox';
-import FacetHeader from './components/FacetHeader';
-import FacetItem from './components/FacetItem';
-import FacetItemsList from './components/FacetItemsList';
+import FacetBox from '../../../components/facet/FacetBox';
+import FacetHeader from '../../../components/facet/FacetHeader';
+import FacetItem from '../../../components/facet/FacetItem';
+import FacetItemsList from '../../../components/facet/FacetItemsList';
 import { translate } from '../../../helpers/l10n';
+import { formatFacetStat } from '../utils';
 
+/*::
 type Props = {|
   facetMode: string,
   onChange: (changes: {}) => void,
@@ -35,9 +37,10 @@ type Props = {|
   resolutions: Array<string>,
   stats?: { [string]: number }
 |};
+*/
 
 export default class ResolutionFacet extends React.PureComponent {
-  props: Props;
+  /*:: props: Props; */
 
   static defaultProps = {
     open: true
@@ -45,7 +48,7 @@ export default class ResolutionFacet extends React.PureComponent {
 
   property = 'resolutions';
 
-  handleItemClick = (itemValue: string) => {
+  handleItemClick = (itemValue /*: string */) => {
     if (itemValue === '') {
       // unresolved
       this.props.onChange({ resolved: !this.props.resolved, resolutions: [] });
@@ -69,20 +72,20 @@ export default class ResolutionFacet extends React.PureComponent {
     this.props.onChange({ resolved: false, resolutions: [] });
   };
 
-  isFacetItemActive(resolution: string) {
+  isFacetItemActive(resolution /*: string */) {
     return resolution === '' ? !this.props.resolved : this.props.resolutions.includes(resolution);
   }
 
-  getFacetItemName(resolution: string) {
+  getFacetItemName(resolution /*: string */) {
     return resolution === '' ? translate('unresolved') : translate('issue.resolution', resolution);
   }
 
-  getStat(resolution: string): ?number {
+  getStat(resolution /*: string */) /*: ?number */ {
     const { stats } = this.props;
     return stats ? stats[resolution] : null;
   }
 
-  renderItem = (resolution: string) => {
+  renderItem = (resolution /*: string */) => {
     const active = this.isFacetItemActive(resolution);
     const stat = this.getStat(resolution);
 
@@ -90,12 +93,11 @@ export default class ResolutionFacet extends React.PureComponent {
       <FacetItem
         active={active}
         disabled={stat === 0 && !active}
-        facetMode={this.props.facetMode}
         key={resolution}
         halfWidth={true}
         name={this.getFacetItemName(resolution)}
         onClick={this.handleItemClick}
-        stat={stat}
+        stat={formatFacetStat(stat, this.props.facetMode)}
         value={resolution}
       />
     );
@@ -105,7 +107,7 @@ export default class ResolutionFacet extends React.PureComponent {
     const resolutions = ['', 'FIXED', 'FALSE-POSITIVE', 'WONTFIX', 'REMOVED'];
 
     return (
-      <FacetBox property={this.property}>
+      <FacetBox>
         <FacetHeader
           name={translate('issues.facet', this.property)}
           onClear={this.handleClear}

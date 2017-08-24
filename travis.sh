@@ -39,6 +39,12 @@ function installMaven {
   export PATH=$M2_HOME/bin:$PATH
 }
 
+function installNode {
+  set +u
+  source ~/.nvm/nvm.sh && nvm install 8
+  set -u
+}
+
 #
 # Replaces the version defined in sources, usually x.y-SNAPSHOT,
 # by a version identifying the build.
@@ -115,6 +121,7 @@ BUILD)
 
   installJdk8
   installMaven
+  installNode
   fixBuildVersion
 
   # Minimal Maven settings
@@ -134,11 +141,19 @@ BUILD)
     mvn org.jacoco:jacoco-maven-plugin:prepare-agent deploy \
           $MAVEN_ARGS \
           -Pdeploy-sonarsource,release
+        
+    #disabling incremental analysis for the time being    
+    INCREMENTAL=false
+    # Triggers a full analysis for every build number ending with 0
+    if [[ "$TRAVIS_BUILD_NUMBER" == *0 ]]; then
+      INCREMENTAL=false
+    fi
+
     mvn sonar:sonar \
+          -Dsonar.incremental=$INCREMENTAL \
           -Dsonar.host.url=$SONAR_HOST_URL \
           -Dsonar.login=$SONAR_TOKEN \
           -Dsonar.projectVersion=$INITIAL_VERSION
-
 
   elif [[ "$TRAVIS_BRANCH" == "branch-"* ]] && [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
     echo 'Build release branch'
@@ -170,8 +185,7 @@ BUILD)
   ;;
 
 WEB_TESTS)
-  set +u
-  source ~/.nvm/nvm.sh && nvm install 6
+  installNode
   curl -o- -L https://yarnpkg.com/install.sh | bash
   export PATH=$HOME/.yarn/bin:$PATH
   cd server/sonar-web && yarn && yarn validate

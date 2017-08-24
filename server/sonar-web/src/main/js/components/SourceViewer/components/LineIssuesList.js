@@ -20,20 +20,24 @@
 // @flow
 import React from 'react';
 import Issue from '../../issue/Issue';
-import type { Issue as IssueType } from '../../issue/types';
+/*:: import type { Issue as IssueType } from '../../issue/types'; */
 
+/*::
 type Props = {
   issues: Array<IssueType>,
   onIssueChange: IssueType => void,
   onIssueClick: (issueKey: string) => void,
+  onPopupToggle: (issue: string, popupName: string, open: ?boolean ) => void,
+  openPopup: ?{ issue: string, name: string},
   selectedIssue: string | null
 };
+*/
 
 export default class LineIssuesList extends React.PureComponent {
-  props: Props;
+  /*:: props: Props; */
 
   render() {
-    const { issues, onIssueClick, selectedIssue } = this.props;
+    const { issues, onIssueClick, openPopup, selectedIssue } = this.props;
 
     return (
       <div className="issue-list">
@@ -43,6 +47,8 @@ export default class LineIssuesList extends React.PureComponent {
             key={issue.key}
             onChange={this.props.onIssueChange}
             onClick={onIssueClick}
+            onPopupToggle={this.props.onPopupToggle}
+            openPopup={openPopup && openPopup.issue === issue.key ? openPopup.name : null}
             selected={selectedIssue === issue.key}
           />
         )}

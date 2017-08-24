@@ -21,15 +21,16 @@
 import React from 'react';
 import { sortBy, uniq, without } from 'lodash';
 import Avatar from '../../../components/ui/Avatar';
-import FacetBox from './components/FacetBox';
-import FacetHeader from './components/FacetHeader';
-import FacetItem from './components/FacetItem';
-import FacetItemsList from './components/FacetItemsList';
-import FacetFooter from './components/FacetFooter';
-import { searchAssignees } from '../utils';
+import FacetBox from '../../../components/facet/FacetBox';
+import FacetHeader from '../../../components/facet/FacetHeader';
+import FacetItem from '../../../components/facet/FacetItem';
+import FacetItemsList from '../../../components/facet/FacetItemsList';
+import FacetFooter from '../../../components/facet/FacetFooter';
+import { searchAssignees, formatFacetStat } from '../utils';
 import { translate } from '../../../helpers/l10n';
-import type { ReferencedUser, Component } from '../utils';
+/*:: import type { ReferencedUser, Component } from '../utils'; */
 
+/*::
 type Props = {|
   assigned: boolean,
   assignees: Array<string>,
@@ -42,9 +43,10 @@ type Props = {|
   stats?: { [string]: number },
   referencedUsers: { [string]: ReferencedUser }
 |};
+*/
 
 export default class AssigneeFacet extends React.PureComponent {
-  props: Props;
+  /*:: props: Props; */
 
   static defaultProps = {
     open: true
@@ -52,7 +54,7 @@ export default class AssigneeFacet extends React.PureComponent {
 
   property = 'assignees';
 
-  handleItemClick = (itemValue: string) => {
+  handleItemClick = (itemValue /*: string */) => {
     if (itemValue === '') {
       // unassigned
       this.props.onChange({ assigned: !this.props.assigned, assignees: [] });
@@ -74,7 +76,7 @@ export default class AssigneeFacet extends React.PureComponent {
     this.props.onChange({ assigned: true, assignees: [] });
   };
 
-  handleSearch = (query: string) => {
+  handleSearch = (query /*: string */) => {
     let organization = this.props.component && this.props.component.organization;
     if (this.props.organization && !organization) {
       organization = this.props.organization.key;
@@ -82,16 +84,16 @@ export default class AssigneeFacet extends React.PureComponent {
     return searchAssignees(query, organization);
   };
 
-  handleSelect = (assignee: string) => {
+  handleSelect = (assignee /*: string */) => {
     const { assignees } = this.props;
     this.props.onChange({ assigned: true, [this.property]: uniq([...assignees, assignee]) });
   };
 
-  isAssigneeActive(assignee: string) {
+  isAssigneeActive(assignee /*: string */) {
     return assignee === '' ? !this.props.assigned : this.props.assignees.includes(assignee);
   }
 
-  getAssigneeName(assignee: string): React.Element<*> | string {
+  getAssigneeName(assignee /*: string */) /*: React.Element<*> | string */ {
     if (assignee === '') {
       return translate('unassigned');
     } else {
@@ -114,12 +116,12 @@ export default class AssigneeFacet extends React.PureComponent {
     }
   }
 
-  getStat(assignee: string): ?number {
+  getStat(assignee /*: string */) /*: ?number */ {
     const { stats } = this.props;
     return stats ? stats[assignee] : null;
   }
 
-  renderOption = (option: { avatar: string, label: string }) => {
+  renderOption = (option /*: { avatar: string, label: string } */) => {
     return (
       <span>
         {option.avatar != null &&
@@ -154,11 +156,10 @@ export default class AssigneeFacet extends React.PureComponent {
         {assignees.map(assignee =>
           <FacetItem
             active={this.isAssigneeActive(assignee)}
-            facetMode={this.props.facetMode}
             key={assignee}
             name={this.getAssigneeName(assignee)}
             onClick={this.handleItemClick}
-            stat={this.getStat(assignee)}
+            stat={formatFacetStat(this.getStat(assignee), this.props.facetMode)}
             value={assignee}
           />
         )}
@@ -182,7 +183,7 @@ export default class AssigneeFacet extends React.PureComponent {
 
   render() {
     return (
-      <FacetBox property={this.property}>
+      <FacetBox>
         <FacetHeader
           name={translate('issues.facet', this.property)}
           onClear={this.handleClear}

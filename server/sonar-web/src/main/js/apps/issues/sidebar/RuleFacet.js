@@ -20,14 +20,16 @@
 // @flow
 import React from 'react';
 import { sortBy, uniq, without } from 'lodash';
-import FacetBox from './components/FacetBox';
-import FacetHeader from './components/FacetHeader';
-import FacetItem from './components/FacetItem';
-import FacetItemsList from './components/FacetItemsList';
-import FacetFooter from './components/FacetFooter';
+import FacetBox from '../../../components/facet/FacetBox';
+import FacetHeader from '../../../components/facet/FacetHeader';
+import FacetItem from '../../../components/facet/FacetItem';
+import FacetItemsList from '../../../components/facet/FacetItemsList';
+import FacetFooter from '../../../components/facet/FacetFooter';
 import { searchRules } from '../../../api/rules';
 import { translate } from '../../../helpers/l10n';
+import { formatFacetStat } from '../utils';
 
+/*::
 type Props = {|
   facetMode: string,
   languages: Array<string>,
@@ -38,9 +40,10 @@ type Props = {|
   referencedRules: { [string]: { name: string } },
   rules: Array<string>
 |};
+*/
 
 export default class RuleFacet extends React.PureComponent {
-  props: Props;
+  /*:: props: Props; */
 
   static defaultProps = {
     open: true
@@ -48,7 +51,7 @@ export default class RuleFacet extends React.PureComponent {
 
   property = 'rules';
 
-  handleItemClick = (itemValue: string) => {
+  handleItemClick = (itemValue /*: string */) => {
     const { rules } = this.props;
     const newValue = sortBy(
       rules.includes(itemValue) ? without(rules, itemValue) : [...rules, itemValue]
@@ -64,7 +67,7 @@ export default class RuleFacet extends React.PureComponent {
     this.props.onChange({ [this.property]: [] });
   };
 
-  handleSearch = (query: string) => {
+  handleSearch = (query /*: string */) => {
     const { languages } = this.props;
     return searchRules({
       f: 'name,langName',
@@ -75,17 +78,17 @@ export default class RuleFacet extends React.PureComponent {
     );
   };
 
-  handleSelect = (rule: string) => {
+  handleSelect = (rule /*: string */) => {
     const { rules } = this.props;
     this.props.onChange({ [this.property]: uniq([...rules, rule]) });
   };
 
-  getRuleName(rule: string): string {
+  getRuleName(rule /*: string */) /*: string */ {
     const { referencedRules } = this.props;
     return referencedRules[rule] ? referencedRules[rule].name : rule;
   }
 
-  getStat(rule: string): ?number {
+  getStat(rule /*: string */) /*: ?number */ {
     const { stats } = this.props;
     return stats ? stats[rule] : null;
   }
@@ -104,11 +107,10 @@ export default class RuleFacet extends React.PureComponent {
         {rules.map(rule =>
           <FacetItem
             active={this.props.rules.includes(rule)}
-            facetMode={this.props.facetMode}
             key={rule}
             name={this.getRuleName(rule)}
             onClick={this.handleItemClick}
-            stat={this.getStat(rule)}
+            stat={formatFacetStat(this.getStat(rule), this.props.facetMode)}
             value={rule}
           />
         )}
@@ -126,7 +128,7 @@ export default class RuleFacet extends React.PureComponent {
 
   render() {
     return (
-      <FacetBox property={this.property}>
+      <FacetBox>
         <FacetHeader
           name={translate('issues.facet', this.property)}
           onClear={this.handleClear}

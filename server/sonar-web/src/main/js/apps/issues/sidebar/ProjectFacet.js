@@ -20,17 +20,19 @@
 // @flow
 import React from 'react';
 import { sortBy, uniq, without } from 'lodash';
-import FacetBox from './components/FacetBox';
-import FacetHeader from './components/FacetHeader';
-import FacetItem from './components/FacetItem';
-import FacetItemsList from './components/FacetItemsList';
-import FacetFooter from './components/FacetFooter';
-import type { ReferencedComponent, Component } from '../utils';
+import FacetBox from '../../../components/facet/FacetBox';
+import FacetHeader from '../../../components/facet/FacetHeader';
+import FacetItem from '../../../components/facet/FacetItem';
+import FacetItemsList from '../../../components/facet/FacetItemsList';
+import FacetFooter from '../../../components/facet/FacetFooter';
 import Organization from '../../../components/shared/Organization';
 import QualifierIcon from '../../../components/shared/QualifierIcon';
 import { searchProjects, getTree } from '../../../api/components';
 import { translate } from '../../../helpers/l10n';
+import { formatFacetStat } from '../utils';
+/*:: import type { ReferencedComponent, Component } from '../utils'; */
 
+/*::
 type Props = {|
   component?: Component,
   facetMode: string,
@@ -42,9 +44,10 @@ type Props = {|
   referencedComponents: { [string]: ReferencedComponent },
   projects: Array<string>
 |};
+*/
 
 export default class ProjectFacet extends React.PureComponent {
-  props: Props;
+  /*:: props: Props; */
 
   static defaultProps = {
     open: true
@@ -52,7 +55,7 @@ export default class ProjectFacet extends React.PureComponent {
 
   property = 'projects';
 
-  handleItemClick = (itemValue: string) => {
+  handleItemClick = (itemValue /*: string */) => {
     const { projects } = this.props;
     const newValue = sortBy(
       projects.includes(itemValue) ? without(projects, itemValue) : [...projects, itemValue]
@@ -68,7 +71,7 @@ export default class ProjectFacet extends React.PureComponent {
     this.props.onChange({ [this.property]: [] });
   };
 
-  handleSearch = (query: string) => {
+  handleSearch = (query /*: string */) => {
     const { component, organization } = this.props;
     if (component != null && ['VW', 'SVW', 'APP'].includes(component.qualifier)) {
       return getTree(component.key, { ps: 50, q: query, qualifiers: 'TRK' }).then(response =>
@@ -93,17 +96,17 @@ export default class ProjectFacet extends React.PureComponent {
     );
   };
 
-  handleSelect = (rule: string) => {
+  handleSelect = (rule /*: string */) => {
     const { projects } = this.props;
     this.props.onChange({ [this.property]: uniq([...projects, rule]) });
   };
 
-  getStat(project: string): ?number {
+  getStat(project /*: string */) /*: ?number */ {
     const { stats } = this.props;
     return stats ? stats[project] : null;
   }
 
-  renderName(project: string): React.Element<*> | string {
+  renderName(project /*: string */) /*: React.Element<*> | string */ {
     const { organization, referencedComponents } = this.props;
     return referencedComponents[project]
       ? <span>
@@ -121,7 +124,7 @@ export default class ProjectFacet extends React.PureComponent {
         </span>;
   }
 
-  renderOption = (option: { label: string, organization: string }) => {
+  renderOption = (option /*: { label: string, organization: string } */) => {
     return (
       <span>
         <Organization link={false} organizationKey={option.organization} />
@@ -144,11 +147,10 @@ export default class ProjectFacet extends React.PureComponent {
         {projects.map(project =>
           <FacetItem
             active={this.props.projects.includes(project)}
-            facetMode={this.props.facetMode}
             key={project}
             name={this.renderName(project)}
             onClick={this.handleItemClick}
-            stat={this.getStat(project)}
+            stat={formatFacetStat(this.getStat(project), this.props.facetMode)}
             value={project}
           />
         )}
@@ -173,7 +175,7 @@ export default class ProjectFacet extends React.PureComponent {
 
   render() {
     return (
-      <FacetBox property={this.property}>
+      <FacetBox>
         <FacetHeader
           name={translate('issues.facet', this.property)}
           onClear={this.handleClear}

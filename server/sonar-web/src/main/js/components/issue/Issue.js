@@ -19,14 +19,15 @@
  */
 // @flow
 import React from 'react';
-import PropTypes from 'prop-types';
 import key from 'keymaster';
+import PropTypes from 'prop-types';
 import IssueView from './IssueView';
-import { updateIssue } from './actions';
-import { setIssueAssignee } from '../../api/issues';
 import { onFail } from '../../store/rootActions';
-import type { Issue } from './types';
+import { setIssueAssignee } from '../../api/issues';
+import { updateIssue } from './actions';
+/*:: import type { Issue } from './types'; */
 
+/*::
 type Props = {|
   checked?: boolean,
   issue: Issue,
@@ -34,17 +35,14 @@ type Props = {|
   onCheck?: string => void,
   onClick: string => void,
   onFilter?: (property: string, issue: Issue) => void,
+  onPopupToggle: (issue: string, popupName: string, open: ?boolean ) => void,
+  openPopup: ?string,
   selected: boolean
 |};
-
-type State = {
-  currentPopup: string
-};
+*/
 
 export default class BaseIssue extends React.PureComponent {
-  mounted: boolean;
-  props: Props;
-  state: State;
+  /*:: props: Props; */
 
   static contextTypes = {
     store: PropTypes.object
@@ -54,34 +52,25 @@ export default class BaseIssue extends React.PureComponent {
     selected: false
   };
 
-  constructor(props: Props) {
-    super(props);
-    this.state = {
-      currentPopup: ''
-    };
-  }
-
   componentDidMount() {
-    this.mounted = true;
     if (this.props.selected) {
       this.bindShortcuts();
     }
   }
 
-  componentWillUpdate(nextProps: Props) {
+  componentWillUpdate(nextProps /*: Props */) {
     if (!nextProps.selected && this.props.selected) {
       this.unbindShortcuts();
     }
   }
 
-  componentDidUpdate(prevProps: Props) {
+  componentDidUpdate(prevProps /*: Props */) {
     if (!prevProps.selected && this.props.selected) {
       this.bindShortcuts();
     }
   }
 
   componentWillUnmount() {
-    this.mounted = false;
     if (this.props.selected) {
       this.unbindShortcuts();
     }
@@ -112,6 +101,12 @@ export default class BaseIssue extends React.PureComponent {
       this.togglePopup('edit-tags');
       return false;
     });
+    key('space', 'issues', () => {
+      if (this.props.onCheck) {
+        this.props.onCheck(this.props.issue.key);
+        return false;
+      }
+    });
   }
 
   unbindShortcuts() {
@@ -120,23 +115,15 @@ export default class BaseIssue extends React.PureComponent {
     key.unbind('m', 'issues');
     key.unbind('i', 'issues');
     key.unbind('c', 'issues');
+    key.unbind('space', 'issues');
     key.unbind('t', 'issues');
   }
 
-  togglePopup = (popupName: string, open?: boolean) => {
-    if (this.mounted) {
-      this.setState((prevState: State) => {
-        if (prevState.currentPopup !== popupName && open !== false) {
-          return { currentPopup: popupName };
-        } else if (prevState.currentPopup === popupName && open !== true) {
-          return { currentPopup: '' };
-        }
-        return prevState;
-      });
-    }
+  togglePopup = (popupName /*: string */, open /*: ?boolean */) => {
+    this.props.onPopupToggle(this.props.issue.key, popupName, open);
   };
 
-  handleAssignement = (login: string) => {
+  handleAssignement = (login /*: string */) => {
     const { issue } = this.props;
     if (issue.assignee !== login) {
       updateIssue(
@@ -148,7 +135,7 @@ export default class BaseIssue extends React.PureComponent {
     this.togglePopup('assign', false);
   };
 
-  handleFail = (error: Error) => {
+  handleFail = (error /*: Error */) => {
     onFail(this.context.store.dispatch)(error);
   };
 
@@ -164,7 +151,7 @@ export default class BaseIssue extends React.PureComponent {
         onFilter={this.props.onFilter}
         onChange={this.props.onChange}
         togglePopup={this.togglePopup}
-        currentPopup={this.state.currentPopup}
+        currentPopup={this.props.openPopup}
         selected={this.props.selected}
       />
     );

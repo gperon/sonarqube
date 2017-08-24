@@ -30,9 +30,10 @@ import {
   getAnalysesByVersionByDay,
   selectedDateQueryChanged
 } from '../utils';
-import type { RawQuery } from '../../../helpers/query';
-import type { Analysis, Query } from '../types';
+/*:: import type { RawQuery } from '../../../helpers/query'; */
+/*:: import type { Analysis, Query } from '../types'; */
 
+/*::
 type Props = {
   addCustomEvent: (analysis: string, name: string, category?: string) => Promise<*>,
   addVersion: (analysis: string, version: string) => Promise<*>,
@@ -43,19 +44,20 @@ type Props = {
   changeEvent: (event: string, name: string) => Promise<*>,
   deleteAnalysis: (analysis: string) => Promise<*>,
   deleteEvent: (analysis: string, event: string) => Promise<*>,
-  loading: boolean,
+  initializing: boolean,
   project: { qualifier: string },
   query: Query,
-  updateQuery: RawQuery => void
+  updateQuery: Object => void
 };
+*/
 
 export default class ProjectActivityAnalysesList extends React.PureComponent {
-  analyses: HTMLCollection<HTMLElement>;
-  badges: HTMLCollection<HTMLElement>;
-  props: Props;
-  scrollContainer: HTMLElement;
+  /*:: analyses: HTMLCollection<HTMLElement>; */
+  /*:: badges: HTMLCollection<HTMLElement>; */
+  /*:: props: Props; */
+  /*:: scrollContainer: HTMLElement; */
 
-  constructor(props: Props) {
+  constructor(props /*: Props */) {
     super(props);
     this.handleScroll = throttle(this.handleScroll, 20);
   }
@@ -65,7 +67,7 @@ export default class ProjectActivityAnalysesList extends React.PureComponent {
     this.analyses = document.getElementsByClassName('project-activity-analysis');
   }
 
-  componentDidUpdate(prevProps: Props) {
+  componentDidUpdate(prevProps /*: Props */) {
     if (!this.scrollContainer) {
       return;
     }
@@ -82,7 +84,7 @@ export default class ProjectActivityAnalysesList extends React.PureComponent {
 
   handleScroll = () => this.updateStickyBadges(true);
 
-  resetScrollTop = (newScrollTop: number, forceBadgeAlignement?: boolean) => {
+  resetScrollTop = (newScrollTop /*: number */, forceBadgeAlignement /*: ?boolean */) => {
     this.scrollContainer.scrollTop = newScrollTop;
     for (let i = 1; i < this.badges.length; i++) {
       this.badges[i].removeAttribute('originOffsetTop');
@@ -91,7 +93,7 @@ export default class ProjectActivityAnalysesList extends React.PureComponent {
     this.updateStickyBadges(forceBadgeAlignement);
   };
 
-  scrollToDate = (targetDate: ?Date) => {
+  scrollToDate = (targetDate /*: ?Date */) => {
     if (!this.scrollContainer || !targetDate) {
       return;
     }
@@ -109,36 +111,41 @@ export default class ProjectActivityAnalysesList extends React.PureComponent {
     }
   };
 
-  updateStickyBadges = (forceBadgeAlignement?: boolean) => {
-    if (this.scrollContainer && this.badges) {
-      const scrollTop = this.scrollContainer.scrollTop;
-      if (scrollTop != null) {
-        let newScrollTop;
-        for (let i = 1; i < this.badges.length; i++) {
-          const badge = this.badges[i];
-          let originOffsetTop = badge.getAttribute('originOffsetTop');
-          if (originOffsetTop == null) {
-            // Set the originOffsetTop attribute, to avoid using getBoundingClientRect
-            originOffsetTop = badge.offsetTop;
-            badge.setAttribute('originOffsetTop', originOffsetTop.toString());
-          }
-          if (Number(originOffsetTop) < scrollTop + 18 + i * 2) {
-            if (forceBadgeAlignement && !badge.classList.contains('sticky')) {
-              newScrollTop = originOffsetTop;
-            }
-            badge.classList.add('sticky');
-          } else {
-            badge.classList.remove('sticky');
-          }
-        }
-        if (forceBadgeAlignement && newScrollTop != null) {
-          this.scrollContainer.scrollTop = newScrollTop - 6;
-        }
+  updateStickyBadges = (forceBadgeAlignement /*: ?boolean */) => {
+    if (!this.scrollContainer || !this.badges) {
+      return;
+    }
+
+    const scrollTop = this.scrollContainer.scrollTop;
+    if (scrollTop == null) {
+      return;
+    }
+
+    let newScrollTop;
+    for (let i = 1; i < this.badges.length; i++) {
+      const badge = this.badges[i];
+      let originOffsetTop = badge.getAttribute('originOffsetTop');
+      if (originOffsetTop == null) {
+        // Set the originOffsetTop attribute, to avoid using getBoundingClientRect
+        originOffsetTop = badge.offsetTop;
+        badge.setAttribute('originOffsetTop', originOffsetTop.toString());
       }
+      if (Number(originOffsetTop) < scrollTop + 18 + i * 2) {
+        if (forceBadgeAlignement && !badge.classList.contains('sticky')) {
+          newScrollTop = originOffsetTop;
+        }
+        badge.classList.add('sticky');
+      } else {
+        badge.classList.remove('sticky');
+      }
+    }
+
+    if (forceBadgeAlignement && newScrollTop != null) {
+      this.scrollContainer.scrollTop = newScrollTop - 6;
     }
   };
 
-  updateSelectedDate = (date: Date) => this.props.updateQuery({ selectedDate: date });
+  updateSelectedDate = (date /*: Date */) => this.props.updateQuery({ selectedDate: date });
 
   render() {
     const byVersionByDay = getAnalysesByVersionByDay(this.props.analyses, this.props.query);
@@ -148,7 +155,7 @@ export default class ProjectActivityAnalysesList extends React.PureComponent {
     if (this.props.analyses.length === 0 || !hasFilteredData) {
       return (
         <div className={this.props.className}>
-          {this.props.loading
+          {this.props.initializing
             ? <div className="text-center">
                 <i className="spinner" />
               </div>

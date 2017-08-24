@@ -19,23 +19,25 @@
  */
 // @flow
 import React from 'react';
-import FacetBox from './components/FacetBox';
-import FacetHeader from './components/FacetHeader';
-import FacetItem from './components/FacetItem';
-import FacetItemsList from './components/FacetItemsList';
+import FacetBox from '../../../components/facet/FacetBox';
+import FacetHeader from '../../../components/facet/FacetHeader';
+import FacetItem from '../../../components/facet/FacetItem';
+import FacetItemsList from '../../../components/facet/FacetItemsList';
 import { translate } from '../../../helpers/l10n';
 
+/*::
 type Props = {|
   facetMode: string,
   onChange: (changes: {}) => void
 |};
+*/
 
 export default class FacetMode extends React.PureComponent {
-  props: Props;
+  /*:: props: Props; */
 
   property = 'facetMode';
 
-  handleItemClick = (itemValue: string) => {
+  handleItemClick = (itemValue /*: string */) => {
     this.props.onChange({ [this.property]: itemValue });
   };
 
@@ -44,19 +46,17 @@ export default class FacetMode extends React.PureComponent {
     const modes = ['count', 'effort'];
 
     return (
-      <FacetBox property={this.property}>
+      <FacetBox>
         <FacetHeader name={translate('issues.facet.mode')} />
 
         <FacetItemsList>
           {modes.map(mode =>
             <FacetItem
               active={facetMode === mode}
-              facetMode={this.props.facetMode}
               halfWidth={true}
               key={mode}
               name={translate('issues.facet.mode', mode)}
               onClick={this.handleItemClick}
-              stat={null}
               value={mode}
             />
           )}

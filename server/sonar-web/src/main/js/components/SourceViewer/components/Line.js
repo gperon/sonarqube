@@ -28,10 +28,11 @@ import LineDuplications from './LineDuplications';
 import LineDuplicationBlock from './LineDuplicationBlock';
 import LineIssuesIndicator from './LineIssuesIndicator';
 import LineCode from './LineCode';
-import type { SourceLine } from '../types';
-import type { LinearIssueLocation } from '../helpers/indexing';
-import type { Issue } from '../../issue/types';
+/*:: import type { SourceLine } from '../types'; */
+/*:: import type { LinearIssueLocation } from '../helpers/indexing'; */
+/*:: import type { Issue } from '../../issue/types'; */
 
+/*::
 type Props = {|
   displayAllIssues: boolean,
   displayCoverage: boolean,
@@ -61,6 +62,8 @@ type Props = {|
   onSCMClick: (SourceLine, HTMLElement) => void,
   onSymbolClick: (Array<string>) => void,
   openIssues: boolean,
+  onPopupToggle: (issue: string, popupName: string, open: ?boolean ) => void,
+  openPopup: ?{ issue: string, name: string},
   previousLine?: SourceLine,
   scroll?: HTMLElement => void,
   secondaryIssueLocations: Array<{
@@ -72,9 +75,10 @@ type Props = {|
   }>,
   selectedIssue: string | null
 |};
+*/
 
 export default class Line extends React.PureComponent {
-  props: Props;
+  /*:: props: Props; */
 
   handleIssuesIndicatorClick = () => {
     if (this.props.openIssues) {
@@ -148,6 +152,8 @@ export default class Line extends React.PureComponent {
           onIssueSelect={this.props.onIssueSelect}
           onLocationSelect={this.props.onLocationSelect}
           onSymbolClick={this.props.onSymbolClick}
+          onPopupToggle={this.props.onPopupToggle}
+          openPopup={this.props.openPopup}
           scroll={this.props.scroll}
           secondaryIssueLocations={this.props.secondaryIssueLocations}
           selectedIssue={this.props.selectedIssue}

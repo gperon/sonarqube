@@ -23,15 +23,16 @@ import { Link } from 'react-router';
 import TaskType from './TaskType';
 import QualifierIcon from '../../../components/shared/QualifierIcon';
 import Organization from '../../../components/shared/Organization';
-import { Task } from '../types';
+/*:: import type { Task } from '../types'; */
 
+/*::
 type Props = {
-  task: Task,
-  types: Array<string>
+  task: Task
 };
+*/
 
-export default function TaskComponent(props: Props) {
-  const { task, types } = props;
+export default function TaskComponent(props /*: Props */) {
+  const { task } = props;
 
   if (!task.componentKey) {
     return (
@@ -39,7 +40,7 @@ export default function TaskComponent(props: Props) {
         <span className="note">
           {task.id}
         </span>
-        {types.length > 1 && <TaskType task={task} />}
+        <TaskType task={task} />
       </td>
     );
   }
@@ -56,7 +57,7 @@ export default function TaskComponent(props: Props) {
         {task.componentName}
       </Link>
 
-      {types.length > 1 && <TaskType task={task} />}
+      <TaskType task={task} />
     </td>
   );
 }

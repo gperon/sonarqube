@@ -28,20 +28,22 @@ import Search from './Search';
 import Domain from './Domain';
 import { getActionKey, isDomainPathActive } from '../utils';
 import { translate } from '../../../helpers/l10n';
-import type { Domain as DomainType } from '../../../api/web-api';
+/*:: import type { Domain as DomainType } from '../../../api/web-api'; */
 import '../styles/web-api.css';
 
+/*::
 type State = {
   domains: Array<DomainType>,
   searchQuery: string,
   showDeprecated: boolean,
   showInternal: boolean
 };
+*/
 
 export default class WebApiApp extends React.PureComponent {
-  mounted: boolean;
-  scrollToAction: () => void;
-  state: State = {
+  /*:: mounted: boolean; */
+  /*:: scrollToAction: () => void; */
+  state /*: State */ = {
     domains: [],
     searchQuery: '',
     showDeprecated: false,
@@ -70,7 +72,7 @@ export default class WebApiApp extends React.PureComponent {
     }
   }
 
-  fetchList(cb?: () => void) {
+  fetchList(cb /*: void | () => void */) {
     fetchWebApi().then(domains => {
       if (this.mounted) {
         this.setState({ domains }, cb);
@@ -83,7 +85,7 @@ export default class WebApiApp extends React.PureComponent {
     this.scrollToElement(splat);
   };
 
-  scrollToElement(id: string) {
+  scrollToElement(id /*: string */) {
     const element = document.getElementById(id);
 
     if (element) {
@@ -115,7 +117,7 @@ export default class WebApiApp extends React.PureComponent {
     }
   }
 
-  handleSearch = (searchQuery: string) => {
+  handleSearch = (searchQuery /*: string */) => {
     this.setState({ searchQuery });
   };
 
@@ -144,43 +146,51 @@ export default class WebApiApp extends React.PureComponent {
     const domain = domains.find(domain => isDomainPathActive(domain.path, splat));
 
     return (
-      <div className="search-navigator sticky">
+      <div className="layout-page">
         <Helmet title={translate('api_documentation.page')} />
-        <div className="search-navigator-side search-navigator-side-light" style={{ top: 30 }}>
-          <div className="web-api-page-header">
-            <Link to="/web_api/">
-              <h1>
-                {translate('api_documentation.page')}
-              </h1>
-            </Link>
+        <div className="layout-page-side-outer">
+          <div className="layout-page-side" style={{ top: 30 }}>
+            <div className="layout-page-side-inner">
+              <div className="layout-page-filters">
+                <div className="web-api-page-header">
+                  <Link to="/web_api/">
+                    <h1>
+                      {translate('api_documentation.page')}
+                    </h1>
+                  </Link>
+                </div>
+
+                <Search
+                  showDeprecated={showDeprecated}
+                  showInternal={showInternal}
+                  onSearch={this.handleSearch}
+                  onToggleInternal={this.handleToggleInternal}
+                  onToggleDeprecated={this.handleToggleDeprecated}
+                />
+
+                <Menu
+                  domains={this.state.domains}
+                  showDeprecated={showDeprecated}
+                  showInternal={showInternal}
+                  searchQuery={searchQuery}
+                  splat={splat}
+                />
+              </div>
+            </div>
           </div>
-
-          <Search
-            showDeprecated={showDeprecated}
-            showInternal={showInternal}
-            onSearch={this.handleSearch}
-            onToggleInternal={this.handleToggleInternal}
-            onToggleDeprecated={this.handleToggleDeprecated}
-          />
-
-          <Menu
-            domains={this.state.domains}
-            showDeprecated={showDeprecated}
-            showInternal={showInternal}
-            searchQuery={searchQuery}
-            splat={splat}
-          />
         </div>
 
-        <div className="search-navigator-workspace">
-          {domain &&
-            <Domain
-              key={domain.path}
-              domain={domain}
-              showDeprecated={showDeprecated}
-              showInternal={showInternal}
-              searchQuery={searchQuery}
-            />}
+        <div className="layout-page-main">
+          <div className="layout-page-main-inner">
+            {domain &&
+              <Domain
+                key={domain.path}
+                domain={domain}
+                showDeprecated={showDeprecated}
+                showInternal={showInternal}
+                searchQuery={searchQuery}
+              />}
+          </div>
         </div>
       </div>
     );

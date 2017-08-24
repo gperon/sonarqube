@@ -22,8 +22,10 @@ import { getGlobalNavigation, getComponentNavigation } from '../api/nav';
 import { getComponentData } from '../api/components';
 import * as auth from '../api/auth';
 import { getOrganizations } from '../api/organizations';
+import { getMetrics } from '../api/metrics';
 import { receiveLanguages } from './languages/actions';
 import { receiveComponents } from './components/actions';
+import { receiveMetrics } from './metrics/actions';
 import { addGlobalErrorMessage } from './globalMessages/duck';
 import { parseError } from '../apps/code/utils';
 import { setAppState } from './appState/duck';
@@ -35,11 +37,13 @@ export const onFail = dispatch => error =>
 export const fetchAppState = () => dispatch =>
   getGlobalNavigation().then(appState => dispatch(setAppState(appState)), onFail(dispatch));
 
-export const fetchLanguages = () => dispatch => {
-  return getLanguages().then(languages => dispatch(receiveLanguages(languages)), onFail(dispatch));
-};
+export const fetchLanguages = () => dispatch =>
+  getLanguages().then(languages => dispatch(receiveLanguages(languages)), onFail(dispatch));
 
-export const fetchOrganizations = (organizations?: Array<string>) => dispatch =>
+export const fetchMetrics = () => dispatch =>
+  getMetrics().then(metrics => dispatch(receiveMetrics(metrics)), onFail(dispatch));
+
+export const fetchOrganizations = (organizations /*: Array<string> | void */) => dispatch =>
   getOrganizations(organizations).then(
     r => dispatch(receiveOrganizations(r.organizations)),
     onFail(dispatch)

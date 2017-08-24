@@ -23,24 +23,27 @@ import { Link } from 'react-router';
 import IssueChangelog from './IssueChangelog';
 import IssueMessage from './IssueMessage';
 import SimilarIssuesFilter from './SimilarIssuesFilter';
+import LinkIcon from '../../../components/icons-components/LinkIcon';
 import LocationIndex from '../../common/LocationIndex';
 import Tooltip from '../../controls/Tooltip';
 import { getComponentIssuesUrl } from '../../../helpers/urls';
 import { formatMeasure } from '../../../helpers/measures';
 import { translate, translateWithParameters } from '../../../helpers/l10n';
-import type { Issue } from '../types';
+/*:: import type { Issue } from '../types'; */
 
+/*::
 type Props = {|
   issue: Issue,
-  currentPopup: string,
+  currentPopup: ?string,
   onFail: Error => void,
   onFilter?: (property: string, issue: Issue) => void,
   togglePopup: (string, boolean | void) => void
 |};
+*/
 
-const stopPropagation = (event: Event) => event.stopPropagation();
+const stopPropagation = (event /*: Event */) => event.stopPropagation();
 
-export default function IssueTitleBar(props: Props) {
+export default function IssueTitleBar(props /*: Props */) {
   const { issue } = props;
   const hasSimilarIssuesFilter = props.onFilter != null;
 
@@ -104,11 +107,12 @@ export default function IssueTitleBar(props: Props) {
                 </li>}
               <li className="issue-meta">
                 <Link
-                  className="js-issue-permalink icon-link"
+                  className="js-issue-permalink link-no-underline"
                   onClick={stopPropagation}
                   target="_blank"
-                  to={issueUrl}
-                />
+                  to={issueUrl}>
+                  <LinkIcon />
+                </Link>
               </li>
               {hasSimilarIssuesFilter &&
                 <li className="issue-meta">

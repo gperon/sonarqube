@@ -20,9 +20,10 @@
 // @flow
 import React from 'react';
 import ListItem from './ListItem';
-import type { Issue } from '../../../components/issue/types';
-import type { Component } from '../utils';
+/*:: import type { Issue } from '../../../components/issue/types'; */
+/*:: import type { Component } from '../utils'; */
 
+/*::
 type Props = {|
   checked: Array<string>,
   component?: Component,
@@ -31,15 +32,18 @@ type Props = {|
   onIssueChange: Issue => void,
   onIssueCheck?: string => void,
   onIssueClick: string => void,
+  onPopupToggle: (issue: string, popupName: string, open: ?boolean ) => void,
+  openPopup: ?{ issue: string, name: string},
   organization?: { key: string },
   selectedIssue: ?Issue
 |};
+*/
 
 export default class IssuesList extends React.PureComponent {
-  props: Props;
+  /*:: props: Props; */
 
   render() {
-    const { checked, component, issues, selectedIssue } = this.props;
+    const { checked, component, issues, openPopup, selectedIssue } = this.props;
 
     return (
       <div>
@@ -53,6 +57,8 @@ export default class IssuesList extends React.PureComponent {
             onCheck={this.props.onIssueCheck}
             onClick={this.props.onIssueClick}
             onFilterChange={this.props.onFilterChange}
+            onPopupToggle={this.props.onPopupToggle}
+            openPopup={openPopup && openPopup.issue === issue.key ? openPopup.name : null}
             organization={this.props.organization}
             previousIssue={index > 0 ? issues[index - 1] : null}
             selected={selectedIssue != null && selectedIssue.key === issue.key}

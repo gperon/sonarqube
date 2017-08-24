@@ -24,25 +24,35 @@ import Avatar from '../../../components/ui/Avatar';
 import BubblePopupHelper from '../../../components/common/BubblePopupHelper';
 import CommentDeletePopup from '../popups/CommentDeletePopup';
 import CommentPopup from '../popups/CommentPopup';
-import type { IssueComment } from '../types';
+/*:: import type { IssueComment } from '../types'; */
 
+/*::
 type Props = {
   comment: IssueComment,
   onDelete: string => void,
   onEdit: (string, string) => void
 };
+*/
 
+/*::
 type State = {
   openPopup: string
 };
+*/
 
 export default class IssueCommentLine extends React.PureComponent {
-  props: Props;
-  state: State = {
+  /*:: props: Props; */
+  state /*: State */ = {
     openPopup: ''
   };
 
-  handleEdit = (text: string) => {
+  handleCommentClick = (event /*: Event & {target: HTMLElement}*/) => {
+    if (event.target.tagName === 'A') {
+      event.stopPropagation();
+    }
+  };
+
+  handleEdit = (text /*: string */) => {
     this.props.onEdit(this.props.comment.key, text);
     this.toggleEditPopup(false);
   };
@@ -52,8 +62,8 @@ export default class IssueCommentLine extends React.PureComponent {
     this.toggleDeletePopup(false);
   };
 
-  togglePopup = (popupName: string, force?: boolean) => {
-    this.setState((prevState: State) => {
+  togglePopup = (popupName /*: string */, force /*: ?boolean */) => {
+    this.setState((prevState /*: State */) => {
       if (prevState.openPopup !== popupName && force !== false) {
         return { openPopup: popupName };
       } else if (prevState.openPopup === popupName && force !== true) {
@@ -63,9 +73,9 @@ export default class IssueCommentLine extends React.PureComponent {
     });
   };
 
-  toggleDeletePopup = (force?: boolean) => this.togglePopup('delete', force);
+  toggleDeletePopup = (force /*: ?boolean */) => this.togglePopup('delete', force);
 
-  toggleEditPopup = (force?: boolean) => this.togglePopup('edit', force);
+  toggleEditPopup = (force /*: ?boolean */) => this.togglePopup('edit', force);
 
   render() {
     const { comment } = this.props;
@@ -83,6 +93,9 @@ export default class IssueCommentLine extends React.PureComponent {
         <div
           className="issue-comment-text markdown"
           dangerouslySetInnerHTML={{ __html: comment.htmlText }}
+          onClick={this.handleCommentClick}
+          role="Listitem"
+          tabIndex={0}
         />
         <div className="issue-comment-age">
           ({moment(comment.createdAt).fromNow()})

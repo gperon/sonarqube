@@ -20,12 +20,14 @@
 import React from 'react';
 import moment from 'moment';
 import { isEqual, sortBy } from 'lodash';
+import DeferredSpinner from '../../../components/common/DeferredSpinner';
 import GraphHistory from './GraphHistory';
 import { EVENT_TYPES, getSeriesMetricType, hasHistoryData, isCustomGraph } from '../utils';
 import { translate } from '../../../helpers/l10n';
-import type { Analysis, MeasureHistory } from '../types';
-import type { Serie } from '../../../components/charts/AdvancedTimeline';
+/*:: import type { Analysis, MeasureHistory } from '../types'; */
+/*:: import type { Serie } from '../../../components/charts/AdvancedTimeline'; */
 
+/*::
 type Props = {
   analyses: Array<Analysis>,
   eventFilter: string,
@@ -42,23 +44,26 @@ type Props = {
   updateGraphZoom: (from: ?Date, to: ?Date) => void,
   updateSelectedDate: (selectedDate: ?Date) => void
 };
+*/
 
+/*::
 type State = {
   selectedDate?: ?Date
 };
+*/
 
 export default class GraphsHistory extends React.PureComponent {
-  props: Props;
-  state: State;
+  /*:: props: Props; */
+  /*:: state: State; */
 
-  constructor(props: Props) {
+  constructor(props /*: Props */) {
     super(props);
     this.state = {
       selectedDate: props.selectedDate
     };
   }
 
-  componentWillReceiveProps(nextProps: Props) {
+  componentWillReceiveProps(nextProps /*: Props */) {
     if (!isEqual(nextProps.selectedDate, this.props.selectedDate)) {
       this.setState({ selectedDate: nextProps.selectedDate });
     }
@@ -102,17 +107,17 @@ export default class GraphsHistory extends React.PureComponent {
     return [];
   };
 
-  updateTooltip = (selectedDate: ?Date) => this.setState({ selectedDate });
+  updateTooltip = (selectedDate /*: ?Date */) => this.setState({ selectedDate });
 
   render() {
-    const { graph, series } = this.props;
+    const { graph, loading, series } = this.props;
     const isCustom = isCustomGraph(graph);
 
-    if (this.props.loading) {
+    if (loading) {
       return (
         <div className="project-activity-graph-container">
           <div className="text-center">
-            <i className="spinner" />
+            <DeferredSpinner className="" loading={loading} />
           </div>
         </div>
       );
