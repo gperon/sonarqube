@@ -57,6 +57,7 @@ public class HttpConnector implements WsConnector {
    */
   private final HttpUrl baseUrl;
   private final String credentials;
+  private final String systemPassCode;
   private final OkHttpClient okHttpClient;
 
   private HttpConnector(Builder builder) {
@@ -74,6 +75,7 @@ public class HttpConnector implements WsConnector {
       // the Basic credentials consider an empty password.
       this.credentials = Credentials.basic(builder.login, nullToEmpty(builder.password));
     }
+    this.systemPassCode = builder.systemPassCode;
     okHttpClientBuilder.setProxy(builder.proxy);
     okHttpClientBuilder.setProxyLogin(builder.proxyLogin);
     okHttpClientBuilder.setProxyPassword(builder.proxyPassword);
@@ -159,11 +161,16 @@ public class HttpConnector implements WsConnector {
   private Request.Builder prepareOkRequestBuilder(WsRequest getRequest, HttpUrl.Builder urlBuilder) {
     Request.Builder okHttpRequestBuilder = new Request.Builder()
       .url(urlBuilder.build())
-      .addHeader("Accept", getRequest.getMediaType())
-      .addHeader("Accept-Charset", "UTF-8");
+      .header("Accept", getRequest.getMediaType())
+      .header("Accept-Charset", "UTF-8");
     if (credentials != null) {
       okHttpRequestBuilder.header("Authorization", credentials);
     }
+    if (systemPassCode != null) {
+      okHttpRequestBuilder.header("X-Sonar-Passcode", systemPassCode);
+    }
+    getRequest.getHeaders().getNames().forEach(name ->
+      okHttpRequestBuilder.header(name, getRequest.getHeaders().getValue(name).get()));
     return okHttpRequestBuilder;
   }
 
@@ -192,6 +199,7 @@ public class HttpConnector implements WsConnector {
     private Proxy proxy;
     private String proxyLogin;
     private String proxyPassword;
+    private String systemPassCode;
     private int connectTimeoutMs = DEFAULT_CONNECT_TIMEOUT_MILLISECONDS;
     private int readTimeoutMs = DEFAULT_READ_TIMEOUT_MILLISECONDS;
     private SSLSocketFactory sslSocketFactory = null;
@@ -199,6 +207,7 @@ public class HttpConnector implements WsConnector {
 
     /**
      * Private since 5.5.
+     *
      * @see HttpConnector#newBuilder()
      */
     private Builder() {
@@ -282,6 +291,11 @@ public class HttpConnector implements WsConnector {
     public Builder proxyCredentials(@Nullable String proxyLogin, @Nullable String proxyPassword) {
       this.proxyLogin = proxyLogin;
       this.proxyPassword = proxyPassword;
+      return this;
+    }
+
+    public Builder systemPassCode(@Nullable String systemPassCode) {
+      this.systemPassCode = systemPassCode;
       return this;
     }
 

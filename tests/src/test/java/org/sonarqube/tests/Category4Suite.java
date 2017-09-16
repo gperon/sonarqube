@@ -42,6 +42,7 @@ import org.sonarqube.tests.serverSystem.HttpHeadersTest;
 import org.sonarqube.tests.serverSystem.LogsTest;
 import org.sonarqube.tests.serverSystem.PingTest;
 import org.sonarqube.tests.serverSystem.ServerSystemTest;
+import org.sonarqube.tests.serverSystem.SystemInfoTest;
 import org.sonarqube.tests.ui.SourceViewerTest;
 import org.sonarqube.tests.ui.UiExtensionsTest;
 import org.sonarqube.tests.ui.UiTest;
@@ -63,6 +64,7 @@ import static util.ItUtils.xooPlugin;
   RootUserTest.class,
   // server system
   ServerSystemTest.class,
+  SystemInfoTest.class,
   PingTest.class,
   // user
   MyAccountPageTest.class,
@@ -125,11 +127,8 @@ public class Category4Suite {
     // Used by LogsTest
     .setServerProperty("sonar.web.accessLogs.pattern", LogsTest.ACCESS_LOGS_PATTERN)
 
-    // reduce xmx and xms from 2g (default) to 1g
-    .setServerProperty("sonar.search.javaOpts", "-Xms512m -Xmx512m -XX:+UseConcMarkSweepGC -XX:CMSInitiatingOccupancyFraction=75 -XX:+UseCMSInitiatingOccupancyOnly" +
-      " -XX:+AlwaysPreTouch -server -Xss1m -Djava.awt.headless=true -Dfile.encoding=UTF-8 -Djna.nosys=true" +
-      " -Djdk.io.permissionsUseCanonicalPath=true -Dio.netty.noUnsafe=true -Dio.netty.noKeySetOptimization=true" +
-      " -Dio.netty.recycler.maxCapacityPerThread=0 -Dlog4j.shutdownHookEnabled=false -Dlog4j2.disable.jmx=true -Dlog4j.skipJansi=true -XX:+HeapDumpOnOutOfMemoryError")
+    // reduce memory for Elasticsearch to 128M
+    .setServerProperty("sonar.search.javaOpts", "-Xms128m -Xmx128m")
 
     .build();
 }

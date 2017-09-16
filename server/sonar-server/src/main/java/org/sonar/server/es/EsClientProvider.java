@@ -20,21 +20,37 @@
 package org.sonar.server.es;
 
 import com.google.common.net.HostAndPort;
+import io.netty.util.ThreadDeathWatcher;
+import io.netty.util.concurrent.GlobalEventExecutor;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.elasticsearch.client.transport.TransportClient;
+import org.elasticsearch.common.network.NetworkModule;
+import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.common.transport.TransportAddress;
-import org.elasticsearch.transport.client.PreBuiltTransportClient;
+import org.elasticsearch.index.reindex.ReindexPlugin;
+import org.elasticsearch.join.ParentJoinPlugin;
+import org.elasticsearch.percolator.PercolatorPlugin;
+import org.elasticsearch.transport.Netty4Plugin;
 import org.picocontainer.injectors.ProviderAdapter;
 import org.sonar.api.ce.ComputeEngineSide;
 import org.sonar.api.config.Configuration;
 import org.sonar.api.server.ServerSide;
 import org.sonar.api.utils.log.Logger;
 import org.sonar.api.utils.log.Loggers;
+import org.sonar.cluster.NodeType;
 import org.sonar.process.ProcessProperties;
+
+import static java.util.Collections.unmodifiableList;
+import static org.sonar.cluster.ClusterProperties.CLUSTER_ENABLED;
+import static org.sonar.cluster.ClusterProperties.CLUSTER_NAME;
+import static org.sonar.cluster.ClusterProperties.CLUSTER_NODE_TYPE;
+import static org.sonar.cluster.ClusterProperties.CLUSTER_SEARCH_HOSTS;
+import static org.sonar.cluster.NodeType.SEARCH;
 
 @ComputeEngineSide
 @ServerSide
@@ -46,22 +62,21 @@ public class EsClientProvider extends ProviderAdapter {
 
   public EsClient provide(Configuration config) {
     if (cache == null) {
-      TransportClient nativeClient;
-      org.elasticsearch.common.settings.Settings.Builder esSettings = org.elasticsearch.common.settings.Settings.builder();
+      Settings.Builder esSettings = Settings.builder();
 
       // mandatory property defined by bootstrap process
-      esSettings.put("cluster.name", config.get(ProcessProperties.CLUSTER_NAME).get());
+      esSettings.put("cluster.name", config.get(CLUSTER_NAME).get());
 
-      boolean clusterEnabled = config.getBoolean(ProcessProperties.CLUSTER_ENABLED).orElse(false);
-      if (clusterEnabled && config.getBoolean(ProcessProperties.CLUSTER_SEARCH_DISABLED).orElse(false)) {
+      boolean clusterEnabled = config.getBoolean(CLUSTER_ENABLED).orElse(false);
+      boolean searchNode = !clusterEnabled || SEARCH.equals(NodeType.parse(config.get(CLUSTER_NODE_TYPE).orElse(null)));
+      final TransportClient nativeClient = new MinimalTransportClient(esSettings.build());
+      if (clusterEnabled && !searchNode) {
         esSettings.put("client.transport.sniff", true);
-        nativeClient = new PreBuiltTransportClient(esSettings.build());
-        Arrays.stream(config.getStringArray(ProcessProperties.CLUSTER_SEARCH_HOSTS))
+        Arrays.stream(config.getStringArray(CLUSTER_SEARCH_HOSTS))
           .map(HostAndPort::fromString)
           .forEach(h -> addHostToClient(h, nativeClient));
         LOGGER.info("Connected to remote Elasticsearch: [{}]", displayedAddresses(nativeClient));
       } else {
-        nativeClient = new PreBuiltTransportClient(esSettings.build());
         HostAndPort host = HostAndPort.fromParts(config.get(ProcessProperties.SEARCH_HOST).get(), config.getInt(ProcessProperties.SEARCH_PORT).get());
         addHostToClient(host, nativeClient);
         LOGGER.info("Connected to local Elasticsearch: [{}]", displayedAddresses(nativeClient));
@@ -82,5 +97,30 @@ public class EsClientProvider extends ProviderAdapter {
 
   private static String displayedAddresses(TransportClient nativeClient) {
     return nativeClient.transportAddresses().stream().map(TransportAddress::toString).collect(Collectors.joining(", "));
+  }
+
+  static class MinimalTransportClient extends TransportClient {
+
+    MinimalTransportClient(Settings settings) {
+      super(settings, unmodifiableList(Arrays.asList(Netty4Plugin.class, ReindexPlugin.class, PercolatorPlugin.class, ParentJoinPlugin.class)));
+    }
+
+    @Override
+    public void close() {
+      super.close();
+      if (!NetworkModule.TRANSPORT_TYPE_SETTING.exists(settings)
+        || NetworkModule.TRANSPORT_TYPE_SETTING.get(settings).equals(Netty4Plugin.NETTY_TRANSPORT_NAME)) {
+        try {
+          GlobalEventExecutor.INSTANCE.awaitInactivity(5, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+        }
+        try {
+          ThreadDeathWatcher.awaitInactivity(5, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+        }
+      }
+    }
   }
 }

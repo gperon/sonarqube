@@ -23,27 +23,15 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.Properties;
+import org.sonar.NetworkUtils;
+
+import static org.sonar.cluster.ClusterProperties.putClusterDefaults;
 
 /**
  * Constants shared by search, web server and app processes.
  * They are almost all the properties defined in conf/sonar.properties.
  */
 public class ProcessProperties {
-  public static final String CLUSTER_ENABLED = "sonar.cluster.enabled";
-  public static final String CLUSTER_CE_DISABLED = "sonar.cluster.ce.disabled";
-  public static final String CLUSTER_SEARCH_DISABLED = "sonar.cluster.search.disabled";
-  public static final String CLUSTER_SEARCH_HOSTS = "sonar.cluster.search.hosts";
-  public static final String CLUSTER_WEB_DISABLED = "sonar.cluster.web.disabled";
-  public static final String CLUSTER_HOSTS = "sonar.cluster.hosts";
-  public static final String CLUSTER_PORT = "sonar.cluster.port";
-  public static final String CLUSTER_NETWORK_INTERFACES = "sonar.cluster.networkInterfaces";
-  public static final String CLUSTER_NAME = "sonar.cluster.name";
-  public static final String HAZELCAST_LOG_LEVEL = "sonar.log.level.app.hazelcast";
-  public static final String CLUSTER_WEB_LEADER = "sonar.cluster.web.startupLeader";
-  // Internal property used by sonar-application to share the local endpoint of Hazelcast
-  public static final String CLUSTER_LOCALENDPOINT = "sonar.cluster.hazelcast.localEndPoint";
-  // Internal property used by sonar-application to share the local UUID of the Hazelcast member
-  public static final String CLUSTER_MEMBERUUID = "sonar.cluster.hazelcast.memberUUID";
 
   public static final String JDBC_URL = "sonar.jdbc.url";
   public static final String JDBC_DRIVER_PATH = "sonar.jdbc.driverPath";
@@ -69,10 +57,12 @@ public class ProcessProperties {
   public static final String SEARCH_REPLICAS = "sonar.search.replicas";
   public static final String SEARCH_MINIMUM_MASTER_NODES = "sonar.search.minimumMasterNodes";
   public static final String SEARCH_INITIAL_STATE_TIMEOUT = "sonar.search.initialStateTimeout";
+  public static final String SEARCH_MARVEL_HOSTS = "sonar.search.marvelHosts";
 
   public static final String WEB_JAVA_OPTS = "sonar.web.javaOpts";
-
   public static final String WEB_JAVA_ADDITIONAL_OPTS = "sonar.web.javaAdditionalOpts";
+  public static final String WEB_PORT = "sonar.web.port";
+
   public static final String CE_JAVA_OPTS = "sonar.ce.javaOpts";
   public static final String CE_JAVA_ADDITIONAL_OPTS = "sonar.ce.javaAdditionalOpts";
 
@@ -80,10 +70,6 @@ public class ProcessProperties {
    * Used by Orchestrator to ask for shutdown of monitor process
    */
   public static final String ENABLE_STOP_COMMAND = "sonar.enableStopCommand";
-
-  public static final String WEB_ENFORCED_JVM_ARGS = "-Djava.awt.headless=true -Dfile.encoding=UTF-8";
-
-  public static final String CE_ENFORCED_JVM_ARGS = "-Djava.awt.headless=true -Dfile.encoding=UTF-8";
 
   public static final String HTTP_PROXY_HOST = "http.proxyHost";
   public static final String HTTPS_PROXY_HOST = "https.proxyHost";
@@ -110,7 +96,7 @@ public class ProcessProperties {
     if ("0".equals(port)) {
       String address = props.nonNullValue(addressPropertyKey);
       try {
-        props.set(portPropertyKey, String.valueOf(NetworkUtils.getNextAvailablePort(InetAddress.getByName(address))));
+        props.set(portPropertyKey, String.valueOf(NetworkUtils.INSTANCE.getNextAvailablePort(InetAddress.getByName(address))));
       } catch (UnknownHostException e) {
         throw new IllegalStateException("Cannot resolve address [" + address + "] set by property [" + addressPropertyKey + "]", e);
       }
@@ -121,25 +107,7 @@ public class ProcessProperties {
     Properties defaults = new Properties();
     defaults.put(SEARCH_HOST, InetAddress.getLoopbackAddress().getHostAddress());
     defaults.put(SEARCH_PORT, "9001");
-    defaults.put(SEARCH_JAVA_OPTS, "-Xms512m" +
-      " -Xmx512m"  +
-      " -XX:+UseConcMarkSweepGC"  +
-      " -XX:CMSInitiatingOccupancyFraction=75"  +
-      " -XX:+UseCMSInitiatingOccupancyOnly"  +
-      " -XX:+AlwaysPreTouch"  +
-      " -server"  +
-      " -Xss1m"  +
-      " -Djava.awt.headless=true"  +
-      " -Dfile.encoding=UTF-8"  +
-      " -Djna.nosys=true"  +
-      " -Djdk.io.permissionsUseCanonicalPath=true"  +
-      " -Dio.netty.noUnsafe=true"  +
-      " -Dio.netty.noKeySetOptimization=true"  +
-      " -Dio.netty.recycler.maxCapacityPerThread=0"  +
-      " -Dlog4j.shutdownHookEnabled=false"  +
-      " -Dlog4j2.disable.jmx=true"  +
-      " -Dlog4j.skipJansi=true"  +
-      " -XX:+HeapDumpOnOutOfMemoryError");
+    defaults.put(SEARCH_JAVA_OPTS, "-Xms512m -Xmx512m -XX:+HeapDumpOnOutOfMemoryError");
     defaults.put(SEARCH_JAVA_ADDITIONAL_OPTS, "");
 
     defaults.put(PATH_DATA, "data");
@@ -158,15 +126,7 @@ public class ProcessProperties {
     defaults.put(JDBC_MIN_EVICTABLE_IDLE_TIME_MILLIS, "600000");
     defaults.put(JDBC_TIME_BETWEEN_EVICTION_RUNS_MILLIS, "30000");
 
-    defaults.put(CLUSTER_ENABLED, "false");
-    defaults.put(CLUSTER_CE_DISABLED, "false");
-    defaults.put(CLUSTER_WEB_DISABLED, "false");
-    defaults.put(CLUSTER_SEARCH_DISABLED, "false");
-    defaults.put(CLUSTER_NAME, "sonarqube");
-    defaults.put(CLUSTER_NETWORK_INTERFACES, "");
-    defaults.put(CLUSTER_HOSTS, "");
-    defaults.put(CLUSTER_PORT, "9003");
-    defaults.put(HAZELCAST_LOG_LEVEL, "WARN");
+    putClusterDefaults(defaults);
 
     return defaults;
   }

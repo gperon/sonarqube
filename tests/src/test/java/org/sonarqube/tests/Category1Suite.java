@@ -20,8 +20,9 @@
 package org.sonarqube.tests;
 
 import com.sonar.orchestrator.Orchestrator;
-import org.sonarqube.tests.projectAdministration.ProjectVisibilityPageTest;
-import org.sonarqube.tests.user.UsersPageTest;
+import org.junit.ClassRule;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
 import org.sonarqube.tests.authorisation.ExecuteAnalysisPermissionTest;
 import org.sonarqube.tests.authorisation.IssuePermissionTest;
 import org.sonarqube.tests.authorisation.PermissionSearchTest;
@@ -30,19 +31,21 @@ import org.sonarqube.tests.authorisation.QualityProfileAdminPermissionTest;
 import org.sonarqube.tests.complexity.ComplexityMeasuresTest;
 import org.sonarqube.tests.customMeasure.CustomMeasuresTest;
 import org.sonarqube.tests.i18n.I18nTest;
+import org.sonarqube.tests.measure.DifferentialPeriodsTest;
 import org.sonarqube.tests.measure.MeasuresWsTest;
 import org.sonarqube.tests.measure.ProjectDashboardTest;
 import org.sonarqube.tests.measure.ProjectMeasuresPageTest;
-import org.sonarqube.tests.measure.DifferentialPeriodsTest;
 import org.sonarqube.tests.measure.SincePreviousVersionHistoryTest;
 import org.sonarqube.tests.measure.SinceXDaysHistoryTest;
 import org.sonarqube.tests.measure.TimeMachineTest;
 import org.sonarqube.tests.projectAdministration.BackgroundTasksTest;
-import org.sonarqube.tests.projectAdministration.ProjectBulkDeletionPageTest;
 import org.sonarqube.tests.projectAdministration.ProjectAdministrationTest;
+import org.sonarqube.tests.projectAdministration.ProjectBulkDeletionPageTest;
 import org.sonarqube.tests.projectAdministration.ProjectLinksPageTest;
+import org.sonarqube.tests.projectAdministration.ProjectVisibilityPageTest;
 import org.sonarqube.tests.projectSearch.ProjectsPageTest;
 import org.sonarqube.tests.qualityGate.QualityGateNotificationTest;
+import org.sonarqube.tests.qualityGate.QualityGateOnRatingMeasuresTest;
 import org.sonarqube.tests.qualityGate.QualityGateTest;
 import org.sonarqube.tests.qualityGate.QualityGateUiTest;
 import org.sonarqube.tests.settings.DeprecatedPropertiesWsTest;
@@ -52,9 +55,7 @@ import org.sonarqube.tests.settings.SettingsTest;
 import org.sonarqube.tests.sourceCode.EncodingTest;
 import org.sonarqube.tests.sourceCode.HighlightingTest;
 import org.sonarqube.tests.sourceCode.ProjectCodeTest;
-import org.junit.ClassRule;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+import org.sonarqube.tests.user.UsersPageTest;
 
 import static util.ItUtils.pluginArtifact;
 import static util.ItUtils.xooPlugin;
@@ -80,6 +81,7 @@ import static util.ItUtils.xooPlugin;
   QualityGateTest.class,
   QualityGateUiTest.class,
   QualityGateNotificationTest.class,
+  QualityGateOnRatingMeasuresTest.class,
   // authorisation
   ExecuteAnalysisPermissionTest.class,
   IssuePermissionTest.class,
@@ -127,11 +129,8 @@ public class Category1Suite {
 
     .addPlugin(pluginArtifact("posttask-plugin"))
 
-    // reduce xmx and xms from 2g (default) to 1g
-    .setServerProperty("sonar.search.javaOpts", "-Xms512m -Xmx512m -XX:+UseConcMarkSweepGC -XX:CMSInitiatingOccupancyFraction=75 -XX:+UseCMSInitiatingOccupancyOnly" +
-      " -XX:+AlwaysPreTouch -server -Xss1m -Djava.awt.headless=true -Dfile.encoding=UTF-8 -Djna.nosys=true" +
-      " -Djdk.io.permissionsUseCanonicalPath=true -Dio.netty.noUnsafe=true -Dio.netty.noKeySetOptimization=true" +
-      " -Dio.netty.recycler.maxCapacityPerThread=0 -Dlog4j.shutdownHookEnabled=false -Dlog4j2.disable.jmx=true -Dlog4j.skipJansi=true -XX:+HeapDumpOnOutOfMemoryError")
+    // reduce memory for Elasticsearch to 128M
+    .setServerProperty("sonar.search.javaOpts", "-Xms128m -Xmx128m")
 
     .addPlugin(xooPlugin())
     .build();

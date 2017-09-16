@@ -120,7 +120,10 @@ public class IssueIndexerTest {
     assertThat(doc.organizationUuid()).isEqualTo(organization.getUuid());
     assertThat(doc.assignee()).isEqualTo(issue.getAssignee());
     assertThat(doc.authorLogin()).isEqualTo(issue.getAuthorLogin());
-    assertThat(doc.componentUuid()).isEqualTo(issue.getComponentUuid());
+    assertThat(doc.componentUuid()).isEqualTo(file.uuid());
+    assertThat(doc.projectUuid()).isEqualTo(project.uuid());
+    assertThat(doc.branchUuid()).isEqualTo(project.uuid());
+    assertThat(doc.isMainBranch()).isTrue();
     assertThat(doc.closeDate()).isEqualTo(issue.getIssueCloseDate());
     assertThat(doc.creationDate()).isEqualToIgnoringMillis(issue.getIssueCreationDate());
     assertThat(doc.directoryPath()).isEqualTo(dir.path());
@@ -138,10 +141,14 @@ public class IssueIndexerTest {
     es.lockWrites(INDEX_TYPE_ISSUE);
     db.issues().insertIssue(organization);
 
-    underTest.indexOnStartup(emptySet());
-
-    assertThatIndexHasSize(0);
-    assertThatEsQueueTableHasSize(0);
+    try {
+      // FIXME : test also message
+      expectedException.expect(IllegalStateException.class);
+      underTest.indexOnStartup(emptySet());
+    } finally {
+      assertThatIndexHasSize(0);
+      assertThatEsQueueTableHasSize(0);
+    }
   }
 
   @Test
@@ -184,12 +191,15 @@ public class IssueIndexerTest {
     es.lockWrites(INDEX_TYPE_ISSUE);
     IssueDto issue = db.issues().insertIssue(organization);
 
-    underTest.indexOnAnalysis(issue.getProjectUuid());
-
-    assertThatIndexHasSize(0);
-    assertThatEsQueueTableHasSize(0);
+    try {
+      // FIXME : test also message
+      expectedException.expect(IllegalStateException.class);
+      underTest.indexOnAnalysis(issue.getProjectUuid());
+    } finally {
+      assertThatIndexHasSize(0);
+      assertThatEsQueueTableHasSize(0);
+    }
   }
-
 
   @Test
   public void index_is_not_updated_when_creating_project() {
@@ -414,10 +424,14 @@ public class IssueIndexerTest {
     addIssueToIndex("P1", "Issue1");
     es.lockWrites(INDEX_TYPE_ISSUE);
 
-    underTest.deleteByKeys("P1", asList("Issue1"));
-
-    assertThatIndexHasOnly("Issue1");
-    assertThatEsQueueTableHasSize(0);
+    try {
+      // FIXME : test also message
+      expectedException.expect(IllegalStateException.class);
+      underTest.deleteByKeys("P1", asList("Issue1"));
+    } finally {
+      assertThatIndexHasOnly("Issue1");
+      assertThatEsQueueTableHasSize(0);
+    }
   }
 
   @Test
@@ -443,6 +457,26 @@ public class IssueIndexerTest {
       .index(asList(issueDoc).iterator());
 
     assertThat(es.countDocuments(INDEX_TYPE_ISSUE)).isEqualTo(1L);
+  }
+
+  @Test
+  public void index_issue_in_non_main_branch() {
+    RuleDefinitionDto rule = db.rules().insert();
+    ComponentDto project = db.components().insertPrivateProject(organization);
+    ComponentDto branch = db.components().insertProjectBranch(project, b -> b.setKey("feature/foo"));
+    ComponentDto dir = db.components().insertComponent(ComponentTesting.newDirectory(branch, "src/main/java/foo"));
+    ComponentDto file = db.components().insertComponent(newFileDto(branch, dir, "F1"));
+    IssueDto issue = db.issues().insertIssue(IssueTesting.newIssue(rule, branch, file));
+
+    underTest.indexOnStartup(emptySet());
+
+    IssueDoc doc = es.getDocuments(INDEX_TYPE_ISSUE, IssueDoc.class).get(0);
+    assertThat(doc.getId()).isEqualTo(issue.getKey());
+    assertThat(doc.organizationUuid()).isEqualTo(organization.getUuid());
+    assertThat(doc.componentUuid()).isEqualTo(file.uuid());
+    assertThat(doc.projectUuid()).isEqualTo(branch.getMainBranchProjectUuid());
+    assertThat(doc.branchUuid()).isEqualTo(branch.uuid());
+    assertThat(doc.isMainBranch()).isFalse();
   }
 
   private void addIssueToIndex(String projectUuid, String issueKey) {

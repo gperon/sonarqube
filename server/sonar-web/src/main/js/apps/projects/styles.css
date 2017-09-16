@@ -129,7 +129,7 @@
   height: 24px;
   margin-top: -12px;
   border-left: 1px solid #e6e6e6;
-  content: "";
+  content: '';
 }
 
 .project-card-measure.pull-right {
@@ -187,9 +187,13 @@
 }
 
 .projects-facet-header {
-  padding-top: 10px;
-  padding-bottom: 10px;
+  padding: 10px;
   transition: none;
+}
+
+.projects-facet-list {
+  padding-left: 10px;
+  padding-right: 10px;
 }
 
 .projects-facet-sort {
@@ -237,8 +241,10 @@
 }
 
 .search-navigator-facet.active .projects-facet-bar-inner,
-.search-navigator-facet-highlight-under-container .search-navigator-facet.active
-  ~ .search-navigator-facet .projects-facet-bar-inner {
+.search-navigator-facet-highlight-under-container
+  .search-navigator-facet.active
+  ~ .search-navigator-facet
+  .projects-facet-bar-inner {
   background-color: #4b9fd5;
 }
 

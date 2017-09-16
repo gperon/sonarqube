@@ -156,24 +156,38 @@ export function parseJSON(response: Response): Promise<any> {
  * Shortcut to do a GET request and return response json
  */
 export function getJSON(url: string, data?: RequestData): Promise<any> {
-  return request(url).setData(data).submit().then(checkStatus).then(parseJSON);
+  return request(url)
+    .setData(data)
+    .submit()
+    .then(checkStatus)
+    .then(parseJSON);
 }
 
 /**
  * Shortcut to do a POST request and return response json
  */
 export function postJSON(url: string, data?: RequestData): Promise<any> {
-  return request(url).setMethod('POST').setData(data).submit().then(checkStatus).then(parseJSON);
+  return request(url)
+    .setMethod('POST')
+    .setData(data)
+    .submit()
+    .then(checkStatus)
+    .then(parseJSON);
 }
 
 /**
  * Shortcut to do a POST request
  */
 export function post(url: string, data?: RequestData): Promise<void> {
-  return new Promise(resolve => {
-    request(url).setMethod('POST').setData(data).submit().then(checkStatus).then(() => {
-      resolve();
-    });
+  return new Promise((resolve, reject) => {
+    request(url)
+      .setMethod('POST')
+      .setData(data)
+      .submit()
+      .then(checkStatus)
+      .then(() => {
+        resolve();
+      }, reject);
   });
 }
 
@@ -181,7 +195,11 @@ export function post(url: string, data?: RequestData): Promise<void> {
  * Shortcut to do a POST request and return response json
  */
 export function requestDelete(url: string, data?: RequestData): Promise<any> {
-  return request(url).setMethod('DELETE').setData(data).submit().then(checkStatus);
+  return request(url)
+    .setMethod('DELETE')
+    .setData(data)
+    .submit()
+    .then(checkStatus);
 }
 
 /**

@@ -18,20 +18,21 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 import { sortBy } from 'lodash';
-import * as moment from 'moment';
+import { Profile as BaseProfile } from '../../api/quality-profiles';
+import { differenceInYears, isValidDate, parseDate } from '../../helpers/dates';
 import { Profile } from './types';
 
-export function sortProfiles(profiles: Profile[]) {
+export function sortProfiles(profiles: BaseProfile[]): Profile[] {
   const result: Profile[] = [];
   const sorted = sortBy(profiles, 'name');
 
-  function retrieveChildren(parent: Profile | null) {
+  function retrieveChildren(parent: BaseProfile | null) {
     return sorted.filter(
       p => (parent == null && p.parentKey == null) || (parent != null && p.parentKey === parent.key)
     );
   }
 
-  function putProfile(profile: Profile | null = null, depth: number = 1) {
+  function putProfile(profile: BaseProfile | null = null, depth: number = 1) {
     const children = retrieveChildren(profile);
 
     if (profile != null) {
@@ -65,8 +66,14 @@ export function createFakeProfile(overrides?: any) {
   };
 }
 
-export function isStagnant(profile: Profile) {
-  return moment().diff(moment(profile.userUpdatedAt), 'years') >= 1;
+export function isStagnant(profile: Profile): boolean {
+  if (profile.userUpdatedAt) {
+    const updateDate = parseDate(profile.userUpdatedAt);
+    if (isValidDate(updateDate)) {
+      return differenceInYears(new Date(), updateDate) >= 1;
+    }
+  }
+  return false;
 }
 
 export const getProfilesPath = (organization: string | null | undefined) =>

@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 import javax.annotation.Nullable;
-import org.apache.ibatis.session.RowBounds;
 import org.sonar.api.resources.Qualifiers;
 import org.sonar.api.server.ws.Change;
 import org.sonar.api.server.ws.Request;
@@ -36,9 +35,8 @@ import org.sonar.api.utils.DateUtils;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbSession;
 import org.sonar.db.component.ComponentDto;
+import org.sonar.db.component.ComponentQuery;
 import org.sonar.db.organization.OrganizationDto;
-import org.sonar.server.es.SearchOptions;
-import org.sonar.server.organization.DefaultOrganizationProvider;
 import org.sonar.server.user.UserSession;
 import org.sonarqube.ws.Common.Paging;
 import org.sonarqube.ws.WsComponents.ProvisionedWsResponse;
@@ -46,6 +44,8 @@ import org.sonarqube.ws.WsComponents.ProvisionedWsResponse.Component;
 
 import static com.google.common.collect.Sets.newHashSet;
 import static java.util.Optional.ofNullable;
+import static org.sonar.api.utils.Paging.offset;
+import static org.sonar.core.util.Protobuf.setNullable;
 import static org.sonar.core.util.stream.MoreCollectors.toList;
 import static org.sonar.db.permission.OrganizationPermission.PROVISION_PROJECTS;
 import static org.sonar.server.es.SearchOptions.MAX_LIMIT;
@@ -56,19 +56,16 @@ import static org.sonar.server.ws.WsUtils.writeProtobuf;
 
 public class ProvisionedAction implements ProjectsWsAction {
 
-  private static final Set<String> QUALIFIERS_FILTER = newHashSet(Qualifiers.PROJECT);
   private static final Set<String> POSSIBLE_FIELDS = newHashSet("uuid", "key", "name", "creationDate", "visibility");
 
   private final ProjectsWsSupport support;
   private final DbClient dbClient;
   private final UserSession userSession;
-  private final DefaultOrganizationProvider defaultOrganizationProvider;
 
-  public ProvisionedAction(ProjectsWsSupport support, DbClient dbClient, UserSession userSession, DefaultOrganizationProvider defaultOrganizationProvider) {
+  public ProvisionedAction(ProjectsWsSupport support, DbClient dbClient, UserSession userSession) {
     this.support = support;
     this.dbClient = dbClient;
     this.userSession = userSession;
-    this.defaultOrganizationProvider = defaultOrganizationProvider;
   }
 
   @Override
@@ -76,10 +73,12 @@ public class ProvisionedAction implements ProjectsWsAction {
     WebService.NewAction action = controller.createAction("provisioned");
     action
       .setDescription(
-        "Get the list of provisioned projects.<br /> " +
+        "Get the list of provisioned projects.<br> " +
+          "Web service is deprecated. Use api/projects/search instead, with onProvisionedOnly=true.<br> " +
           "Require 'Create Projects' permission.")
       .setSince("5.2")
-      .setResponseExample(Resources.getResource(getClass(), "projects-example-provisioned.json"))
+      .setDeprecatedSince("6.6")
+      .setResponseExample(Resources.getResource(getClass(), "provisioned-example.json"))
       .setHandler(this)
       .addPagingParams(100, MAX_LIMIT)
       .addSearchQuery("sonar", "names", "keys")
@@ -96,29 +95,42 @@ public class ProvisionedAction implements ProjectsWsAction {
   public void handle(Request request, Response response) throws Exception {
     userSession.checkLoggedIn();
 
-    SearchOptions options = new SearchOptions().setPage(
-      request.mandatoryParamAsInt(Param.PAGE),
-      request.mandatoryParamAsInt(Param.PAGE_SIZE));
+    int page = request.mandatoryParamAsInt(Param.PAGE);
+    int pageSize = request.mandatoryParamAsInt(Param.PAGE_SIZE);
     Set<String> desiredFields = desiredFields(request);
     String query = request.param(Param.TEXT_QUERY);
 
     try (DbSession dbSession = dbClient.openSession(false)) {
-      OrganizationDto organization = support.getOrganization(dbSession,
-        request.getParam(PARAM_ORGANIZATION).or(defaultOrganizationProvider.get()::getKey));
+      OrganizationDto organization = support.getOrganization(dbSession, request.param(PARAM_ORGANIZATION));
       userSession.checkPermission(PROVISION_PROJECTS, organization);
 
-      RowBounds rowBounds = new RowBounds(options.getOffset(), options.getLimit());
-      List<ComponentDto> projects = dbClient.componentDao().selectProvisioned(dbSession, organization.getUuid(), query, QUALIFIERS_FILTER, rowBounds);
-      int nbOfProjects = dbClient.componentDao().countProvisioned(dbSession, organization.getUuid(), query, QUALIFIERS_FILTER);
+      ComponentQuery dbQuery = buildDbQuery(query);
+      List<ComponentDto> projects = dbClient.componentDao().selectByQuery(dbSession, organization.getUuid(), dbQuery, offset(page, pageSize), pageSize);
+      int nbOfProjects = dbClient.componentDao().countByQuery(dbSession, organization.getUuid(), dbQuery);
+
       ProvisionedWsResponse result = ProvisionedWsResponse.newBuilder()
         .addAllProjects(writeProjects(projects, desiredFields))
         .setPaging(Paging.newBuilder()
           .setTotal(nbOfProjects)
-          .setPageIndex(options.getPage())
-          .setPageSize(options.getLimit()))
+          .setPageIndex(page)
+          .setPageSize(pageSize))
         .build();
       writeProtobuf(result, request, response);
     }
+  }
+
+  private static ComponentQuery buildDbQuery(@Nullable String nameOrKeyQuery) {
+    ComponentQuery.Builder dbQuery = ComponentQuery.builder()
+      .setQualifiers(Qualifiers.PROJECT)
+      .setOnProvisionedOnly(true);
+
+    setNullable(nameOrKeyQuery, q -> {
+      dbQuery.setPartialMatchOnKey(true);
+      dbQuery.setNameOrKeyQuery(q);
+      return dbQuery;
+    });
+
+    return dbQuery.build();
   }
 
   private static List<Component> writeProjects(List<ComponentDto> projects, Set<String> desiredFields) {

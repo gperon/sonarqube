@@ -90,8 +90,9 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>org.sonarsource.update-center</groupId>
-      <artifactId>sonar-update-center-common</artifactId>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>sonar-cluster</artifactId>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -116,6 +117,20 @@
           <artifactId>maven-project</artifactId>
         </exclusion>
       </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>sonar-ws</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>sonar-plugin-bridge</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.sonarsource.update-center</groupId>
+      <artifactId>sonar-update-center-common</artifactId>
     </dependency>
     <dependency>
       <groupId>commons-beanutils</groupId>
@@ -173,22 +188,17 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>com.google.protobuf</groupId>
-      <artifactId>protobuf-java</artifactId>
+      <groupId>com.hazelcast</groupId>
+      <artifactId>hazelcast-client</artifactId>
     </dependency>
     <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>sonar-ws</artifactId>
-      <version>${project.version}</version>
+      <groupId>com.google.protobuf</groupId>
+      <artifactId>protobuf-java</artifactId>
     </dependency>
     <dependency>
       <groupId>com.google.code.findbugs</groupId>
       <artifactId>jsr305</artifactId>
       <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>sonar-plugin-bridge</artifactId>
     </dependency>
     <dependency>
       <groupId>io.jsonwebtoken</groupId>
@@ -241,12 +251,6 @@
     <dependency>
       <groupId>com.github.kevinsawicki</groupId>
       <artifactId>http-request</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>sonar-search</artifactId>
-      <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>

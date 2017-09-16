@@ -28,25 +28,6 @@
       <scope>provided</scope>
     </dependencySet>
 
-
-    <dependencySet>
-      <outputDirectory>lib/common</outputDirectory>
-      <useTransitiveFiltering>true</useTransitiveFiltering>
-      <useProjectArtifact>false</useProjectArtifact>
-      <scope>runtime</scope>
-    </dependencySet>
-
-    <dependencySet>
-      <outputDirectory>lib/search</outputDirectory>
-      <useProjectArtifact>false</useProjectArtifact>
-      <useTransitiveDependencies>true</useTransitiveDependencies>
-      <useTransitiveFiltering>false</useTransitiveFiltering>
-      <includes>
-        <include>org.sonarsource.sonarqube:sonar-search</include>
-      </includes>
-      <scope>provided</scope>
-    </dependencySet>
-
     <dependencySet>
       <outputDirectory>lib/server</outputDirectory>
       <useProjectArtifact>false</useProjectArtifact>
@@ -141,6 +122,11 @@
   </dependencySets>
 
   <fileSets>
+    <!-- common directory -->
+    <fileSet>
+      <directory>target/common</directory>
+      <outputDirectory>lib/common</outputDirectory>
+    </fileSet>
     <!-- wrapper binaries -->
     <fileSet>
       <directory>src/main/assembly</directory>
@@ -201,6 +187,12 @@
         <exclude>**/*.sh</exclude>
         <exclude>**/ant</exclude>
         <exclude>**/antRun</exclude>
+        <!--exclude ES modules by default in the distribution that we don't use-->
+        <exclude>elasticsearch/modules/lang-expression/</exclude>
+        <exclude>elasticsearch/modules/lang-groovy/</exclude>
+        <exclude>elasticsearch/modules/lang-mustache/</exclude>
+        <exclude>elasticsearch/modules/lang-painless/</exclude>
+        <exclude>elasticsearch/modules/transport-netty3/</exclude>
       </excludes>
       <fileMode>0644</fileMode>
     </fileSet>

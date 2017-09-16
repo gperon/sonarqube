@@ -35,27 +35,21 @@ export default function EmptyOverview({ component } /*: Props */) {
 
   return (
     <div className="page page-limited">
-      <div className="alert alert-warning">
-        {translate('provisioning.no_analysis')}
-      </div>
+      <div className="alert alert-warning">{translate('provisioning.no_analysis')}</div>
 
       <div className="big-spacer-top">
         {head}
         <Link
           className="text-danger"
           to={{ pathname: '/project/deletion', query: { id: component.key } }}>
-          {translate('provisioning.no_analysis.delete_it')}
+          {translate('provisioning.no_analysis.delete_project')}
         </Link>
         {tail}
       </div>
 
       <div className="big-spacer-top">
-        <h4>
-          {translate('key')}
-        </h4>
-        <code>
-          {component.key}
-        </code>
+        <h4>{translate('key')}</h4>
+        <code>{component.key}</code>
       </div>
     </div>
   );

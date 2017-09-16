@@ -19,10 +19,11 @@
  */
 import * as React from 'react';
 import { Link } from 'react-router';
-import * as moment from 'moment';
 import ChangesList from './ChangesList';
+import DateTimeFormatter from '../../../components/intl/DateTimeFormatter';
 import { translate } from '../../../helpers/l10n';
 import { getRulesUrl } from '../../../helpers/urls';
+import { differenceInSeconds, parseDate } from '../../../helpers/dates';
 import { ProfileChangelogEvent } from '../types';
 
 interface Props {
@@ -35,7 +36,8 @@ export default function Changelog(props: Props) {
 
   const rows = props.events.map((event, index) => {
     const prev = index > 0 ? props.events[index - 1] : null;
-    const isSameDate = prev != null && moment(prev.date).diff(event.date, 'seconds') < 10;
+    const isSameDate =
+      prev != null && differenceInSeconds(parseDate(prev.date), parseDate(event.date)) < 10;
     const isBulkChange =
       prev != null &&
       isSameDate &&
@@ -50,17 +52,15 @@ export default function Changelog(props: Props) {
 
     return (
       <tr key={index} className={className}>
-        <td className="thin nowrap">
-          {!isBulkChange && moment(event.date).format('LLL')}
-        </td>
+        <td className="thin nowrap">{!isBulkChange && <DateTimeFormatter date={event.date} />}</td>
 
         <td className="thin nowrap">
           {!isBulkChange &&
-            (event.authorName
-              ? <span>
-                  {event.authorName}
-                </span>
-              : <span className="note">System</span>)}
+            (event.authorName ? (
+              <span>{event.authorName}</span>
+            ) : (
+              <span className="note">System</span>
+            ))}
         </td>
 
         <td className="thin nowrap">
@@ -73,9 +73,7 @@ export default function Changelog(props: Props) {
           </Link>
         </td>
 
-        <td className="thin nowrap">
-          {event.params && <ChangesList changes={event.params} />}
-        </td>
+        <td className="thin nowrap">{event.params && <ChangesList changes={event.params} />}</td>
       </tr>
     );
   });
@@ -87,23 +85,13 @@ export default function Changelog(props: Props) {
           <th className="thin nowrap">
             {translate('date')} <i className="icon-sort-desc" />
           </th>
-          <th className="thin nowrap">
-            {translate('user')}
-          </th>
-          <th className="thin nowrap">
-            {translate('action')}
-          </th>
-          <th>
-            {translate('rule')}
-          </th>
-          <th className="thin nowrap">
-            {translate('parameters')}
-          </th>
+          <th className="thin nowrap">{translate('user')}</th>
+          <th className="thin nowrap">{translate('action')}</th>
+          <th>{translate('rule')}</th>
+          <th className="thin nowrap">{translate('parameters')}</th>
         </tr>
       </thead>
-      <tbody>
-        {rows}
-      </tbody>
+      <tbody>{rows}</tbody>
     </table>
   );
 }

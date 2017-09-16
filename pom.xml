@@ -85,7 +85,7 @@
 
     <protobuf.version>3.0.0-beta-2</protobuf.version>
 
-    <hazelcast.version>3.8</hazelcast.version>
+    <hazelcast.version>3.8.4</hazelcast.version>
 
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.min.version>3.2</maven.min.version>
@@ -445,14 +445,24 @@
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.sonarsource.update-center</groupId>
-        <artifactId>sonar-update-center-common</artifactId>
-        <version>${sonarUpdateCenter.version}</version>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>sonar-process</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>sonar-cluster</artifactId>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>sonar-server</artifactId>
         <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.sonarsource.update-center</groupId>
+        <artifactId>sonar-update-center-common</artifactId>
+        <version>${sonarUpdateCenter.version}</version>
       </dependency>
       <dependency>
         <groupId>org.codehaus.sonar</groupId>
@@ -705,6 +715,16 @@
         <groupId>org.elasticsearch.client</groupId>
         <artifactId>transport</artifactId>
         <version>${elasticsearch.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.elasticsearch.plugin</groupId>
+            <artifactId>lang-mustache-client</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.elasticsearch.plugin</groupId>
+            <artifactId>transport-netty3-client</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>com.github.tlrx</groupId>
@@ -806,6 +826,11 @@
         <version>${jackson.version}</version>
       </dependency>
       <dependency>
+        <groupId>org.yaml</groupId>
+        <artifactId>snakeyaml</artifactId>
+        <version>1.15</version>
+      </dependency>
+      <dependency>
         <groupId>org.mybatis</groupId>
         <artifactId>mybatis</artifactId>
         <version>3.4.4</version>
@@ -891,16 +916,13 @@
         <version>1.5.9</version>
       </dependency>
       <dependency>
-        <groupId>org.mariadb.jdbc</groupId>
-        <artifactId>mariadb-java-client</artifactId>
-        <version>1.5.9</version>
-      </dependency>
-      <dependency>
-        <groupId>com.oracle</groupId>
-        <artifactId>ojdbc6</artifactId>
-        <!-- SonarSource internal tests: -->
-        <!-- This version should be the same as at http://infra.internal.sonarsource.com/jenkins/orch-oracle*.properties -->
-        <version>11.2.0.3.0</version>
+        <groupId>com.oracle.jdbc</groupId>
+        <artifactId>ojdbc8</artifactId>
+        <!--
+             This version is compatible with Oracle 11g and 12c :
+             http://www.oracle.com/technetwork/database/enterprise-edition/jdbc-faq-090281.html#01_02
+        -->
+        <version>12.2.0.1.0</version>
       </dependency>
       <dependency>
         <groupId>org.postgresql</groupId>

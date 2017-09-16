@@ -18,12 +18,12 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 import React from 'react';
-import moment from 'moment';
 import { isEqual, sortBy } from 'lodash';
 import DeferredSpinner from '../../../components/common/DeferredSpinner';
 import GraphHistory from './GraphHistory';
 import { EVENT_TYPES, getSeriesMetricType, hasHistoryData, isCustomGraph } from '../utils';
 import { translate } from '../../../helpers/l10n';
+import { parseDate } from '../../../helpers/dates';
 /*:: import type { Analysis, MeasureHistory } from '../types'; */
 /*:: import type { Serie } from '../../../components/charts/AdvancedTimeline'; */
 
@@ -87,7 +87,7 @@ export default class GraphsHistory extends React.PureComponent {
       return acc.concat({
         className: event.category,
         name: event.name,
-        date: moment(analysis.date).toDate()
+        date: parseDate(analysis.date)
       });
     }, []);
     return sortBy(filteredEvents, 'date');
@@ -140,7 +140,7 @@ export default class GraphsHistory extends React.PureComponent {
     const showAreas = ['coverage', 'duplications'].includes(graph);
     return (
       <div className="project-activity-graphs">
-        {this.props.graphs.map((series, idx) =>
+        {this.props.graphs.map((series, idx) => (
           <GraphHistory
             key={idx}
             events={events}
@@ -159,7 +159,7 @@ export default class GraphsHistory extends React.PureComponent {
             updateSelectedDate={this.props.updateSelectedDate}
             updateTooltip={this.updateTooltip}
           />
-        )}
+        ))}
       </div>
     );
   }

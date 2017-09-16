@@ -18,7 +18,9 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 import * as React from 'react';
-import * as moment from 'moment';
+import DateFromNow from '../../../components/intl/DateFromNow';
+import DateTimeFormatter from '../../../components/intl/DateTimeFormatter';
+import Tooltip from '../../../components/controls/Tooltip';
 import { translate } from '../../../helpers/l10n';
 
 interface Props {
@@ -26,11 +28,13 @@ interface Props {
 }
 
 export default function ProfileDate({ date }: Props) {
-  return date
-    ? <span title={moment(date).format('LLL')} data-toggle="tooltip">
-        {moment(date).fromNow()}
+  return date ? (
+    <Tooltip overlay={<DateTimeFormatter date={date} />}>
+      <span>
+        <DateFromNow date={date} />
       </span>
-    : <span>
-        {translate('never')}
-      </span>;
+    </Tooltip>
+  ) : (
+    <span>{translate('never')}</span>
+  );
 }

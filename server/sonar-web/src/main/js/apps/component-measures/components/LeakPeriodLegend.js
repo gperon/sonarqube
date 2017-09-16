@@ -20,7 +20,8 @@
 // @flow
 import React from 'react';
 import classNames from 'classnames';
-import moment from 'moment';
+import DateFromNow from '../../../components/intl/DateFromNow';
+import DateFormatter from '../../../components/intl/DateFormatter';
 import Tooltip from '../../../components/controls/Tooltip';
 import { getPeriodLabel, getPeriodDate } from '../../../helpers/periods';
 import { translate, translateWithParameters } from '../../../helpers/l10n';
@@ -35,11 +36,7 @@ import { translate, translateWithParameters } from '../../../helpers/l10n';
 export default function LeakPeriodLegend({ className, component, period } /*: Props */) {
   const leakClass = classNames('domain-measures-leak-header', className);
   if (component.qualifier === 'APP') {
-    return (
-      <div className={leakClass}>
-        {translate('issues.leak_period')}
-      </div>
-    );
+    return <div className={leakClass}>{translate('issues.leak_period')}</div>;
   }
 
   const label = (
@@ -53,8 +50,13 @@ export default function LeakPeriodLegend({ className, component, period } /*: Pr
   }
 
   const date = getPeriodDate(period);
-  const fromNow = moment(date).fromNow();
-  const tooltip = fromNow + ', ' + moment(date).format('LL');
+  const tooltip = (
+    <div>
+      <DateFromNow date={date} />
+      {', '}
+      <DateFormatter date={date} long={true} />
+    </div>
+  );
   return (
     <Tooltip placement="left" overlay={tooltip}>
       {label}

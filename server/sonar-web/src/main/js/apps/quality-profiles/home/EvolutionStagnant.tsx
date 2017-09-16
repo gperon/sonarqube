@@ -18,9 +18,9 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 import * as React from 'react';
-import * as moment from 'moment';
+import DateFormatter from '../../../components/intl/DateFormatter';
 import ProfileLink from '../components/ProfileLink';
-import { translate } from '../../../helpers/l10n';
+import { translate, translateWithParameters } from '../../../helpers/l10n';
 import { isStagnant } from '../utils';
 import { Profile } from '../types';
 
@@ -29,7 +29,7 @@ interface Props {
   profiles: Profile[];
 }
 
-export default function EvolutionStagnan(props: Props) {
+export default function EvolutionStagnant(props: Props) {
   // TODO filter built-in out
 
   const outdated = props.profiles.filter(isStagnant);
@@ -41,15 +41,13 @@ export default function EvolutionStagnan(props: Props) {
   return (
     <div className="quality-profile-box quality-profiles-evolution-stagnant">
       <div className="spacer-bottom">
-        <strong>
-          {translate('quality_profiles.stagnant_profiles')}
-        </strong>
+        <strong>{translate('quality_profiles.stagnant_profiles')}</strong>
       </div>
       <div className="spacer-bottom">
         {translate('quality_profiles.not_updated_more_than_year')}
       </div>
       <ul>
-        {outdated.map(profile =>
+        {outdated.map(profile => (
           <li key={profile.key} className="spacer-top">
             <div className="text-ellipsis">
               <ProfileLink
@@ -60,13 +58,21 @@ export default function EvolutionStagnan(props: Props) {
                 {profile.name}
               </ProfileLink>
             </div>
-            <div className="note">
-              {profile.languageName}
-              {', '}
-              updated on {moment(profile.rulesUpdatedAt).format('LL')}
-            </div>
+            {profile.rulesUpdatedAt && (
+              <DateFormatter date={profile.rulesUpdatedAt} long={true}>
+                {formattedDate => (
+                  <div className="note">
+                    {translateWithParameters(
+                      'quality_profiles.x_updated_on_y',
+                      profile.languageName,
+                      formattedDate
+                    )}
+                  </div>
+                )}
+              </DateFormatter>
+            )}
           </li>
-        )}
+        ))}
       </ul>
     </div>
   );

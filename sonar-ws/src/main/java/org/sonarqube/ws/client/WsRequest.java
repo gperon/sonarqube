@@ -43,6 +43,8 @@ public interface WsRequest {
 
   Parameters getParameters();
 
+  Headers getHeaders();
+
   enum Method {
     GET, POST
   }

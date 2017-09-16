@@ -1,0 +1,209 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`renders 1`] = `
+<div
+  className="layout-page projects-page"
+>
+  <HelmetWrapper
+    encodeSpecialCharacters={true}
+    title="projects.page"
+  />
+  <div
+    className="layout-page-side-outer"
+  >
+    <div
+      className="layout-page-side projects-page-side"
+      style={
+        Object {
+          "top": 30,
+        }
+      }
+    >
+      <div
+        className="layout-page-side-inner"
+      >
+        <div
+          className="layout-page-filters"
+        >
+          <PageSidebar
+            isFavorite={false}
+            query={Object {}}
+            view="overall"
+            visualization="risk"
+          />
+        </div>
+      </div>
+    </div>
+  </div>
+  <div
+    className="layout-page-main projects-page-content"
+  >
+    <div
+      className="layout-page-header-panel layout-page-main-header"
+    >
+      <div
+        className="layout-page-header-panel-inner layout-page-main-header-inner"
+      >
+        <div
+          className="layout-page-main-inner"
+        >
+          <PageHeader
+            currentUser={
+              Object {
+                "isLoggedIn": true,
+              }
+            }
+            isFavorite={false}
+            loading={false}
+            onPerspectiveChange={[Function]}
+            onSortChange={[Function]}
+            projects={
+              Array [
+                Object {
+                  "key": "foo",
+                  "measures": Object {},
+                  "name": "Foo",
+                },
+              ]
+            }
+            query={Object {}}
+            selectedSort="name"
+            total={0}
+            view="overall"
+            visualization="risk"
+          />
+        </div>
+      </div>
+    </div>
+    <div
+      className="layout-page-main-inner"
+    >
+      <ProjectsList
+        cardType="overall"
+        isFavorite={false}
+        isFiltered={false}
+        projects={
+          Array [
+            Object {
+              "key": "foo",
+              "measures": Object {},
+              "name": "Foo",
+            },
+          ]
+        }
+      />
+      <ListFooter
+        count={1}
+        loadMore={[Function]}
+        ready={true}
+        total={0}
+      />
+    </div>
+  </div>
+</div>
+`;
+
+exports[`renders 2`] = `
+<div
+  className="layout-page projects-page"
+>
+  <HelmetWrapper
+    encodeSpecialCharacters={true}
+    title="projects.page"
+  />
+  <div
+    className="layout-page-side-outer"
+  >
+    <div
+      className="layout-page-side projects-page-side"
+      style={
+        Object {
+          "top": 30,
+        }
+      }
+    >
+      <div
+        className="layout-page-side-inner"
+      >
+        <div
+          className="layout-page-filters"
+        >
+          <PageSidebar
+            isFavorite={false}
+            query={
+              Object {
+                "view": "visualizations",
+              }
+            }
+            view="visualizations"
+            visualization="risk"
+          />
+        </div>
+      </div>
+    </div>
+  </div>
+  <div
+    className="layout-page-main projects-page-content"
+  >
+    <div
+      className="layout-page-header-panel layout-page-main-header"
+    >
+      <div
+        className="layout-page-header-panel-inner layout-page-main-header-inner"
+      >
+        <div
+          className="layout-page-main-inner"
+        >
+          <PageHeader
+            currentUser={
+              Object {
+                "isLoggedIn": true,
+              }
+            }
+            isFavorite={false}
+            loading={false}
+            onPerspectiveChange={[Function]}
+            onSortChange={[Function]}
+            projects={
+              Array [
+                Object {
+                  "key": "foo",
+                  "measures": Object {},
+                  "name": "Foo",
+                },
+              ]
+            }
+            query={
+              Object {
+                "view": "visualizations",
+              }
+            }
+            selectedSort="name"
+            total={0}
+            view="visualizations"
+            visualization="risk"
+          />
+        </div>
+      </div>
+    </div>
+    <div
+      className="layout-page-main-inner"
+    >
+      <Visualizations
+        displayOrganizations={false}
+        projects={
+          Array [
+            Object {
+              "key": "foo",
+              "measures": Object {},
+              "name": "Foo",
+            },
+          ]
+        }
+        total={0}
+        visualization="risk"
+      />
+    </div>
+  </div>
+</div>
+`;

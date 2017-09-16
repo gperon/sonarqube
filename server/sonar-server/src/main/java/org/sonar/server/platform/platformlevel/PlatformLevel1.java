@@ -21,7 +21,7 @@ package org.sonar.server.platform.platformlevel;
 
 import java.util.Properties;
 import javax.annotation.Nullable;
-import org.sonar.db.DBSessionsImpl;
+import org.sonar.NetworkUtils;
 import org.sonar.api.SonarQubeSide;
 import org.sonar.api.SonarQubeVersion;
 import org.sonar.api.internal.ApiVersion;
@@ -32,6 +32,7 @@ import org.sonar.api.utils.internal.TempFolderCleaner;
 import org.sonar.core.config.ConfigurationProvider;
 import org.sonar.core.config.CorePropertyDefinitions;
 import org.sonar.core.util.UuidFactoryImpl;
+import org.sonar.db.DBSessionsImpl;
 import org.sonar.db.DaoModule;
 import org.sonar.db.DatabaseChecker;
 import org.sonar.db.DbClient;
@@ -48,11 +49,12 @@ import org.sonar.server.platform.Platform;
 import org.sonar.server.platform.ServerFileSystemImpl;
 import org.sonar.server.platform.TempFolderProvider;
 import org.sonar.server.platform.UrlSettings;
-import org.sonar.server.platform.cluster.ClusterImpl;
+import org.sonar.server.platform.WebServerImpl;
 import org.sonar.server.platform.db.EmbeddedDatabaseFactory;
 import org.sonar.server.rule.index.RuleIndex;
 import org.sonar.server.search.EsSearchModule;
 import org.sonar.server.setting.ThreadLocalSettings;
+import org.sonar.server.user.SystemPasscodeImpl;
 import org.sonar.server.user.ThreadLocalUserSession;
 import org.sonar.server.util.OkHttpClientProvider;
 
@@ -83,6 +85,7 @@ public class PlatformLevel1 extends PlatformLevel {
       ProcessCommandWrapperImpl.class,
       RestartFlagHolderImpl.class,
       UuidFactoryImpl.INSTANCE,
+      NetworkUtils.INSTANCE,
       UrlSettings.class,
       EmbeddedDatabaseFactory.class,
       LogbackHelper.class,
@@ -101,6 +104,7 @@ public class PlatformLevel1 extends PlatformLevel {
 
       // user session
       ThreadLocalUserSession.class,
+      SystemPasscodeImpl.class,
 
       // DB
       DBSessionsImpl.class,
@@ -122,7 +126,7 @@ public class PlatformLevel1 extends PlatformLevel {
     addAll(CorePropertyDefinitions.all());
 
     // cluster
-    add(ClusterImpl.class);
+    add(WebServerImpl.class);
   }
 
   private void addExtraRootComponents() {

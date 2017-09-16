@@ -19,9 +19,13 @@
  */
 import { getJSON, RequestData } from '../helpers/request';
 
-export function getMeasures(componentKey: string, metrics: string[]): Promise<any> {
+export function getMeasures(
+  componentKey: string,
+  metrics: string[],
+  branch?: string
+): Promise<any> {
   const url = '/api/measures/component';
-  const data = { componentKey, metricKeys: metrics.join(',') };
+  const data = { componentKey, metricKeys: metrics.join(','), branch };
   return getJSON(url, data).then(r => r.component.measures);
 }
 
@@ -34,9 +38,24 @@ export function getMeasuresAndMeta(
   return getJSON('/api/measures/component', data);
 }
 
-export function getMeasuresForProjects(projectKeys: string[], metricKeys: string[]): Promise<any> {
+export interface Period {
+  index: number;
+  value: string;
+}
+
+export interface Measure {
+  component: string;
+  metric: string;
+  periods?: Period[];
+  value?: string;
+}
+
+export function getMeasuresForProjects(
+  projectKeys: string[],
+  metricKeys: string[]
+): Promise<Measure[]> {
   return getJSON('/api/measures/search', {
     projectKeys: projectKeys.join(),
     metricKeys: metricKeys.join()
-  });
+  }).then(r => r.measures);
 }

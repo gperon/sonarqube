@@ -19,11 +19,11 @@
  */
 // @flow
 import React from 'react';
-import moment from 'moment';
 import Avatar from '../../../components/ui/Avatar';
 import BubblePopupHelper from '../../../components/common/BubblePopupHelper';
 import CommentDeletePopup from '../popups/CommentDeletePopup';
 import CommentPopup from '../popups/CommentPopup';
+import DateFromNow from '../../../components/intl/DateFromNow';
 /*:: import type { IssueComment } from '../types'; */
 
 /*::
@@ -98,10 +98,10 @@ export default class IssueCommentLine extends React.PureComponent {
           tabIndex={0}
         />
         <div className="issue-comment-age">
-          ({moment(comment.createdAt).fromNow()})
+          <DateFromNow date={comment.createdAt} />
         </div>
         <div className="issue-comment-actions">
-          {comment.updatable &&
+          {comment.updatable && (
             <BubblePopupHelper
               className="bubble-popup-helper-inline"
               isOpen={this.state.openPopup === 'edit'}
@@ -121,8 +121,9 @@ export default class IssueCommentLine extends React.PureComponent {
                 className="js-issue-comment-edit button-link icon-edit icon-half-transparent"
                 onClick={this.toggleEditPopup}
               />
-            </BubblePopupHelper>}
-          {comment.updatable &&
+            </BubblePopupHelper>
+          )}
+          {comment.updatable && (
             <BubblePopupHelper
               className="bubble-popup-helper-inline"
               isOpen={this.state.openPopup === 'delete'}
@@ -134,7 +135,8 @@ export default class IssueCommentLine extends React.PureComponent {
                 className="js-issue-comment-delete button-link icon-delete icon-half-transparent"
                 onClick={this.toggleDeletePopup}
               />
-            </BubblePopupHelper>}
+            </BubblePopupHelper>
+          )}
         </div>
       </div>
     );

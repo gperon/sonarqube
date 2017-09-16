@@ -34,6 +34,7 @@ import { getComponentUrl } from '../../../helpers/urls';
 /*:: import type { TreeMapItem } from '../../../components/charts/TreeMap'; */
 
 /*:: type Props = {|
+  branch?: string,
   components: Array<ComponentEnhanced>,
   handleSelect: string => void,
   metric: Metric
@@ -62,7 +63,7 @@ export default class TreeMapView extends React.PureComponent {
     }
   }
 
-  getTreemapComponents = ({ components, metric } /*: Props */) => {
+  getTreemapComponents = ({ branch, components, metric } /*: Props */) => {
     const colorScale = this.getColorScale(metric);
     return components
       .map(component => {
@@ -93,14 +94,16 @@ export default class TreeMapView extends React.PureComponent {
             sizeValue
           ),
           label: component.name,
-          link: getComponentUrl(component.refKey || component.key)
+          link: getComponentUrl(component.refKey || component.key, branch)
         };
       })
       .filter(Boolean);
   };
 
   getLevelColorScale = () =>
-    scaleOrdinal().domain(['ERROR', 'WARN', 'OK', 'NONE']).range(LEVEL_COLORS);
+    scaleOrdinal()
+      .domain(['ERROR', 'WARN', 'OK', 'NONE'])
+      .range(LEVEL_COLORS);
 
   getPercentColorScale = (metric /*: Metric */) => {
     const color = scaleLinear().domain([0, 25, 50, 75, 100]);
@@ -108,7 +111,10 @@ export default class TreeMapView extends React.PureComponent {
     return color;
   };
 
-  getRatingColorScale = () => scaleLinear().domain([1, 2, 3, 4, 5]).range(COLORS);
+  getRatingColorScale = () =>
+    scaleLinear()
+      .domain([1, 2, 3, 4, 5])
+      .range(COLORS);
 
   getColorScale = (metric /*: Metric */) => {
     if (metric.type === 'LEVEL') {
@@ -193,18 +199,17 @@ export default class TreeMapView extends React.PureComponent {
               )
             )}
           </li>
-          <li className="pull-right">
-            {this.renderLegend()}
-          </li>
+          <li className="pull-right">{this.renderLegend()}</li>
         </ul>
         <AutoSizer>
-          {({ width }) =>
+          {({ width }) => (
             <TreeMap
               items={treemapItems}
               onRectangleClick={this.props.handleSelect}
               height={HEIGHT}
               width={width}
-            />}
+            />
+          )}
         </AutoSizer>
       </div>
     );

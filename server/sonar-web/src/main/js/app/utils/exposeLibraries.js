@@ -17,7 +17,6 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-import moment from 'moment';
 import * as ReactRedux from 'react-redux';
 import * as ReactRouter from 'react-router';
 import Select from 'react-select';
@@ -25,6 +24,9 @@ import Modal from 'react-modal';
 import * as measures from '../../helpers/measures';
 import * as request from '../../helpers/request';
 import * as icons from '../../components/icons-components/icons';
+import DateFromNow from '../../components/intl/DateFromNow';
+import DateFormatter from '../../components/intl/DateFormatter';
+import DateTimeFormatter from '../../components/intl/DateTimeFormatter';
 import FavoriteContainer from '../../components/controls/FavoriteContainer';
 import ListFooter from '../../components/controls/ListFooter';
 import Tooltip from '../../components/controls/Tooltip';
@@ -35,13 +37,15 @@ import DuplicationsRating from '../../components/ui/DuplicationsRating';
 import Level from '../../components/ui/Level';
 
 const exposeLibraries = () => {
-  window.moment = moment;
   window.ReactRedux = ReactRedux;
   window.ReactRouter = ReactRouter;
   window.SonarIcons = icons;
   window.SonarMeasures = measures;
   window.SonarRequest = request;
   window.SonarComponents = {
+    DateFromNow,
+    DateFormatter,
+    DateTimeFormatter,
     FavoriteContainer,
     ListFooter,
     Modal,

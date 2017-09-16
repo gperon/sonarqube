@@ -30,7 +30,15 @@ import MetaSize from './MetaSize';
 import MetaTags from './MetaTags';
 import { areThereCustomOrganizations } from '../../../store/rootReducer';
 
-const Meta = ({ component, history, measures, areThereCustomOrganizations, router }) => {
+const Meta = ({
+  branch,
+  component,
+  history,
+  measures,
+  areThereCustomOrganizations,
+  onComponentChange,
+  router
+}) => {
   const { qualifier, description, qualityProfiles, qualityGate } = component;
 
   const isProject = qualifier === 'TRK';
@@ -46,35 +54,38 @@ const Meta = ({ component, history, measures, areThereCustomOrganizations, route
 
   return (
     <div className="overview-meta">
-      {hasDescription &&
-        <div className="overview-meta-card overview-meta-description">
-          {description}
-        </div>}
+      {hasDescription && (
+        <div className="overview-meta-card overview-meta-description">{description}</div>
+      )}
 
-      <MetaSize component={component} measures={measures} />
+      <MetaSize branch={branch} component={component} measures={measures} />
 
-      {isProject && <MetaTags component={component} />}
+      {isProject && <MetaTags component={component} onComponentChange={onComponentChange} />}
 
-      {(isProject || isApplication) &&
+      {(isProject || isApplication) && (
         <AnalysesList
+          branch={branch}
           project={component.key}
           qualifier={component.qualifier}
           history={history}
           router={router}
-        />}
+        />
+      )}
 
-      {shouldShowQualityGate &&
+      {shouldShowQualityGate && (
         <MetaQualityGate
           gate={qualityGate}
           organization={hasOrganization && component.organization}
-        />}
+        />
+      )}
 
-      {shouldShowQualityProfiles &&
+      {shouldShowQualityProfiles && (
         <MetaQualityProfiles
           component={component}
           customOrganizations={areThereCustomOrganizations}
           profiles={qualityProfiles}
-        />}
+        />
+      )}
 
       {isProject && <MetaLinks component={component} />}
 

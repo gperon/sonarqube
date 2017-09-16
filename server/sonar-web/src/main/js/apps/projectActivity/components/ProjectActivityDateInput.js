@@ -19,10 +19,10 @@
  */
 // @flow
 import React from 'react';
-import moment from 'moment';
 import DateInput from '../../../components/controls/DateInput';
 import { parseAsDate } from '../../../helpers/query';
 import { translate } from '../../../helpers/l10n';
+import { toShortNotSoISOString } from '../../../helpers/dates';
 /*:: import type { RawQuery } from '../../../helpers/query'; */
 
 /*::
@@ -42,7 +42,7 @@ export default class ProjectActivityDateInput extends React.PureComponent {
 
   handleResetClick = () => this.props.onChange({ from: null, to: null });
 
-  formatDate = (date /*: ?Date */) => (date ? moment(date).format('YYYY-MM-DD') : null);
+  formatDate = (date /*: ?Date */) => (date ? toShortNotSoISOString(date) : undefined);
 
   render() {
     return (

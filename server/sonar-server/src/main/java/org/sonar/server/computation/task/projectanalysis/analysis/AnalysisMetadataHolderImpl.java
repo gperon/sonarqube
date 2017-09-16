@@ -21,8 +21,11 @@ package org.sonar.server.computation.task.projectanalysis.analysis;
 
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
+import java.util.Optional;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nullable;
+
+import org.sonar.db.component.BranchType;
 import org.sonar.server.computation.util.InitializedProperty;
 import org.sonar.server.qualityprofile.QualityProfile;
 
@@ -37,9 +40,11 @@ public class AnalysisMetadataHolderImpl implements MutableAnalysisMetadataHolder
   private final InitializedProperty<Boolean> incrementalAnalysis = new InitializedProperty<>();
   private final InitializedProperty<Analysis> baseProjectSnapshot = new InitializedProperty<>();
   private final InitializedProperty<Boolean> crossProjectDuplicationEnabled = new InitializedProperty<>();
-  private final InitializedProperty<String> branch = new InitializedProperty<>();
+  private final InitializedProperty<Branch> branch = new InitializedProperty<>();
+  private final InitializedProperty<Project> project = new InitializedProperty<>();
   private final InitializedProperty<Integer> rootComponentRef = new InitializedProperty<>();
   private final InitializedProperty<Map<String, QualityProfile>> qProfilesPerLanguage = new InitializedProperty<>();
+  private final InitializedProperty<Map<String, ScannerPlugin>> pluginsByKey = new InitializedProperty<>();
 
   @Override
   public MutableAnalysisMetadataHolder setOrganization(Organization organization) {
@@ -133,20 +138,34 @@ public class AnalysisMetadataHolderImpl implements MutableAnalysisMetadataHolder
   }
 
   @Override
-  public MutableAnalysisMetadataHolder setBranch(@Nullable String branch) {
+  public MutableAnalysisMetadataHolder setBranch(@Nullable Branch branch) {
     checkState(!this.branch.isInitialized(), "Branch has already been set");
     this.branch.setProperty(branch);
     return this;
   }
 
   @Override
-  public String getBranch() {
+  public Optional<Branch> getBranch() {
     checkState(branch.isInitialized(), "Branch has not been set");
-    return branch.getProperty();
+    return Optional.ofNullable(branch.getProperty());
+  }
+
+  @Override
+  public MutableAnalysisMetadataHolder setProject(Project project) {
+    checkState(!this.project.isInitialized(), "Project has already been set");
+    this.project.setProperty(project);
+    return this;
+  }
+
+  @Override
+  public Project getProject() {
+    checkState(project.isInitialized(), "Project has not been set");
+    return project.getProperty();
   }
 
   @Override
   public MutableAnalysisMetadataHolder setRootComponentRef(int rootComponentRef) {
+
     checkState(!this.rootComponentRef.isInitialized(), "Root component ref has already been set");
     this.rootComponentRef.setProperty(rootComponentRef);
     return this;
@@ -169,6 +188,25 @@ public class AnalysisMetadataHolderImpl implements MutableAnalysisMetadataHolder
   public Map<String, QualityProfile> getQProfilesByLanguage() {
     checkState(qProfilesPerLanguage.isInitialized(), "QProfiles by language has not been set");
     return qProfilesPerLanguage.getProperty();
+  }
+
+  @Override
+  public MutableAnalysisMetadataHolder setScannerPluginsByKey(Map<String, ScannerPlugin> pluginsByKey) {
+    checkState(!this.pluginsByKey.isInitialized(), "Plugins by key has already been set");
+    this.pluginsByKey.setProperty(ImmutableMap.copyOf(pluginsByKey));
+    return this;
+  }
+
+  @Override
+  public Map<String, ScannerPlugin> getScannerPluginsByKey() {
+    checkState(pluginsByKey.isInitialized(), "Plugins by key has not been set");
+    return pluginsByKey.getProperty();
+  }
+
+  public boolean isShortLivingBranch() {
+    checkState(this.branch.isInitialized(), "Branch has not been set");
+    Branch prop = branch.getProperty();
+    return prop != null && prop.getType() == BranchType.SHORT;
   }
 
 }

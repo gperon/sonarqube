@@ -27,6 +27,7 @@ import { getLocalizedMetricName } from '../../../helpers/l10n';
 /*:: import type { Metric } from '../../../store/metrics/actions'; */
 
 /*:: type Props = {|
+  branch?: string,
   components: Array<ComponentEnhanced>,
   onClick: string => void,
   metric: Metric,
@@ -35,7 +36,7 @@ import { getLocalizedMetricName } from '../../../helpers/l10n';
 |}; */
 
 export default function ComponentsList(
-  { components, onClick, metrics, metric, selectedComponent } /*: Props */
+  { branch, components, onClick, metrics, metric, selectedComponent } /*: Props */
 ) {
   if (!components.length) {
     return <EmptyResult />;
@@ -44,36 +45,34 @@ export default function ComponentsList(
   const otherMetrics = (complementary[metric.key] || []).map(key => metrics[key]);
   return (
     <table className="data zebra zebra-hover">
-      {otherMetrics.length > 0 &&
+      {otherMetrics.length > 0 && (
         <thead>
           <tr>
             <th>&nbsp;</th>
             <th className="text-right">
-              <span className="small">
-                {getLocalizedMetricName(metric)}
-              </span>
+              <span className="small">{getLocalizedMetricName(metric)}</span>
             </th>
-            {otherMetrics.map(metric =>
+            {otherMetrics.map(metric => (
               <th key={metric.key} className="text-right">
-                <span className="small">
-                  {getLocalizedMetricName(metric)}
-                </span>
+                <span className="small">{getLocalizedMetricName(metric)}</span>
               </th>
-            )}
+            ))}
           </tr>
-        </thead>}
+        </thead>
+      )}
 
       <tbody>
-        {components.map(component =>
+        {components.map(component => (
           <ComponentsListRow
             key={component.id}
+            branch={branch}
             component={component}
             otherMetrics={otherMetrics}
             isSelected={component.key === selectedComponent}
             metric={metric}
             onClick={onClick}
           />
-        )}
+        ))}
       </tbody>
     </table>
   );

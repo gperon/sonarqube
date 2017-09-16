@@ -39,6 +39,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.lang.String.format;
 import static java.lang.String.valueOf;
 import static java.util.Objects.requireNonNull;
+import static org.sonar.cluster.ClusterProperties.CLUSTER_ENABLED;
 import static org.sonar.server.es.DefaultIndexSettings.ANALYZER;
 import static org.sonar.server.es.DefaultIndexSettings.FIELDDATA_ENABLED;
 import static org.sonar.server.es.DefaultIndexSettings.FIELD_FIELDDATA;
@@ -68,7 +69,7 @@ public class NewIndex {
     settings.put("index.refresh_interval", refreshInterval(settingsConfiguration));
 
     Configuration config = settingsConfiguration.getConfiguration();
-    boolean clusterMode = config.getBoolean(ProcessProperties.CLUSTER_ENABLED).orElse(false);
+    boolean clusterMode = config.getBoolean(CLUSTER_ENABLED).orElse(false);
     int shards = config.getInt(format("sonar.search.%s.shards", indexName))
       .orElse(settingsConfiguration.getDefaultNbOfShards());
     int replicas = clusterMode ? config.getInt(ProcessProperties.SEARCH_REPLICAS).orElse(1) : 0;
@@ -232,7 +233,10 @@ public class NewIndex {
     }
 
     public NewIndexType createDateTimeField(String fieldName) {
-      return setProperty(fieldName, ImmutableMap.of("type", "date", "format", "date_time||epoch_second"));
+      Map<String, String> hash = new TreeMap<>();
+      hash.put("type", "date");
+      hash.put("format", "date_time||epoch_second");
+      return setProperty(fieldName, hash);
     }
 
     public NewIndexType createDoubleField(String fieldName) {
@@ -271,7 +275,7 @@ public class NewIndex {
   /**
    * Helper to define a string field in mapping of index type
    */
-  public abstract static class StringFieldBuilder {
+  public abstract static class StringFieldBuilder<T extends StringFieldBuilder<T>> {
     private final NewIndexType indexType;
     private final String fieldName;
     private boolean disableSearch = false;
@@ -279,6 +283,7 @@ public class NewIndex {
     private boolean termVectorWithPositionOffsets = false;
     private SortedMap<String, Object> subFields = Maps.newTreeMap();
     private boolean store = false;
+    protected boolean disabledDocValues = false;
 
     private StringFieldBuilder(NewIndexType indexType, String fieldName) {
       this.indexType = indexType;
@@ -289,18 +294,18 @@ public class NewIndex {
      * Add a sub-field. A {@code SortedMap} is required for consistency of the index settings hash.
      * @see IndexDefinitionHash
      */
-    private StringFieldBuilder addSubField(String fieldName, SortedMap<String, String> fieldDefinition) {
+    private T addSubField(String fieldName, SortedMap<String, String> fieldDefinition) {
       subFields.put(fieldName, fieldDefinition);
-      return this;
+      return castThis();
     }
 
     /**
      * Add subfields, one for each analyzer.
      */
-    public StringFieldBuilder addSubFields(DefaultIndexSettingsElement... analyzers) {
+    public T addSubFields(DefaultIndexSettingsElement... analyzers) {
       Arrays.stream(analyzers)
         .forEach(analyzer -> addSubField(analyzer.getSubFieldSuffix(), analyzer.fieldMapping()));
-      return this;
+      return castThis();
     }
 
     /**
@@ -309,17 +314,17 @@ public class NewIndex {
      * https://www.elastic.co/guide/en/elasticsearch/reference/2.3/norms.html
      * https://www.elastic.co/guide/en/elasticsearch/guide/current/scoring-theory.html#field-norm
      */
-    public StringFieldBuilder disableNorms() {
+    public T disableNorms() {
       this.disableNorms = true;
-      return this;
+      return castThis();
     }
 
     /**
      * Position offset term vectors are required for the fast_vector_highlighter (fvh).
      */
-    public StringFieldBuilder termVectorWithPositionOffsets() {
+    public T termVectorWithPositionOffsets() {
       this.termVectorWithPositionOffsets = true;
-      return this;
+      return castThis();
     }
 
     /**
@@ -327,14 +332,19 @@ public class NewIndex {
      * By default field is "true": it is searchable, but index the value exactly
      * as specified.
      */
-    public StringFieldBuilder disableSearch() {
+    public T disableSearch() {
       this.disableSearch = true;
-      return this;
+      return castThis();
     }
 
-    public StringFieldBuilder store() {
+    public T store() {
       this.store = true;
-      return this;
+      return castThis();
+    }
+
+    @SuppressWarnings("unchecked")
+    private T castThis() {
+      return (T) this;
     }
 
     public NewIndexType build() {
@@ -346,11 +356,13 @@ public class NewIndex {
 
     private NewIndexType buildWithoutSubfields() {
       Map<String, Object> hash = new TreeMap<>();
-      hash.putAll(ImmutableMap.of(
-        "type", getFieldType(),
-        INDEX, disableSearch ? INDEX_NOT_SEARCHABLE : INDEX_SEARCHABLE,
-        "norms", valueOf(!disableNorms),
-        "store", valueOf(store)));
+      hash.put("type", getFieldType());
+      hash.put(INDEX, disableSearch ? INDEX_NOT_SEARCHABLE : INDEX_SEARCHABLE);
+      hash.put("norms", valueOf(!disableNorms));
+      hash.put("store", valueOf(store));
+      if (FIELD_TYPE_KEYWORD.equals(getFieldType())) {
+        hash.put("doc_values", valueOf(!disabledDocValues));
+      }
       if (getFieldData()) {
         hash.put(FIELD_FIELDDATA, FIELDDATA_ENABLED);
       }
@@ -388,11 +400,15 @@ public class NewIndex {
         hash.put(FIELD_FIELDDATA, FIELDDATA_ENABLED);
       }
 
-      multiFields.put(fieldName, ImmutableMap.of(
-        "type", getFieldType(),
-        INDEX, INDEX_SEARCHABLE,
-        "norms", "false",
-        "store", valueOf(store)));
+      Map<String, String> subHash = new TreeMap<>();
+      subHash.put("type", getFieldType());
+      subHash.put(INDEX, INDEX_SEARCHABLE);
+      subHash.put("norms", "false");
+      subHash.put("store", valueOf(store));
+      if (FIELD_TYPE_KEYWORD.equals(getFieldType())) {
+        subHash.put("doc_values", valueOf(!disabledDocValues));
+      }
+      multiFields.put(fieldName, subHash);
       hash.put("fields", multiFields);
 
       return indexType.setProperty(fieldName, hash);
@@ -409,7 +425,7 @@ public class NewIndex {
     }
   }
 
-  public static class KeywordFieldBuilder extends StringFieldBuilder {
+  public static class KeywordFieldBuilder extends StringFieldBuilder<KeywordFieldBuilder> {
 
     private KeywordFieldBuilder(NewIndexType indexType, String fieldName) {
       super(indexType, fieldName);
@@ -423,9 +439,20 @@ public class NewIndex {
     protected String getFieldType() {
       return FIELD_TYPE_KEYWORD;
     }
+
+    /**
+     * By default, field is stored on disk in a column-stride fashion, so that it can later be used for sorting,
+     * aggregations, or scripting.
+     * Disabling this reduces the size of the index and drop the constraint of single term max size of
+     * 32766 bytes (which, if there is no tokenizing enabled on the field, equals the size of the whole data).
+     */
+    public KeywordFieldBuilder disableSortingAndAggregating() {
+      this.disabledDocValues = true;
+      return this;
+    }
   }
 
-  public static class TextFieldBuilder extends StringFieldBuilder {
+  public static class TextFieldBuilder extends StringFieldBuilder<TextFieldBuilder> {
 
     private boolean fieldData = false;
 
@@ -469,7 +496,7 @@ public class NewIndex {
     }
 
     public NestedFieldBuilder addKeywordField(String fieldName) {
-      return setProperty(fieldName, ImmutableMap.of(
+      return setProperty(fieldName, ImmutableSortedMap.of(
         "type", FIELD_TYPE_KEYWORD,
         INDEX, INDEX_SEARCHABLE));
     }
@@ -484,11 +511,10 @@ public class NewIndex {
 
     public NewIndexType build() {
       checkArgument(!properties.isEmpty(), "At least one sub-field must be declared in nested property '%s'", fieldName);
-      Map<String, Object> hash = new TreeMap<>();
-      hash.put("type", "nested");
-      hash.put("properties", properties);
 
-      return indexType.setProperty(fieldName, hash);
+      return indexType.setProperty(fieldName, ImmutableSortedMap.of(
+        "type", "nested",
+        "properties", properties));
     }
   }
 

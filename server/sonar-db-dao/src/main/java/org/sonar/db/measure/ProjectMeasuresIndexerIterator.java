@@ -19,7 +19,7 @@
  */
 package org.sonar.db.measure;
 
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedSet;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -27,6 +27,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -53,6 +54,7 @@ public class ProjectMeasuresIndexerIterator extends CloseableIterator<ProjectMea
 
   public static final Set<String> METRIC_KEYS = ImmutableSortedSet.of(
     CoreMetrics.NCLOC_KEY,
+    CoreMetrics.LINES_KEY,
     CoreMetrics.DUPLICATED_LINES_DENSITY_KEY,
     CoreMetrics.COVERAGE_KEY,
     CoreMetrics.SQALE_RATING_KEY,
@@ -70,7 +72,7 @@ public class ProjectMeasuresIndexerIterator extends CloseableIterator<ProjectMea
   private static final String SQL_PROJECTS = "SELECT p.organization_uuid, p.uuid, p.kee, p.name, s.uuid, s.created_at, p.tags " +
     "FROM projects p " +
     "LEFT OUTER JOIN snapshots s ON s.component_uuid=p.uuid AND s.islast=? " +
-    "WHERE p.enabled=? AND p.scope=? AND p.qualifier=?";
+    "WHERE p.enabled=? AND p.scope=? AND p.qualifier=? and p.main_branch_project_uuid is null ";
 
   private static final String PROJECT_FILTER = " AND p.uuid=?";
 
@@ -203,7 +205,7 @@ public class ProjectMeasuresIndexerIterator extends CloseableIterator<ProjectMea
       return;
     }
     if (NCLOC_LANGUAGE_DISTRIBUTION_KEY.equals(metricKey)) {
-      readTextValue(rs, measures::setLanguages);
+      readTextValue(rs, measures::setNclocByLanguages);
       return;
     }
   }
@@ -283,10 +285,9 @@ public class ProjectMeasuresIndexerIterator extends CloseableIterator<ProjectMea
   }
 
   public static class Measures {
-
     private Map<String, Double> numericMeasures = new HashMap<>();
     private String qualityGateStatus;
-    private List<String> languages = new ArrayList<>();
+    private Map<String, Integer> nclocByLanguages = new LinkedHashMap<>();
 
     Measures addNumericMeasure(String metricKey, double value) {
       numericMeasures.put(metricKey, value);
@@ -307,13 +308,13 @@ public class ProjectMeasuresIndexerIterator extends CloseableIterator<ProjectMea
       return qualityGateStatus;
     }
 
-    Measures setLanguages(String languageDistributionValue) {
-      this.languages = ImmutableList.copyOf(parseStringInt(languageDistributionValue).keySet());
+    Measures setNclocByLanguages(String nclocByLangues) {
+      this.nclocByLanguages = ImmutableMap.copyOf(parseStringInt(nclocByLangues));
       return this;
     }
 
-    public List<String> getLanguages() {
-      return languages;
+    public Map<String, Integer> getNclocByLanguages() {
+      return nclocByLanguages;
     }
   }
 

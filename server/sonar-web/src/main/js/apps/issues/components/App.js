@@ -55,6 +55,7 @@ import {
 } from '../utils'; */
 import ListFooter from '../../../components/controls/ListFooter';
 import EmptySearch from '../../../components/common/EmptySearch';
+import { getBranchName } from '../../../helpers/branches';
 import { translate, translateWithParameters } from '../../../helpers/l10n';
 import { scrollToElement } from '../../../helpers/scrolling';
 /*:: import type { Issue } from '../../../components/issue/types'; */
@@ -63,6 +64,7 @@ import '../styles.css';
 
 /*::
 export type Props = {
+  branch?: { name: string },
   component?: Component,
   currentUser: CurrentUser,
   fetchIssues: (query: RawQuery) => Promise<*>,
@@ -138,7 +140,7 @@ export default class App extends React.PureComponent {
 
     const footer = document.getElementById('footer');
     if (footer) {
-      footer.classList.add('search-navigator-footer');
+      footer.classList.add('page-footer-with-sidebar');
     }
 
     this.attachShortcuts();
@@ -171,6 +173,8 @@ export default class App extends React.PureComponent {
     const { query } = this.props.location;
     const { query: prevQuery } = prevProps.location;
     if (
+      prevProps.component !== this.props.component ||
+      prevProps.branch !== this.props.branch ||
       !areQueriesEqual(prevQuery, query) ||
       areMyIssuesSelected(prevQuery) !== areMyIssuesSelected(query)
     ) {
@@ -187,7 +191,7 @@ export default class App extends React.PureComponent {
 
     const footer = document.getElementById('footer');
     if (footer) {
-      footer.classList.remove('search-navigator-footer');
+      footer.classList.remove('page-footer-with-sidebar');
     }
 
     this.mounted = false;
@@ -306,6 +310,7 @@ export default class App extends React.PureComponent {
       pathname: this.props.location.pathname,
       query: {
         ...serializeQuery(this.state.query),
+        branch: this.props.branch && getBranchName(this.props.branch),
         id: this.props.component && this.props.component.key,
         myIssues: this.state.myIssues ? 'true' : undefined,
         open: issue
@@ -324,6 +329,7 @@ export default class App extends React.PureComponent {
         pathname: this.props.location.pathname,
         query: {
           ...serializeQuery(this.state.query),
+          branch: this.props.branch && getBranchName(this.props.branch),
           id: this.props.component && this.props.component.key,
           myIssues: this.state.myIssues ? 'true' : undefined,
           open: undefined
@@ -355,10 +361,15 @@ export default class App extends React.PureComponent {
     const { myIssues, openFacets, query } = this.state;
 
     const facets = requestFacets
-      ? Object.keys(openFacets).filter(facet => openFacets[facet]).map(mapFacet).join(',')
+      ? Object.keys(openFacets)
+          .filter(facet => openFacets[facet])
+          .map(mapFacet)
+          .join(',')
       : undefined;
 
     const parameters = {
+      branch: this.props.branch && getBranchName(this.props.branch),
+      componentKeys: component && component.key,
       s: 'FILE_LINE',
       ...serializeQuery(query),
       ps: '100',
@@ -366,10 +377,6 @@ export default class App extends React.PureComponent {
       facets,
       ...additional
     };
-
-    if (component) {
-      Object.assign(parameters, { componentKeys: component.key });
-    }
 
     // only sorting by CREATION_DATE is allowed, so let's sort DESC
     if (query.sort) {
@@ -552,6 +559,7 @@ export default class App extends React.PureComponent {
       pathname: this.props.location.pathname,
       query: {
         ...serializeQuery({ ...this.state.query, ...changes }),
+        branch: this.props.branch && getBranchName(this.props.branch),
         id: this.props.component && this.props.component.key,
         myIssues: this.state.myIssues ? 'true' : undefined
       }
@@ -567,6 +575,7 @@ export default class App extends React.PureComponent {
       pathname: this.props.location.pathname,
       query: {
         ...serializeQuery({ ...this.state.query, assigned: true, assignees: [] }),
+        branch: this.props.branch && getBranchName(this.props.branch),
         id: this.props.component && this.props.component.key,
         myIssues: myIssues ? 'true' : undefined
       }
@@ -593,6 +602,7 @@ export default class App extends React.PureComponent {
       pathname: this.props.location.pathname,
       query: {
         ...DEFAULT_QUERY,
+        branch: this.props.branch && getBranchName(this.props.branch),
         id: this.props.component && this.props.component.key,
         myIssues: this.state.myIssues ? 'true' : undefined
       }
@@ -682,29 +692,31 @@ export default class App extends React.PureComponent {
 
     return (
       <div className="pull-left">
-        {checked.length > 0
-          ? <div className="dropdown">
-              <button id="issues-bulk-change" data-toggle="dropdown">
-                {translate('bulk_change')}
-                <i className="icon-dropdown little-spacer-left" />
-              </button>
-              <ul className="dropdown-menu">
-                <li>
-                  <a href="#" onClick={this.handleBulkChangeClick}>
-                    {translateWithParameters('issues.bulk_change', paging ? paging.total : 0)}
-                  </a>
-                </li>
-                <li>
-                  <a href="#" onClick={this.handleBulkChangeSelectedClick}>
-                    {translateWithParameters('issues.bulk_change_selected', checked.length)}
-                  </a>
-                </li>
-              </ul>
-            </div>
-          : <button id="issues-bulk-change" onClick={this.handleBulkChangeClick}>
+        {checked.length > 0 ? (
+          <div className="dropdown">
+            <button id="issues-bulk-change" data-toggle="dropdown">
               {translate('bulk_change')}
-            </button>}
-        {bulkChange != null &&
+              <i className="icon-dropdown little-spacer-left" />
+            </button>
+            <ul className="dropdown-menu">
+              <li>
+                <a href="#" onClick={this.handleBulkChangeClick}>
+                  {translateWithParameters('issues.bulk_change', paging ? paging.total : 0)}
+                </a>
+              </li>
+              <li>
+                <a href="#" onClick={this.handleBulkChangeSelectedClick}>
+                  {translateWithParameters('issues.bulk_change_selected', checked.length)}
+                </a>
+              </li>
+            </ul>
+          </div>
+        ) : (
+          <button id="issues-bulk-change" onClick={this.handleBulkChangeClick}>
+            {translate('bulk_change')}
+          </button>
+        )}
+        {bulkChange != null && (
           <BulkChangeModal
             component={component}
             currentUser={currentUser}
@@ -712,7 +724,8 @@ export default class App extends React.PureComponent {
             onClose={this.closeBulkChange}
             onDone={this.handleBulkChangeDone}
             organization={this.props.organization}
-          />}
+          />
+        )}
       </div>
     );
   }
@@ -723,11 +736,12 @@ export default class App extends React.PureComponent {
 
     return (
       <div className="layout-page-filters">
-        {currentUser.isLoggedIn &&
+        {currentUser.isLoggedIn && (
           <MyIssuesFilter
             myIssues={this.state.myIssues}
             onMyIssuesChange={this.handleMyIssuesChange}
-          />}
+          />
+        )}
         <FiltersHeader displayReset={this.isFiltered()} onReset={this.handleReset} />
         <Sidebar
           component={component}
@@ -769,8 +783,9 @@ export default class App extends React.PureComponent {
           selectedLocationIndex={this.state.selectedLocationIndex}
         />
         {paging != null &&
-          paging.total > 0 &&
-          <ListFooter total={paging.total} count={issues.length} loadMore={this.fetchMoreIssues} />}
+        paging.total > 0 && (
+          <ListFooter total={paging.total} count={issues.length} loadMore={this.fetchMoreIssues} />
+        )}
       </div>
     );
   }
@@ -790,7 +805,7 @@ export default class App extends React.PureComponent {
   }
 
   renderList() {
-    const { component, currentUser, organization } = this.props;
+    const { branch, component, currentUser, organization } = this.props;
     const { issues, openIssue, paging } = this.state;
     const selectedIndex = this.getSelectedIndex();
     const selectedIssue = selectedIndex != null ? issues[selectedIndex] : null;
@@ -801,8 +816,9 @@ export default class App extends React.PureComponent {
 
     return (
       <div>
-        {paging.total > 0 &&
+        {paging.total > 0 && (
           <IssuesList
+            branch={this.props.branch && getBranchName(branch)}
             checked={this.state.checked}
             component={component}
             issues={issues}
@@ -814,10 +830,12 @@ export default class App extends React.PureComponent {
             openPopup={this.state.openPopup}
             organization={organization}
             selectedIssue={selectedIssue}
-          />}
+          />
+        )}
 
-        {paging.total > 0 &&
-          <ListFooter total={paging.total} count={issues.length} loadMore={this.fetchMoreIssues} />}
+        {paging.total > 0 && (
+          <ListFooter total={paging.total} count={issues.length} loadMore={this.fetchMoreIssues} />
+        )}
 
         {paging.total === 0 && <EmptySearch />}
       </div>
@@ -833,16 +851,15 @@ export default class App extends React.PureComponent {
     return (
       <div className="pull-right note">
         <span className="shortcut-button little-spacer-right">alt</span>
-        <span className="little-spacer-right">
-          {'+'}
-        </span>
+        <span className="little-spacer-right">{'+'}</span>
         <span className="shortcut-button little-spacer-right">↑</span>
         <span className="shortcut-button little-spacer-right">↓</span>
-        {hasSeveralFlows &&
+        {hasSeveralFlows && (
           <span>
             <span className="shortcut-button little-spacer-right">←</span>
             <span className="shortcut-button little-spacer-right">→</span>
-          </span>}
+          </span>
+        )}
         {translate('issues.to_navigate_issue_locations')}
       </div>
     );
@@ -862,20 +879,23 @@ export default class App extends React.PureComponent {
             <div className="layout-page-header-panel-inner layout-page-main-header-inner">
               <div className="layout-page-main-inner">
                 {this.renderBulkChange(openIssue)}
-                {openIssue != null
-                  ? <div className="pull-left width-60">
-                      <ComponentBreadcrumbs
-                        component={component}
-                        issue={openIssue}
-                        organization={this.props.organization}
-                      />
-                    </div>
-                  : <PageActions
-                      loading={this.state.loading}
-                      onReload={this.handleReload}
-                      paging={paging}
-                      selectedIndex={selectedIndex}
-                    />}
+                {openIssue != null ? (
+                  <div className="pull-left width-60">
+                    <ComponentBreadcrumbs
+                      branch={this.props.branch && getBranchName(this.props.branch)}
+                      component={component}
+                      issue={openIssue}
+                      organization={this.props.organization}
+                    />
+                  </div>
+                ) : (
+                  <PageActions
+                    loading={this.state.loading}
+                    onReload={this.handleReload}
+                    paging={paging}
+                    selectedIndex={selectedIndex}
+                  />
+                )}
                 {this.renderShortcutsForLocations()}
               </div>
             </div>
@@ -883,19 +903,23 @@ export default class App extends React.PureComponent {
 
           <div className="layout-page-main-inner">
             <div>
-              {openIssue
-                ? <IssuesSourceViewer
-                    openIssue={openIssue}
-                    loadIssues={this.fetchIssuesForComponent}
-                    onIssueChange={this.handleIssueChange}
-                    onIssueSelect={this.openIssue}
-                    onLocationSelect={this.selectLocation}
-                    selectedFlowIndex={this.state.selectedFlowIndex}
-                    selectedLocationIndex={
-                      this.state.locationsNavigator ? this.state.selectedLocationIndex : null
-                    }
-                  />
-                : this.renderList()}
+              {openIssue ? (
+                <IssuesSourceViewer
+                  branch={this.props.branch && getBranchName(this.props.branch)}
+                  component={component}
+                  openIssue={openIssue}
+                  loadIssues={this.fetchIssuesForComponent}
+                  onIssueChange={this.handleIssueChange}
+                  onIssueSelect={this.openIssue}
+                  onLocationSelect={this.selectLocation}
+                  selectedFlowIndex={this.state.selectedFlowIndex}
+                  selectedLocationIndex={
+                    this.state.locationsNavigator ? this.state.selectedLocationIndex : null
+                  }
+                />
+              ) : (
+                this.renderList()
+              )}
             </div>
           </div>
         </div>

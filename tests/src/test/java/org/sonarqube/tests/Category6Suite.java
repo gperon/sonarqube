@@ -35,9 +35,10 @@ import org.sonarqube.tests.organization.OrganizationMembershipUiTest;
 import org.sonarqube.tests.organization.OrganizationTest;
 import org.sonarqube.tests.organization.PersonalOrganizationTest;
 import org.sonarqube.tests.organization.RootUserOnOrganizationTest;
-import org.sonarqube.tests.projectAdministration.ProjectDeletionTest;
+import org.sonarqube.tests.projectAdministration.ProjectDeleteTest;
 import org.sonarqube.tests.projectAdministration.ProjectKeyUpdateTest;
 import org.sonarqube.tests.projectAdministration.ProjectProvisioningTest;
+import org.sonarqube.tests.projectAdministration.ProjectSearchTest;
 import org.sonarqube.tests.projectSearch.LeakProjectsPageTest;
 import org.sonarqube.tests.projectSearch.SearchProjectsTest;
 import org.sonarqube.tests.qualityGate.OrganizationQualityGateUiTest;
@@ -76,9 +77,10 @@ import static util.ItUtils.xooPlugin;
   LeakProjectsPageTest.class,
   SearchProjectsTest.class,
   RulesWsTest.class,
-  ProjectDeletionTest.class,
+  ProjectDeleteTest.class,
   ProjectProvisioningTest.class,
   ProjectKeyUpdateTest.class,
+  ProjectSearchTest.class,
   PermissionTemplateTest.class
 })
 public class Category6Suite {
@@ -98,11 +100,8 @@ public class Category6Suite {
     .addPlugin(pluginArtifact("fake-billing-plugin"))
     .addPlugin(pluginArtifact("ui-extensions-plugin"))
 
-    // reduce xmx and xms from 2g (default) to 1g
-    .setServerProperty("sonar.search.javaOpts", "-Xms512m -Xmx512m -XX:+UseConcMarkSweepGC -XX:CMSInitiatingOccupancyFraction=75 -XX:+UseCMSInitiatingOccupancyOnly" +
-      " -XX:+AlwaysPreTouch -server -Xss1m -Djava.awt.headless=true -Dfile.encoding=UTF-8 -Djna.nosys=true" +
-      " -Djdk.io.permissionsUseCanonicalPath=true -Dio.netty.noUnsafe=true -Dio.netty.noKeySetOptimization=true" +
-      " -Dio.netty.recycler.maxCapacityPerThread=0 -Dlog4j.shutdownHookEnabled=false -Dlog4j2.disable.jmx=true -Dlog4j.skipJansi=true -XX:+HeapDumpOnOutOfMemoryError")
+    // reduce memory for Elasticsearch to 128M
+    .setServerProperty("sonar.search.javaOpts", "-Xms128m -Xmx128m")
 
     .build();
 }

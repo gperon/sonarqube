@@ -26,14 +26,14 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import org.junit.Test;
-import org.sonar.ce.cluster.HazelcastClientWrapperImpl;
 import org.sonar.ce.taskprocessor.CeWorkerFactory;
+import org.sonar.cluster.localclient.HazelcastLocalClient;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.data.MapEntry.entry;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.sonar.process.cluster.ClusterObjectKeys.WORKER_UUIDS;
+import static org.sonar.cluster.ClusterObjectKeys.WORKER_UUIDS;
 
 public class CeDistributedInformationImplTest {
   private String clientUUID1 = "1";
@@ -45,12 +45,12 @@ public class CeDistributedInformationImplTest {
     clientUUID3, ImmutableSet.of("4", "5", "6")
   );
 
-  private HazelcastClientWrapperImpl hzClientWrapper = mock(HazelcastClientWrapperImpl.class);
+  private HazelcastLocalClient hzClientWrapper = mock(HazelcastLocalClient.class);
 
   @Test
   public void getWorkerUUIDs_returns_union_of_workers_uuids_of_local_and_cluster_worker_uuids() {
-    when(hzClientWrapper.getClientUUID()).thenReturn(clientUUID1);
-    when(hzClientWrapper.getConnectedClients()).thenReturn(ImmutableSet.of(clientUUID1, clientUUID2, clientUUID3));
+    when(hzClientWrapper.getUUID()).thenReturn(clientUUID1);
+    when(hzClientWrapper.getMemberUuids()).thenReturn(ImmutableSet.of(clientUUID1, clientUUID2, clientUUID3));
     when(hzClientWrapper.getReplicatedMap(WORKER_UUIDS)).thenReturn(workerMap);
 
     CeDistributedInformation ceDistributedInformation = new CeDistributedInformationImpl(hzClientWrapper, mock(CeWorkerFactory.class));
@@ -59,8 +59,8 @@ public class CeDistributedInformationImplTest {
 
   @Test
   public void getWorkerUUIDs_must_filter_absent_client() {
-    when(hzClientWrapper.getClientUUID()).thenReturn(clientUUID1);
-    when(hzClientWrapper.getConnectedClients()).thenReturn(ImmutableSet.of(clientUUID1, clientUUID2));
+    when(hzClientWrapper.getUUID()).thenReturn(clientUUID1);
+    when(hzClientWrapper.getMemberUuids()).thenReturn(ImmutableSet.of(clientUUID1, clientUUID2));
     when(hzClientWrapper.getReplicatedMap(WORKER_UUIDS)).thenReturn(workerMap);
 
     CeDistributedInformation ceDistributedInformation = new CeDistributedInformationImpl(hzClientWrapper, mock(CeWorkerFactory.class));
@@ -74,8 +74,8 @@ public class CeDistributedInformationImplTest {
     connectedClients.add(clientUUID1);
     connectedClients.add(clientUUID2);
 
-    when(hzClientWrapper.getClientUUID()).thenReturn(clientUUID1);
-    when(hzClientWrapper.getConnectedClients()).thenReturn(connectedClients);
+    when(hzClientWrapper.getUUID()).thenReturn(clientUUID1);
+    when(hzClientWrapper.getMemberUuids()).thenReturn(connectedClients);
     when(hzClientWrapper.getReplicatedMap(WORKER_UUIDS)).thenReturn(modifiableWorkerMap);
 
     CeWorkerFactory ceWorkerFactory = mock(CeWorkerFactory.class);
@@ -101,8 +101,8 @@ public class CeDistributedInformationImplTest {
     Map modifiableWorkerMap = new HashMap();
     modifiableWorkerMap.putAll(workerMap);
 
-    when(hzClientWrapper.getClientUUID()).thenReturn(clientUUID1);
-    when(hzClientWrapper.getConnectedClients()).thenReturn(connectedClients);
+    when(hzClientWrapper.getUUID()).thenReturn(clientUUID1);
+    when(hzClientWrapper.getMemberUuids()).thenReturn(connectedClients);
     when(hzClientWrapper.getReplicatedMap(WORKER_UUIDS)).thenReturn(modifiableWorkerMap);
 
     CeDistributedInformationImpl ceDistributedInformation = new CeDistributedInformationImpl(hzClientWrapper, mock(CeWorkerFactory.class));

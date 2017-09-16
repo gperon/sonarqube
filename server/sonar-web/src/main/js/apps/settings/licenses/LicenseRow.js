@@ -19,7 +19,7 @@
  */
 import React from 'react';
 import PropTypes from 'prop-types';
-import moment from 'moment';
+import DateFormatter from '../../../components/intl/DateFormatter';
 import LicenseStatus from './LicenseStatus';
 import LicenseChangeForm from './LicenseChangeForm';
 
@@ -44,22 +44,17 @@ export default class LicenseRow extends React.PureComponent {
             {license.name || license.key}
           </div>
         </td>
-        <td className="js-organization text-middle">
-          {license.organization}
-        </td>
+        <td className="js-organization text-middle">{license.organization}</td>
         <td className="js-expiration text-middle">
-          {license.expiration != null &&
+          {license.expiration != null && (
             <div className={license.invalidExpiration ? 'text-danger' : null}>
-              {moment(license.expiration).format('LL')}
-            </div>}
+              <DateFormatter date={license.expiration} long={true} />
+            </div>
+          )}
         </td>
-        <td className="js-type text-middle">
-          {license.type}
-        </td>
+        <td className="js-type text-middle">{license.type}</td>
         <td className="js-server-id text-middle">
-          <div className={license.invalidServerId ? 'text-danger' : null}>
-            {license.serverId}
-          </div>
+          <div className={license.invalidServerId ? 'text-danger' : null}>{license.serverId}</div>
         </td>
         <td className="text-right">
           <LicenseChangeForm license={license} onChange={this.handleSet} />

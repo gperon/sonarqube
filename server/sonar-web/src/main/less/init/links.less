@@ -73,6 +73,22 @@ a {
   border-bottom: 1px solid @lightBlue;
 }
 
+.link-checkbox {
+  color: inherit;
+  border-bottom: none;
+  &:hover,
+  &:active,
+  &:focus {
+    color: inherit;
+  }
+}
+
+.link-checkbox-control {
+  display: inline-block;
+  padding: 4px 0 5px;
+  line-height: 16px;
+}
+
 a.active-link,
 .link-active {
   .link-no-underline;
@@ -82,8 +98,7 @@ a.active-link,
 // Color
 
 .link-red,
-/* deprecated */
-a.text-danger {
+/* deprecated */ a.text-danger {
   .link-variant(@red, darken(@red, 10%), lighten(@red, 40%));
 }
 a.text-muted {

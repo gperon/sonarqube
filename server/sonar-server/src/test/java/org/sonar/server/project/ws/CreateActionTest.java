@@ -85,11 +85,11 @@ public class CreateActionTest {
   private TestProjectIndexers projectIndexers = new TestProjectIndexers();
   private WsActionTester ws = new WsActionTester(
     new CreateAction(
-      new ProjectsWsSupport(db.getDbClient(), billingValidations),
+      new ProjectsWsSupport(db.getDbClient(), defaultOrganizationProvider, billingValidations),
       db.getDbClient(), userSession,
       new ComponentUpdater(db.getDbClient(), i18n, system2, mock(PermissionTemplateService.class), new FavoriteUpdater(db.getDbClient()),
-        projectIndexers),
-      defaultOrganizationProvider));
+        projectIndexers)
+    ));
 
   @Test
   public void create_project() throws Exception {
@@ -104,8 +104,8 @@ public class CreateActionTest {
       .extracting(Project::getKey, Project::getName, Project::getQualifier, Project::getVisibility)
       .containsOnly(DEFAULT_PROJECT_KEY, DEFAULT_PROJECT_NAME, "TRK", "public");
     assertThat(db.getDbClient().componentDao().selectByKey(db.getSession(), DEFAULT_PROJECT_KEY).get())
-      .extracting(ComponentDto::getDbKey, ComponentDto::name, ComponentDto::qualifier, ComponentDto::scope, ComponentDto::isPrivate)
-      .containsOnly(DEFAULT_PROJECT_KEY, DEFAULT_PROJECT_NAME, "TRK", "PRJ", false);
+      .extracting(ComponentDto::getDbKey, ComponentDto::name, ComponentDto::qualifier, ComponentDto::scope, ComponentDto::isPrivate, ComponentDto::getMainBranchProjectUuid)
+      .containsOnly(DEFAULT_PROJECT_KEY, DEFAULT_PROJECT_NAME, "TRK", "PRJ", false, null);
   }
 
   @Test

@@ -25,6 +25,7 @@ import { getComponentUrl } from '../../../helpers/urls';
 /*:: import type { ComponentEnhanced } from '../types'; */
 
 /*:: type Props = {
+  branch?: string,
   component: ComponentEnhanced,
   onClick: string => void
 }; */
@@ -56,37 +57,36 @@ export default class ComponentCell extends React.PureComponent {
       <span title={component.refKey || component.key}>
         <QualifierIcon qualifier={component.qualifier} />
         &nbsp;
-        {head.length > 0 &&
-          <span className="note">
-            {head}/
-          </span>}
+        {head.length > 0 && <span className="note">{head}/</span>}
         <span>{tail}</span>
       </span>
     );
   }
 
   render() {
-    const { component } = this.props;
+    const { branch, component } = this.props;
     return (
       <td className="measure-details-component-cell">
         <div className="text-ellipsis">
-          {component.refId == null
-            ? <a
-                id={'component-measures-component-link-' + component.key}
-                className="link-no-underline"
-                href={getComponentUrl(component.key)}
-                onClick={this.handleClick}>
-                {this.renderInner()}
-              </a>
-            : <a
-                id={'component-measures-component-link-' + component.key}
-                className="link-no-underline"
-                href={getComponentUrl(component.refKey || component.key)}>
-                <span className="big-spacer-right">
-                  <i className="icon-detach" />
-                </span>
-                {this.renderInner()}
-              </a>}
+          {component.refKey == null ? (
+            <a
+              id={'component-measures-component-link-' + component.key}
+              className="link-no-underline"
+              href={getComponentUrl(component.key, branch)}
+              onClick={this.handleClick}>
+              {this.renderInner()}
+            </a>
+          ) : (
+            <a
+              id={'component-measures-component-link-' + component.key}
+              className="link-no-underline"
+              href={getComponentUrl(component.refKey, branch)}>
+              <span className="big-spacer-right">
+                <i className="icon-detach" />
+              </span>
+              {this.renderInner()}
+            </a>
+          )}
         </div>
       </td>
     );

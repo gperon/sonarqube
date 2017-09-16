@@ -20,11 +20,11 @@
 // @flow
 import React from 'react';
 import classNames from 'classnames';
-import moment from 'moment';
 import { throttle } from 'lodash';
 import ProjectActivityAnalysis from './ProjectActivityAnalysis';
-import FormattedDate from '../../../components/ui/FormattedDate';
+import DateFormatter from '../../../components/intl/DateFormatter';
 import { translate } from '../../../helpers/l10n';
+import { toShortNotSoISOString } from '../../../helpers/dates';
 import {
   activityQueryChanged,
   getAnalysesByVersionByDay,
@@ -155,13 +155,13 @@ export default class ProjectActivityAnalysesList extends React.PureComponent {
     if (this.props.analyses.length === 0 || !hasFilteredData) {
       return (
         <div className={this.props.className}>
-          {this.props.initializing
-            ? <div className="text-center">
-                <i className="spinner" />
-              </div>
-            : <span className="note">
-                {translate('no_results')}
-              </span>}
+          {this.props.initializing ? (
+            <div className="text-center">
+              <i className="spinner" />
+            </div>
+          ) : (
+            <span className="note">{translate('no_results')}</span>
+          )}
         </div>
       );
     }
@@ -183,24 +183,23 @@ export default class ProjectActivityAnalysesList extends React.PureComponent {
           }
           return (
             <li key={version.key || 'noversion'}>
-              {version.version &&
+              {version.version && (
                 <div className={classNames('project-activity-version-badge', { first: idx === 0 })}>
-                  <span className="badge">
-                    {version.version}
-                  </span>
-                </div>}
+                  <span className="badge">{version.version}</span>
+                </div>
+              )}
               <ul className="project-activity-days-list">
-                {days.map(day =>
+                {days.map(day => (
                   <li
                     key={day}
                     className="project-activity-day"
-                    data-day={moment(Number(day)).format('YYYY-MM-DD')}>
+                    data-day={toShortNotSoISOString(Number(day))}>
                     <div className="project-activity-date">
-                      <FormattedDate date={Number(day)} format="LL" />
+                      <DateFormatter date={Number(day)} long={true} />
                     </div>
                     <ul className="project-activity-analyses-list">
                       {version.byDay[day] != null &&
-                        version.byDay[day].map(analysis =>
+                        version.byDay[day].map(analysis => (
                           <ProjectActivityAnalysis
                             addCustomEvent={this.props.addCustomEvent}
                             addVersion={this.props.addVersion}
@@ -215,18 +214,19 @@ export default class ProjectActivityAnalysesList extends React.PureComponent {
                             selected={analysis.date.valueOf() === selectedDate}
                             updateSelectedDate={this.updateSelectedDate}
                           />
-                        )}
+                        ))}
                     </ul>
                   </li>
-                )}
+                ))}
               </ul>
             </li>
           );
         })}
-        {this.props.analysesLoading &&
+        {this.props.analysesLoading && (
           <li className="text-center">
             <i className="spinner" />
-          </li>}
+          </li>
+        )}
       </ul>
     );
   }

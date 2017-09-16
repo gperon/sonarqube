@@ -18,55 +18,59 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 import * as React from 'react';
-import * as moment from 'moment';
 import { sortBy } from 'lodash';
 import { Link } from 'react-router';
 import { Project } from './types';
+import DateFromNow from '../../../components/intl/DateFromNow';
+import DateTimeFormatter from '../../../components/intl/DateTimeFormatter';
 import Level from '../../../components/ui/Level';
+import Tooltip from '../../../components/controls/Tooltip';
 import { translateWithParameters, translate } from '../../../helpers/l10n';
 
 interface Props {
   project: Project;
 }
 
-export default function ProjectCard(props: Props) {
-  const { project } = props;
+export default function ProjectCard({ project }: Props) {
   const isAnalyzed = project.lastAnalysisDate != null;
-  const analysisMoment = isAnalyzed && moment(project.lastAnalysisDate);
   const links = sortBy(project.links, 'type');
 
   return (
     <div className="account-project-card clearfix">
       <aside className="account-project-side">
-        {isAnalyzed
-          ? <div
-              className="account-project-analysis"
-              title={analysisMoment ? analysisMoment.format('LLL') : undefined}>
-              {translateWithParameters(
-                'my_account.projects.analyzed_x',
-                analysisMoment ? analysisMoment.fromNow() : undefined
-              )}
+        {isAnalyzed ? (
+          <Tooltip
+            overlay={<DateTimeFormatter date={project.lastAnalysisDate} />}
+            placement="right">
+            <div className="account-project-analysis">
+              <DateFromNow date={project.lastAnalysisDate}>
+                {(fromNow: string) => (
+                  <span>{translateWithParameters('my_account.projects.analyzed_x', fromNow)}</span>
+                )}
+              </DateFromNow>
             </div>
-          : <div className="account-project-analysis">
-              {translate('my_account.projects.never_analyzed')}
-            </div>}
+          </Tooltip>
+        ) : (
+          <div className="account-project-analysis">
+            {translate('my_account.projects.never_analyzed')}
+          </div>
+        )}
 
-        {project.qualityGate != null &&
+        {project.qualityGate != null && (
           <div className="account-project-quality-gate">
             <Level level={project.qualityGate} />
-          </div>}
+          </div>
+        )}
       </aside>
 
       <h3 className="account-project-name">
-        <Link to={{ pathname: '/dashboard', query: { id: project.key } }}>
-          {project.name}
-        </Link>
+        <Link to={{ pathname: '/dashboard', query: { id: project.key } }}>{project.name}</Link>
       </h3>
 
-      {links.length > 0 &&
+      {links.length > 0 && (
         <div className="account-project-links">
           <ul className="list-inline">
-            {links.map(link =>
+            {links.map(link => (
               <li key={link.type}>
                 <a
                   className="link-with-icon"
@@ -77,18 +81,16 @@ export default function ProjectCard(props: Props) {
                   <i className={`icon-color-link icon-${link.type}`} />
                 </a>
               </li>
-            )}
+            ))}
           </ul>
-        </div>}
+        </div>
+      )}
 
-      <div className="account-project-key">
-        {project.key}
-      </div>
+      <div className="account-project-key">{project.key}</div>
 
-      {!!project.description &&
-        <div className="account-project-description">
-          {project.description}
-        </div>}
+      {!!project.description && (
+        <div className="account-project-description">{project.description}</div>
+      )}
     </div>
   );
 }

@@ -21,9 +21,11 @@ package org.sonar.server.computation.task.projectanalysis.analysis;
 
 import java.util.Date;
 import java.util.Map;
+import java.util.Optional;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nullable;
 import org.junit.rules.ExternalResource;
+import org.sonar.db.component.BranchType;
 import org.sonar.db.organization.OrganizationDto;
 import org.sonar.server.computation.util.InitializedProperty;
 import org.sonar.server.qualityprofile.QualityProfile;
@@ -46,11 +48,15 @@ public class AnalysisMetadataHolderRule extends ExternalResource implements Muta
 
   private final InitializedProperty<Boolean> crossProjectDuplicationEnabled = new InitializedProperty<>();
 
-  private final InitializedProperty<String> branch = new InitializedProperty<>();
+  private final InitializedProperty<Branch> branch = new InitializedProperty<>();
+
+  private final InitializedProperty<Project> project = new InitializedProperty<>();
 
   private final InitializedProperty<Integer> rootComponentRef = new InitializedProperty<>();
 
   private final InitializedProperty<Map<String, QualityProfile>> qProfilesPerLanguage = new InitializedProperty<>();
+
+  private final InitializedProperty<Map<String, ScannerPlugin>> pluginsByKey = new InitializedProperty<>();
 
   @Override
   public AnalysisMetadataHolderRule setOrganization(Organization organization) {
@@ -139,15 +145,27 @@ public class AnalysisMetadataHolderRule extends ExternalResource implements Muta
   }
 
   @Override
-  public AnalysisMetadataHolderRule setBranch(@Nullable String branch) {
+  public AnalysisMetadataHolderRule setBranch(@Nullable Branch branch) {
     this.branch.setProperty(branch);
     return this;
   }
 
   @Override
-  public String getBranch() {
+  public Optional<Branch> getBranch() {
     checkState(branch.isInitialized(), "Branch has not been set");
-    return branch.getProperty();
+    return Optional.ofNullable(branch.getProperty());
+  }
+
+  @Override
+  public AnalysisMetadataHolderRule setProject(Project p) {
+    this.project.setProperty(p);
+    return this;
+  }
+
+  @Override
+  public Project getProject() {
+    checkState(project.isInitialized(), "Project has not been set");
+    return project.getProperty();
   }
 
   @Override
@@ -175,6 +193,18 @@ public class AnalysisMetadataHolderRule extends ExternalResource implements Muta
   }
 
   @Override
+  public AnalysisMetadataHolderRule setScannerPluginsByKey(Map<String, ScannerPlugin> plugins) {
+    this.pluginsByKey.setProperty(plugins);
+    return this;
+  }
+
+  @Override
+  public Map<String, ScannerPlugin> getScannerPluginsByKey() {
+    checkState(pluginsByKey.isInitialized(), "Plugins per key has not been set");
+    return pluginsByKey.getProperty();
+  }
+
+  @Override
   public boolean isIncrementalAnalysis() {
     checkState(incremental.isInitialized(), "Incremental mode flag has not been set");
     return incremental.getProperty();
@@ -184,5 +214,11 @@ public class AnalysisMetadataHolderRule extends ExternalResource implements Muta
   public AnalysisMetadataHolderRule setIncrementalAnalysis(boolean isIncrementalAnalysis) {
     this.incremental.setProperty(isIncrementalAnalysis);
     return this;
+  }
+
+  @Override
+  public boolean isShortLivingBranch() {
+    Branch property = this.branch.getProperty();
+    return property != null && property.getType() == BranchType.SHORT;
   }
 }

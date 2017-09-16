@@ -44,7 +44,7 @@ public interface MutableAnalysisMetadataHolder extends AnalysisMetadataHolder {
    * @throws IllegalStateException if it has already been set
    */
   MutableAnalysisMetadataHolder setIncrementalAnalysis(boolean isIncrementalAnalysis);
-  
+
   /**
    * @throws IllegalStateException if baseAnalysis has already been set
    */
@@ -58,7 +58,12 @@ public interface MutableAnalysisMetadataHolder extends AnalysisMetadataHolder {
   /**
    * @throws IllegalStateException if branch has already been set
    */
-  MutableAnalysisMetadataHolder setBranch(@Nullable String branch);
+  MutableAnalysisMetadataHolder setBranch(@Nullable Branch branch);
+
+  /**
+   * @throws IllegalStateException if project has already been set
+   */
+  MutableAnalysisMetadataHolder setProject(Project project);
 
   /**
    * @throws IllegalStateException if root component ref has already been set
@@ -70,4 +75,8 @@ public interface MutableAnalysisMetadataHolder extends AnalysisMetadataHolder {
    */
   MutableAnalysisMetadataHolder setQProfilesByLanguage(Map<String, QualityProfile> qprofilesByLanguage);
 
+  /**
+   * @throws IllegalStateException if Plugins by key has already been set
+   */
+  MutableAnalysisMetadataHolder setScannerPluginsByKey(Map<String, ScannerPlugin> pluginsByKey);
 }

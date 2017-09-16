@@ -22,7 +22,7 @@ package org.sonar.ce.app;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import java.util.concurrent.atomic.AtomicReference;
-import javax.annotation.CheckForNull;
+import javax.annotation.Nullable;
 import org.sonar.api.utils.log.Logger;
 import org.sonar.api.utils.log.Loggers;
 import org.sonar.ce.ComputeEngine;
@@ -56,7 +56,7 @@ public class CeServer implements Monitored {
   private volatile boolean stopAwait = false;
 
   private final ComputeEngine computeEngine;
-  @CheckForNull
+  @Nullable
   private CeMainThread ceMainThread = null;
 
   @VisibleForTesting
@@ -171,7 +171,9 @@ public class CeServer implements Monitored {
         try {
           Thread.sleep(CHECK_FOR_STOP_DELAY);
         } catch (InterruptedException e) {
-          // ignore the interruption itself, check the flag
+          // ignore the interruption itself
+          // Do not propagate the isInterrupted flag with Thread.currentThread().interrupt()
+          // It will break the shutdown of ComputeEngineContainerImpl#stop()
         }
       }
       attemptShutdown();
@@ -179,18 +181,15 @@ public class CeServer implements Monitored {
 
     private void attemptShutdown() {
       try {
-        shutdown();
+        LOG.info("Compute Engine is stopping...");
+        computeEngine.shutdown();
+        LOG.info("Compute Engine is stopped");
       } catch (Throwable e) {
-        LOG.error("Compute Engine shutdown failed", e);
+        LOG.error("Compute Engine failed to stop", e);
       } finally {
         // release thread waiting for CeServer
         stopAwait();
       }
-    }
-
-    private void shutdown() {
-      LOG.info("Compute Engine shutting down...");
-      computeEngine.shutdown();
     }
 
     public boolean isStarted() {
@@ -210,8 +209,9 @@ public class CeServer implements Monitored {
       if (t != null) {
         t.interrupt();
         try {
-          t.join(1000);
+          t.join(1_000);
         } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
           // Ignored
         }
       }

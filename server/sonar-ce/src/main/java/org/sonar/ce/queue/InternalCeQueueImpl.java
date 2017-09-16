@@ -26,13 +26,13 @@ import java.io.PrintWriter;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import org.sonar.api.ce.ComputeEngineSide;
 import org.sonar.api.utils.System2;
 import org.sonar.api.utils.log.Loggers;
+import org.sonar.ce.container.ComputeEngineStatus;
 import org.sonar.ce.monitoring.CEQueueStatus;
 import org.sonar.core.util.UuidFactory;
 import org.sonar.db.DbClient;
@@ -40,9 +40,11 @@ import org.sonar.db.DbSession;
 import org.sonar.db.ce.CeActivityDto;
 import org.sonar.db.ce.CeQueueDao;
 import org.sonar.db.ce.CeQueueDto;
+import org.sonar.server.computation.task.projectanalysis.component.VisitException;
 import org.sonar.server.organization.DefaultOrganizationProvider;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 @ComputeEngineSide
@@ -54,23 +56,22 @@ public class InternalCeQueueImpl extends CeQueueImpl implements InternalCeQueue 
   private final System2 system2;
   private final DbClient dbClient;
   private final CEQueueStatus queueStatus;
-
-  // state
-  private AtomicBoolean peekPaused = new AtomicBoolean(false);
+  private final ComputeEngineStatus computeEngineStatus;
 
   public InternalCeQueueImpl(System2 system2, DbClient dbClient, UuidFactory uuidFactory, CEQueueStatus queueStatus,
-    DefaultOrganizationProvider defaultOrganizationProvider) {
+    DefaultOrganizationProvider defaultOrganizationProvider, ComputeEngineStatus computeEngineStatus) {
     super(dbClient, uuidFactory, defaultOrganizationProvider);
     this.system2 = system2;
     this.dbClient = dbClient;
     this.queueStatus = queueStatus;
+    this.computeEngineStatus = computeEngineStatus;
   }
 
   @Override
   public Optional<CeTask> peek(String workerUuid) {
     requireNonNull(workerUuid, "workerUuid can't be null");
 
-    if (peekPaused.get()) {
+    if (computeEngineStatus.getStatus() != ComputeEngineStatus.Status.STARTED) {
       return Optional.empty();
     }
     try (DbSession dbSession = dbClient.openSession(false)) {
@@ -121,7 +122,11 @@ public class InternalCeQueueImpl extends CeQueueImpl implements InternalCeQueue 
       return;
     }
 
-    activityDto.setErrorMessage(error.getMessage());
+    if (error instanceof VisitException && error.getCause() != null) {
+      activityDto.setErrorMessage(format("%s (%s)", error.getCause().getMessage(), error.getMessage()));
+    } else {
+      activityDto.setErrorMessage(error.getMessage());
+    }
     String stacktrace = getStackTraceForPersistence(error);
     if (stacktrace != null) {
       activityDto.setErrorStacktrace(stacktrace);
@@ -175,21 +180,6 @@ public class InternalCeQueueImpl extends CeQueueImpl implements InternalCeQueue 
       dbClient.ceQueueDao().resetTasksWithUnknownWorkerUUIDs(dbSession, knownWorkerUUIDs);
       dbSession.commit();
     }
-  }
-
-  @Override
-  public void pausePeek() {
-    this.peekPaused.set(true);
-  }
-
-  @Override
-  public void resumePeek() {
-    this.peekPaused.set(false);
-  }
-
-  @Override
-  public boolean isPeekPaused() {
-    return peekPaused.get();
   }
 
   /**

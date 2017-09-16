@@ -49,23 +49,29 @@ public class DropColumnsBuilder {
         this.columns = columns;
     }
 
-    public List<String> build() {
-        switch (dialect.getId()) {
-            case PostgreSql.ID:
-            case MySql.ID:
-            case MariaDb.ID:
-                StringBuilder sql = new StringBuilder().append(ALTER_TABLE).append(tableName).append(" ");
-                dropColumns(sql, "DROP COLUMN ", columns);
-                return Collections.singletonList(sql.toString());
-            case MsSql.ID:
-                return Collections.singletonList(getMsSQLStatement(columns));
-            case Oracle.ID:
-                return Collections.singletonList(getOracleStatement());
-            case H2.ID:
-                return Arrays.stream(columns).map(this::getMsSQLStatement).collect(MoreCollectors.toList(columns.length));
-            default:
-                throw new IllegalStateException(String.format("Unsupported database '%s'", dialect.getId()));
-        }
+  private String getOracleStatement() {
+    StringBuilder sql = new StringBuilder().append(ALTER_TABLE).append(tableName).append(" ");
+    sql.append("SET UNUSED (");
+    dropColumns(sql, "", columns);
+    sql.append(")");
+    return sql.toString();
+  }
+
+  private String getMsSQLStatement(String... columnNames) {
+    StringBuilder sql = new StringBuilder().append(ALTER_TABLE).append(tableName).append(" ");
+    sql.append("DROP COLUMN ");
+    dropColumns(sql, "", columnNames);
+    return sql.toString();
+  }
+
+  private static void dropColumns(StringBuilder sql, String columnPrefix, String... columnNames) {
+    Iterator<String> columnNamesIterator = Arrays.stream(columnNames).iterator();
+    while (columnNamesIterator.hasNext()) {
+      sql.append(columnPrefix);
+      sql.append(columnNamesIterator.next());
+      if (columnNamesIterator.hasNext()) {
+        sql.append(", ");
+      }
     }
 
     private String getOracleStatement() {

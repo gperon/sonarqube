@@ -22,12 +22,14 @@ package org.sonar.process;
 import java.io.File;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.sonar.process.sharedmemoryfile.DefaultProcessCommands;
+import org.sonar.process.sharedmemoryfile.ProcessCommands;
 
 public class ProcessEntryPoint implements Stoppable {
 
   public static final String PROPERTY_PROCESS_KEY = "process.key";
   public static final String PROPERTY_PROCESS_INDEX = "process.index";
-  public static final String PROPERTY_TERMINATION_TIMEOUT = "process.terminationTimeout";
+  public static final String PROPERTY_TERMINATION_TIMEOUT_MS = "process.terminationTimeout";
   public static final String PROPERTY_SHARED_PATH = "process.sharedDir";
 
   private final Props props;
@@ -169,7 +171,7 @@ public class ProcessEntryPoint implements Stoppable {
   @Override
   public void stopAsync() {
     if (lifecycle.tryToMoveTo(Lifecycle.State.STOPPING)) {
-      stopperThread = new StopperThread(monitored, commands, Long.parseLong(props.nonNullValue(PROPERTY_TERMINATION_TIMEOUT)));
+      stopperThread = new StopperThread(monitored, commands, Long.parseLong(props.nonNullValue(PROPERTY_TERMINATION_TIMEOUT_MS)));
       stopperThread.start();
       stopWatcher.stopWatching();
     }

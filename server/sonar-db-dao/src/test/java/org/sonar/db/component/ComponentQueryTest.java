@@ -19,10 +19,13 @@
  */
 package org.sonar.db.component;
 
+import java.util.function.Supplier;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import static java.util.Collections.emptySet;
+import static java.util.Collections.singleton;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.sonar.api.resources.Qualifiers.PROJECT;
 
@@ -36,12 +39,17 @@ public class ComponentQueryTest {
     ComponentQuery underTest = ComponentQuery.builder()
       .setNameOrKeyQuery("key")
       .setLanguage("java")
+      .setAnalyzedBefore(1_000_000_000L)
       .setQualifiers(PROJECT)
       .build();
 
     assertThat(underTest.getNameOrKeyQuery()).isEqualTo("key");
     assertThat(underTest.getLanguage()).isEqualTo("java");
     assertThat(underTest.getQualifiers()).containsOnly(PROJECT);
+    assertThat(underTest.getAnalyzedBefore()).isEqualTo(1_000_000_000L);
+    assertThat(underTest.isOnProvisionedOnly()).isFalse();
+    assertThat(underTest.isPartialMatchOnKey()).isFalse();
+    assertThat(underTest.hasEmptySetOfComponents()).isFalse();
   }
 
   @Test
@@ -56,6 +64,28 @@ public class ComponentQueryTest {
   }
 
   @Test
+  public void test_getNameOrKeyUpperLikeQuery() throws Exception {
+    ComponentQuery underTest = ComponentQuery.builder()
+      .setNameOrKeyQuery("NAME/key")
+      .setQualifiers(PROJECT)
+      .build();
+
+    assertThat(underTest.getNameOrKeyUpperLikeQuery()).isEqualTo("%NAME//KEY%");
+  }
+
+  @Test
+  public void empty_list_of_components() {
+    Supplier<ComponentQuery.Builder> query = () -> ComponentQuery.builder().setQualifiers(PROJECT);
+
+    assertThat(query.get().setComponentIds(emptySet()).build().hasEmptySetOfComponents()).isTrue();
+    assertThat(query.get().setComponentKeys(emptySet()).build().hasEmptySetOfComponents()).isTrue();
+    assertThat(query.get().setComponentUuids(emptySet()).build().hasEmptySetOfComponents()).isTrue();
+    assertThat(query.get().setComponentIds(singleton(404L)).build().hasEmptySetOfComponents()).isFalse();
+    assertThat(query.get().setComponentKeys(singleton("P1")).build().hasEmptySetOfComponents()).isFalse();
+    assertThat(query.get().setComponentUuids(singleton("U1")).build().hasEmptySetOfComponents()).isFalse();
+  }
+
+  @Test
   public void fail_if_no_qualifier_provided() {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("At least one qualifier must be provided");
@@ -64,12 +94,10 @@ public class ComponentQueryTest {
   }
 
   @Test
-  public void test_getNameOrKeyUpperLikeQuery() throws Exception {
-    ComponentQuery underTest = ComponentQuery.builder()
-      .setNameOrKeyQuery("NAME/key")
-      .setQualifiers(PROJECT)
-      .build();
+  public void fail_if_partial_match_on_key_without_a_query() {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("A query must be provided if a partial match on key is specified.");
 
-    assertThat(underTest.getNameOrKeyUpperLikeQuery()).isEqualTo("%NAME//KEY%");
+    ComponentQuery.builder().setQualifiers(PROJECT).setPartialMatchOnKey(false).build();
   }
 }

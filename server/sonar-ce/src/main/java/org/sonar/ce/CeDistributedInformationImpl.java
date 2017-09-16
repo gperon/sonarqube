@@ -24,28 +24,28 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import org.picocontainer.Startable;
-import org.sonar.ce.cluster.HazelcastClientWrapper;
 import org.sonar.ce.taskprocessor.CeWorkerFactory;
-import org.sonar.process.cluster.ClusterObjectKeys;
+import org.sonar.cluster.ClusterObjectKeys;
+import org.sonar.cluster.localclient.HazelcastClient;
 
+import static org.sonar.cluster.ClusterObjectKeys.WORKER_UUIDS;
 import static org.sonar.core.util.stream.MoreCollectors.toSet;
-import static org.sonar.process.cluster.ClusterObjectKeys.WORKER_UUIDS;
 
 /**
  * Provide the set of worker's UUID in a clustered SonarQube instance
  */
 public class CeDistributedInformationImpl implements CeDistributedInformation, Startable {
-  private final HazelcastClientWrapper hazelcastClientWrapper;
+  private final HazelcastClient hazelcastClient;
   private final CeWorkerFactory ceCeWorkerFactory;
 
-  public CeDistributedInformationImpl(HazelcastClientWrapper hazelcastClientWrapper, CeWorkerFactory ceCeWorkerFactory) {
-    this.hazelcastClientWrapper = hazelcastClientWrapper;
+  public CeDistributedInformationImpl(HazelcastClient hazelcastClient, CeWorkerFactory ceCeWorkerFactory) {
+    this.hazelcastClient = hazelcastClient;
     this.ceCeWorkerFactory = ceCeWorkerFactory;
   }
 
   @Override
   public Set<String> getWorkerUUIDs() {
-    Set<String> connectedWorkerUUIDs = hazelcastClientWrapper.getConnectedClients();
+    Set<String> connectedWorkerUUIDs = hazelcastClient.getMemberUuids();
 
     return getClusteredWorkerUUIDs().entrySet().stream()
       .filter(e -> connectedWorkerUUIDs.contains(e.getKey()))
@@ -56,12 +56,12 @@ public class CeDistributedInformationImpl implements CeDistributedInformation, S
 
   @Override
   public void broadcastWorkerUUIDs() {
-    getClusteredWorkerUUIDs().put(hazelcastClientWrapper.getClientUUID(), ceCeWorkerFactory.getWorkerUUIDs());
+    getClusteredWorkerUUIDs().put(hazelcastClient.getUUID(), ceCeWorkerFactory.getWorkerUUIDs());
   }
 
   @Override
   public Lock acquireCleanJobLock() {
-    return hazelcastClientWrapper.getLock(ClusterObjectKeys.CE_CLEANING_JOB_LOCK);
+    return hazelcastClient.getLock(ClusterObjectKeys.CE_CLEANING_JOB_LOCK);
   }
 
   @Override
@@ -72,10 +72,10 @@ public class CeDistributedInformationImpl implements CeDistributedInformation, S
   @Override
   public void stop() {
     // Removing the worker UUIDs
-    getClusteredWorkerUUIDs().remove(hazelcastClientWrapper.getClientUUID());
+    getClusteredWorkerUUIDs().remove(hazelcastClient.getUUID());
   }
 
   private Map<String, Set<String>> getClusteredWorkerUUIDs() {
-    return hazelcastClientWrapper.getReplicatedMap(WORKER_UUIDS);
+    return hazelcastClient.getReplicatedMap(WORKER_UUIDS);
   }
 }

@@ -29,7 +29,7 @@ import {
   translate,
   translateWithParameters
 } from '../../../helpers/l10n';
-import { getBubbleMetrics, isProjectOverview } from '../utils';
+import { getBubbleMetrics, getBubbleYDomain, isProjectOverview } from '../utils';
 import { RATING_COLORS } from '../../../helpers/constants';
 /*:: import type { Component, ComponentEnhanced } from '../types'; */
 /*:: import type { Metric } from '../../../store/metrics/actions'; */
@@ -131,6 +131,7 @@ export default class BubbleChart extends React.PureComponent {
         formatXTick={formatXTick}
         formatYTick={formatYTick}
         onBubbleClick={this.handleBubbleClick}
+        yDomain={getBubbleYDomain(this.props.domain)}
       />
     );
   }
@@ -148,12 +149,10 @@ export default class BubbleChart extends React.PureComponent {
         );
     return (
       <div className="measure-overview-bubble-chart-header">
-        <span className="measure-overview-bubble-chart-title">
-          {title}
-        </span>
+        <span className="measure-overview-bubble-chart-title">{title}</span>
         <span className="measure-overview-bubble-chart-legend">
           <span className="note">
-            {colorsMetric &&
+            {colorsMetric && (
               <span className="spacer-right">
                 {translateWithParameters(
                   'component_measures.legend.color_x',
@@ -164,7 +163,8 @@ export default class BubbleChart extends React.PureComponent {
                       )
                     : getLocalizedMetricName(colorsMetric[0])
                 )}
-              </span>}
+              </span>
+            )}
             {translateWithParameters(
               'component_measures.legend.size_x',
               getLocalizedMetricName(sizeMetric)
@@ -182,11 +182,7 @@ export default class BubbleChart extends React.PureComponent {
     if (description === translatedDescription) {
       return null;
     }
-    return (
-      <div className="measure-overview-bubble-chart-footer">
-        {translatedDescription}
-      </div>
-    );
+    return <div className="measure-overview-bubble-chart-footer">{translatedDescription}</div>;
   }
 
   render() {

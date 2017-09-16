@@ -26,6 +26,7 @@ import org.sonar.db.ce.CeQueueDao;
 import org.sonar.db.ce.CeScannerContextDao;
 import org.sonar.db.ce.CeTaskCharacteristicDao;
 import org.sonar.db.ce.CeTaskInputDao;
+import org.sonar.db.component.BranchDao;
 import org.sonar.db.component.ComponentDao;
 import org.sonar.db.component.ComponentKeyUpdaterDao;
 import org.sonar.db.component.ComponentLinkDao;
@@ -47,6 +48,7 @@ import org.sonar.db.permission.GroupPermissionDao;
 import org.sonar.db.permission.UserPermissionDao;
 import org.sonar.db.permission.template.PermissionTemplateCharacteristicDao;
 import org.sonar.db.permission.template.PermissionTemplateDao;
+import org.sonar.db.plugin.PluginDao;
 import org.sonar.db.property.InternalPropertiesDao;
 import org.sonar.db.property.PropertiesDao;
 import org.sonar.db.purge.PurgeDao;
@@ -74,6 +76,7 @@ public class DbClient {
   private final Database database;
   private final MyBatis myBatis;
   private final DBSessions dbSessions;
+
   private final SchemaMigrationDao schemaMigrationDao;
   private final AuthorizationDao authorizationDao;
   private final OrganizationDao organizationDao;
@@ -121,6 +124,8 @@ public class DbClient {
   private final WebhookDeliveryDao webhookDeliveryDao;
   private final DefaultQProfileDao defaultQProfileDao;
   private final EsQueueDao esQueueDao;
+  private final PluginDao pluginDao;
+  private final BranchDao branchDao;
 
   public DbClient(Database database, MyBatis myBatis, DBSessions dbSessions, Dao... daos) {
     this.database = database;
@@ -178,6 +183,8 @@ public class DbClient {
     webhookDeliveryDao = getDao(map, WebhookDeliveryDao.class);
     defaultQProfileDao = getDao(map, DefaultQProfileDao.class);
     esQueueDao = getDao(map, EsQueueDao.class);
+    pluginDao = getDao(map, PluginDao.class);
+    branchDao = getDao(map, BranchDao.class);
   }
 
   public DbSession openSession(boolean batch) {
@@ -376,6 +383,14 @@ public class DbClient {
     return esQueueDao;
   }
 
+  public PluginDao pluginDao() {
+    return pluginDao;
+  }
+
+  public BranchDao branchDao() {
+    return branchDao;
+  }
+
   protected <K extends Dao> K getDao(Map<Class, Dao> map, Class<K> clazz) {
     return (K) map.get(clazz);
   }
@@ -384,4 +399,5 @@ public class DbClient {
   public MyBatis getMyBatis() {
     return myBatis;
   }
+
 }

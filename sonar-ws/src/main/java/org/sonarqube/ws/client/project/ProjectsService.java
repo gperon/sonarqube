@@ -37,12 +37,16 @@ import static org.sonarqube.ws.client.project.ProjectsWsParameters.ACTION_SEARCH
 import static org.sonarqube.ws.client.project.ProjectsWsParameters.ACTION_UPDATE_KEY;
 import static org.sonarqube.ws.client.project.ProjectsWsParameters.ACTION_UPDATE_VISIBILITY;
 import static org.sonarqube.ws.client.project.ProjectsWsParameters.CONTROLLER;
+import static org.sonarqube.ws.client.project.ProjectsWsParameters.PARAM_ANALYZED_BEFORE;
 import static org.sonarqube.ws.client.project.ProjectsWsParameters.PARAM_BRANCH;
 import static org.sonarqube.ws.client.project.ProjectsWsParameters.PARAM_FROM;
 import static org.sonarqube.ws.client.project.ProjectsWsParameters.PARAM_NAME;
+import static org.sonarqube.ws.client.project.ProjectsWsParameters.PARAM_ON_PROVISIONED_ONLY;
 import static org.sonarqube.ws.client.project.ProjectsWsParameters.PARAM_ORGANIZATION;
 import static org.sonarqube.ws.client.project.ProjectsWsParameters.PARAM_PROJECT;
+import static org.sonarqube.ws.client.project.ProjectsWsParameters.PARAM_PROJECTS;
 import static org.sonarqube.ws.client.project.ProjectsWsParameters.PARAM_PROJECT_ID;
+import static org.sonarqube.ws.client.project.ProjectsWsParameters.PARAM_PROJECT_IDS;
 import static org.sonarqube.ws.client.project.ProjectsWsParameters.PARAM_QUALIFIERS;
 import static org.sonarqube.ws.client.project.ProjectsWsParameters.PARAM_TO;
 import static org.sonarqube.ws.client.project.ProjectsWsParameters.PARAM_VISIBILITY;
@@ -81,10 +85,15 @@ public class ProjectsService extends BaseService {
       .setParam("project", request.getKey()));
   }
 
-  public void bulkDelete(BulkDeleteRequest request) {
+  public void bulkDelete(SearchWsRequest request) {
     PostRequest post = new PostRequest(path("bulk_delete"))
-      .setParam("organization", request.getOrganization())
-      .setParam("projects", String.join(",", request.getProjectKeys()));
+      .setParam(PARAM_ORGANIZATION, request.getOrganization())
+      .setParam(PARAM_QUALIFIERS, inlineMultipleParamValue(request.getQualifiers()))
+      .setParam(PARAM_ANALYZED_BEFORE, request.getAnalyzedBefore())
+      .setParam(TEXT_QUERY, request.getQuery())
+      .setParam(PARAM_ON_PROVISIONED_ONLY, request.isOnProvisionedOnly())
+      .setParam(PARAM_PROJECTS, inlineMultipleParamValue(request.getProjects()))
+      .setParam(PARAM_PROJECT_IDS, inlineMultipleParamValue(request.getProjectIds()));
 
     call(post);
   }
@@ -112,9 +121,13 @@ public class ProjectsService extends BaseService {
     GetRequest get = new GetRequest(path(ACTION_SEARCH))
       .setParam(PARAM_ORGANIZATION, request.getOrganization())
       .setParam(PARAM_QUALIFIERS, Joiner.on(",").join(request.getQualifiers()))
+      .setParam(PARAM_ANALYZED_BEFORE, request.getAnalyzedBefore())
       .setParam(TEXT_QUERY, request.getQuery())
       .setParam(PAGE, request.getPage())
-      .setParam(PAGE_SIZE, request.getPageSize());
+      .setParam(PAGE_SIZE, request.getPageSize())
+      .setParam(PARAM_ON_PROVISIONED_ONLY, request.isOnProvisionedOnly())
+      .setParam(PARAM_PROJECTS, inlineMultipleParamValue(request.getProjects()))
+      .setParam(PARAM_PROJECT_IDS, inlineMultipleParamValue(request.getProjectIds()));
     return call(get, SearchWsResponse.parser());
   }
 

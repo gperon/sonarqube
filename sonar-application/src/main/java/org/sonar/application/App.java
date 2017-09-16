@@ -23,15 +23,16 @@ import java.io.IOException;
 import org.sonar.application.config.AppSettings;
 import org.sonar.application.config.AppSettingsLoader;
 import org.sonar.application.config.AppSettingsLoaderImpl;
-import org.sonar.application.process.CommandFactory;
-import org.sonar.application.process.CommandFactoryImpl;
 import org.sonar.application.process.ProcessLauncher;
 import org.sonar.application.process.ProcessLauncherImpl;
 import org.sonar.application.process.StopRequestWatcher;
 import org.sonar.application.process.StopRequestWatcherImpl;
 import org.sonar.process.SystemExit;
+import org.sonar.process.command.CommandFactory;
+import org.sonar.process.command.CommandFactoryImpl;
 
 import static org.sonar.application.config.SonarQubeVersionHelper.getSonarqubeVersion;
+import static org.sonar.cluster.ClusterProperties.CLUSTER_NAME;
 
 public class App {
 
@@ -48,9 +49,10 @@ public class App {
 
     try (AppState appState = new AppStateFactory(settings).create()) {
       appState.registerSonarQubeVersion(getSonarqubeVersion());
+      appState.registerClusterName(settings.getProps().value(CLUSTER_NAME, "sonarqube"));
       AppReloader appReloader = new AppReloaderImpl(settingsLoader, fileSystem, appState, logging);
-      CommandFactory commandFactory = new CommandFactoryImpl(settings);
       fileSystem.reset();
+      CommandFactory commandFactory = new CommandFactoryImpl(settings.getProps(), fileSystem.getTempDir());
 
       try (ProcessLauncher processLauncher = new ProcessLauncherImpl(fileSystem.getTempDir())) {
         Scheduler scheduler = new SchedulerImpl(settings, appReloader, commandFactory, processLauncher, appState);

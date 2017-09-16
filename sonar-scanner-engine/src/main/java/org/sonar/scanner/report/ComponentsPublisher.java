@@ -44,20 +44,24 @@ import org.sonar.scanner.protocol.output.ScannerReport.ComponentLink.ComponentLi
 import org.sonar.scanner.protocol.output.ScannerReport.Issue;
 import org.sonar.scanner.protocol.output.ScannerReportReader;
 import org.sonar.scanner.protocol.output.ScannerReportWriter;
+import org.sonar.scanner.scan.branch.BranchConfiguration;
 
 /**
  * Adds components and analysis metadata to output report
  */
 public class ComponentsPublisher implements ReportPublisherStep {
 
-  private InputComponentTree componentTree;
-  private InputModuleHierarchy moduleHierarchy;
+  private final InputComponentTree componentTree;
+  private final InputModuleHierarchy moduleHierarchy;
+  private final BranchConfiguration branchConfiguration;
+
   private ScannerReportReader reader;
   private ScannerReportWriter writer;
 
-  public ComponentsPublisher(InputModuleHierarchy moduleHierarchy, InputComponentTree inputComponentTree) {
+  public ComponentsPublisher(InputModuleHierarchy moduleHierarchy, InputComponentTree inputComponentTree, BranchConfiguration branchConfiguration) {
     this.moduleHierarchy = moduleHierarchy;
     this.componentTree = inputComponentTree;
+    this.branchConfiguration = branchConfiguration;
   }
 
   @Override
@@ -103,9 +107,7 @@ public class ComponentsPublisher implements ReportPublisherStep {
       }
 
       writeVersion(inputModule, builder);
-    }
-
-    if (component.isFile()) {
+    } else if (component.isFile()) {
       DefaultInputFile file = (DefaultInputFile) component;
       builder.setIsTest(file.type() == InputFile.Type.TEST);
       builder.setLines(file.lines());
@@ -114,6 +116,11 @@ public class ComponentsPublisher implements ReportPublisherStep {
       String lang = getLanguageKey(file);
       if (lang != null) {
         builder.setLanguage(lang);
+      }
+    } else if (component instanceof InputDir) {
+      FileStatus status = getDirectoryStatus(component, children);
+      if (status != null) {
+        builder.setStatus(status);
       }
     }
 
@@ -143,18 +150,40 @@ public class ComponentsPublisher implements ReportPublisherStep {
     }
   }
 
+  @CheckForNull
+  private static FileStatus getDirectoryStatus(InputComponent component, Collection<InputComponent> children) {
+    if (children.isEmpty()) {
+      // directory must have issues, otherwise wouldn't be written
+      return null;
+    }
+
+    boolean hasChangedFiles = children.stream()
+      .filter(c -> c instanceof InputFile)
+      .map(c -> (DefaultInputFile) c)
+      .anyMatch(f -> f.isPublished() && f.status() != Status.SAME);
+
+    if (!hasChangedFiles) {
+      // this means that SonarJava didn't analyze the directory
+      return FileStatus.SAME;
+    }
+    return null;
+  }
+
   private boolean shouldSkipComponent(DefaultInputComponent component, Collection<InputComponent> children) {
-    if (component instanceof InputDir && children.isEmpty()) {
+    if (component instanceof InputModule && children.isEmpty() && branchConfiguration.isShortLivingBranch()) {
+      // no children on a module in short branch analysis -> skip it (except root)
+      return !moduleHierarchy.isRoot((InputModule) component);
+    } else if (component instanceof InputDir && children.isEmpty()) {
       try (CloseableIterator<Issue> componentIssuesIt = reader.readComponentIssues(component.batchId())) {
         if (!componentIssuesIt.hasNext()) {
-          // no file to publish on a directory without issues -> skip it
+          // no files to publish on a directory without issues -> skip it
           return true;
         }
       }
     } else if (component instanceof DefaultInputFile) {
       // skip files not marked for publishing
       DefaultInputFile inputFile = (DefaultInputFile) component;
-      return !inputFile.isPublished();
+      return !inputFile.isPublished() || (branchConfiguration.isShortLivingBranch() && inputFile.status() == Status.SAME);
     }
     return false;
   }

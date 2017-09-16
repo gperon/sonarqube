@@ -21,8 +21,6 @@ package org.sonarqube.tests.projectAdministration;
 
 import com.sonar.orchestrator.Orchestrator;
 import com.sonar.orchestrator.build.SonarScanner;
-import org.sonarqube.pageobjects.ProjectsManagementPage;
-import org.sonarqube.tests.Category1Suite;
 import java.io.UnsupportedEncodingException;
 import java.sql.SQLException;
 import java.util.Calendar;
@@ -36,17 +34,23 @@ import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.openqa.selenium.By;
 import org.sonar.wsclient.SonarClient;
 import org.sonar.wsclient.base.HttpException;
 import org.sonar.wsclient.user.UserParameters;
 import org.sonarqube.pageobjects.Navigation;
+import org.sonarqube.pageobjects.ProjectsManagementPage;
 import org.sonarqube.pageobjects.settings.SettingsPage;
+import org.sonarqube.tests.Category1Suite;
 import org.sonarqube.tests.Tester;
 import org.sonarqube.ws.WsPermissions;
 import org.sonarqube.ws.client.permission.AddUserToTemplateWsRequest;
 import org.sonarqube.ws.client.permission.CreateTemplateWsRequest;
 import org.sonarqube.ws.client.permission.UsersWsRequest;
+import org.sonarqube.ws.client.project.SearchWsRequest;
 
+import static com.codeborne.selenide.Selenide.$;
+import static java.util.Collections.singletonList;
 import static org.apache.commons.lang.time.DateUtils.addDays;
 import static org.assertj.core.api.Assertions.assertThat;
 import static util.ItUtils.getComponent;
@@ -66,7 +70,7 @@ public class ProjectAdministrationTest {
   public ExpectedException expectedException = ExpectedException.none();
 
   @Rule
-  public Tester tester = new Tester(orchestrator);
+  public Tester tester = new Tester(orchestrator).disableOrganizations();
 
   private Navigation nav = Navigation.create(orchestrator);
 
@@ -95,14 +99,15 @@ public class ProjectAdministrationTest {
 
   @Test
   public void fail_when_trying_to_delete_a_file() {
-    expectedException.expect(HttpException.class);
     scanSampleWithDate(ANALYSIS_DATE);
-
     assertThat(getComponent(orchestrator, PROJECT_KEY)).isNotNull();
     assertThat(getComponent(orchestrator, FILE_KEY)).isNotNull();
 
-    // it's forbidden to delete only some files
-    orchestrator.getServer().adminWsClient().post(DELETE_WS_ENDPOINT, "keys", FILE_KEY);
+    expectedException.expect(org.sonarqube.ws.client.HttpException.class);
+
+    tester.wsClient().projects().bulkDelete(SearchWsRequest.builder()
+      .setQualifiers(singletonList("FIL"))
+      .setProjects(singletonList(FILE_KEY)).build());
   }
 
   @Test
@@ -190,6 +195,22 @@ public class ProjectAdministrationTest {
       .assertBooleanSettingValue("sonar.dbcleaner.cleanDirectory", true)
       .setStringValue("sonar.dbcleaner.daysBeforeDeletingClosedIssues", "1")
       .assertStringSettingValue("sonar.dbcleaner.daysBeforeDeletingClosedIssues", "1");
+  }
+
+  @Test
+  public void display_correct_global_setting () throws UnsupportedEncodingException {
+    scanSample(null, null);
+    SettingsPage page = nav.logIn().submitCredentials(adminUser).openSettings("sample")
+      .openCategory("Analysis Scope")
+      .assertSettingDisplayed("sonar.coverage.exclusions")
+      .setStringValue("sonar.coverage.exclusions", "foo")
+      .assertStringSettingValue("sonar.coverage.exclusions", "foo");
+
+    $(".global-navbar-menu ").$(By.linkText("Administration")).click();
+    page
+      .openCategory("Analysis Scope")
+      .assertSettingDisplayed("sonar.coverage.exclusions")
+      .assertStringSettingValue("sonar.coverage.exclusions", "");
   }
 
   @Test

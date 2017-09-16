@@ -19,11 +19,9 @@
  */
 import { combineReducers } from 'redux';
 import appState from './appState/duck';
-import components, * as fromComponents from './components/reducer';
 import users, * as fromUsers from './users/reducer';
 import favorites, * as fromFavorites from './favorites/duck';
 import languages, * as fromLanguages from './languages/reducer';
-import measures, * as fromMeasures from './measures/reducer';
 import metrics, * as fromMetrics from './metrics/reducer';
 import notifications, * as fromNotifications from './notifications/duck';
 import organizations, * as fromOrganizations from './organizations/duck';
@@ -31,17 +29,14 @@ import organizationsMembers, * as fromOrganizationsMembers from './organizations
 import globalMessages, * as fromGlobalMessages from './globalMessages/duck';
 import permissionsApp, * as fromPermissionsApp from '../apps/permissions/shared/store/rootReducer';
 import projectAdminApp, * as fromProjectAdminApp from '../apps/project-admin/store/rootReducer';
-import projectsApp, * as fromProjectsApp from '../apps/projects/store/reducer';
 import qualityGatesApp from '../apps/quality-gates/store/rootReducer';
 import settingsApp, * as fromSettingsApp from '../apps/settings/store/rootReducer';
 
 export default combineReducers({
   appState,
-  components,
   globalMessages,
   favorites,
   languages,
-  measures,
   metrics,
   notifications,
   organizations,
@@ -51,14 +46,11 @@ export default combineReducers({
   // apps
   permissionsApp,
   projectAdminApp,
-  projectsApp,
   qualityGatesApp,
   settingsApp
 });
 
 export const getAppState = state => state.appState;
-
-export const getComponent = (state, key) => fromComponents.getComponent(state.components, key);
 
 export const getGlobalMessages = state =>
   fromGlobalMessages.getGlobalMessages(state.globalMessages);
@@ -80,12 +72,6 @@ export const getUsers = state => fromUsers.getUsers(state.users);
 
 export const isFavorite = (state, componentKey) =>
   fromFavorites.isFavorite(state.favorites, componentKey);
-
-export const getComponentMeasure = (state, componentKey, metricKey) =>
-  fromMeasures.getComponentMeasure(state.measures, componentKey, metricKey);
-
-export const getComponentMeasures = (state, componentKey) =>
-  fromMeasures.getComponentMeasures(state.measures, componentKey);
 
 export const getMetrics = state => fromMetrics.getMetrics(state.metrics);
 
@@ -126,16 +112,6 @@ export const getOrganizationMembersLogins = (state, organization) =>
 export const getOrganizationMembersState = (state, organization) =>
   fromOrganizationsMembers.getOrganizationMembersState(state.organizationsMembers, organization);
 
-export const getProjects = state => fromProjectsApp.getProjects(state.projectsApp);
-
-export const getProjectsAppState = state => fromProjectsApp.getState(state.projectsApp);
-
-export const getProjectsAppFacetByProperty = (state, property) =>
-  fromProjectsApp.getFacetByProperty(state.projectsApp, property);
-
-export const getProjectsAppMaxFacetValue = state =>
-  fromProjectsApp.getMaxFacetValue(state.projectsApp);
-
 export const getQualityGatesAppState = state => state.qualityGatesApp;
 
 export const getPermissionsAppUsers = state => fromPermissionsApp.getUsers(state.permissionsApp);
@@ -153,7 +129,8 @@ export const getPermissionsAppSelectedPermission = state =>
 
 export const getPermissionsAppError = state => fromPermissionsApp.getError(state.permissionsApp);
 
-export const getSettingValue = (state, key) => fromSettingsApp.getValue(state.settingsApp, key);
+export const getGlobalSettingValue = (state, key) =>
+  fromSettingsApp.getValue(state.settingsApp, key);
 
 export const getSettingsAppDefinition = (state, key) =>
   fromSettingsApp.getDefinition(state.settingsApp, key);
@@ -164,8 +141,8 @@ export const getSettingsAppAllCategories = state =>
 export const getSettingsAppDefaultCategory = state =>
   fromSettingsApp.getDefaultCategory(state.settingsApp);
 
-export const getSettingsAppSettingsForCategory = (state, category) =>
-  fromSettingsApp.getSettingsForCategory(state.settingsApp, category);
+export const getSettingsAppSettingsForCategory = (state, category, componentKey) =>
+  fromSettingsApp.getSettingsForCategory(state.settingsApp, category, componentKey);
 
 export const getSettingsAppChangedValue = (state, key) =>
   fromSettingsApp.getChangedValue(state.settingsApp, key);
@@ -187,24 +164,6 @@ export const getSettingsAppEncryptionState = state =>
 
 export const getSettingsAppGlobalMessages = state =>
   fromSettingsApp.getGlobalMessages(state.settingsApp);
-
-export const getProjectAdminProfileByKey = (state, profileKey) =>
-  fromProjectAdminApp.getProfileByKey(state.projectAdminApp, profileKey);
-
-export const getProjectAdminAllProfiles = state =>
-  fromProjectAdminApp.getAllProfiles(state.projectAdminApp);
-
-export const getProjectAdminProjectProfiles = (state, projectKey) =>
-  fromProjectAdminApp.getProjectProfiles(state.projectAdminApp, projectKey);
-
-export const getProjectAdminGateById = (state, gateId) =>
-  fromProjectAdminApp.getGateById(state.projectAdminApp, gateId);
-
-export const getProjectAdminAllGates = state =>
-  fromProjectAdminApp.getAllGates(state.projectAdminApp);
-
-export const getProjectAdminProjectGate = (state, projectKey) =>
-  fromProjectAdminApp.getProjectGate(state.projectAdminApp, projectKey);
 
 export const getProjectAdminLinkById = (state, linkId) =>
   fromProjectAdminApp.getLinkById(state.projectAdminApp, linkId);

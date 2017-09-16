@@ -35,4 +35,8 @@ public interface Session {
 
   UserTester users();
 
+  SettingTester settings();
+
+  QGateTester qGates();
+
 }

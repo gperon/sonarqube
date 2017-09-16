@@ -35,6 +35,7 @@ import org.sonar.db.DbClient;
 import org.sonar.db.DbSession;
 import org.sonar.db.DbTester;
 import org.sonar.db.ce.CeQueueDto;
+import org.sonar.db.component.BranchDto;
 import org.sonar.db.component.ComponentDto;
 import org.sonar.db.component.ComponentTesting;
 import org.sonar.db.organization.OrganizationDto;
@@ -53,6 +54,7 @@ import org.sonar.server.exceptions.NotFoundException;
 import org.sonar.server.exceptions.UnauthorizedException;
 import org.sonar.server.organization.BillingValidations;
 import org.sonar.server.organization.BillingValidationsProxy;
+import org.sonar.server.organization.TestDefaultOrganizationProvider;
 import org.sonar.server.permission.index.FooIndexDefinition;
 import org.sonar.server.tester.UserSessionRule;
 import org.sonar.server.ws.TestRequest;
@@ -94,7 +96,7 @@ public class UpdateVisibilityActionTest {
   private TestProjectIndexers projectIndexers = new TestProjectIndexers();
   private BillingValidationsProxy billingValidations = mock(BillingValidationsProxy.class);
 
-  private ProjectsWsSupport wsSupport = new ProjectsWsSupport(dbClient, billingValidations);
+  private ProjectsWsSupport wsSupport = new ProjectsWsSupport(dbClient, TestDefaultOrganizationProvider.from(dbTester), billingValidations);
   private UpdateVisibilityAction underTest = new UpdateVisibilityAction(dbClient, TestComponentFinder.from(dbTester), userSessionRule, projectIndexers, wsSupport);
   private WsActionTester actionTester = new WsActionTester(underTest);
 
@@ -280,10 +282,16 @@ public class UpdateVisibilityActionTest {
   public void execute_changes_private_flag_of_specified_project_and_all_children_to_specified_new_visibility() {
     ComponentDto project = randomPublicOrPrivateProject();
     boolean initiallyPrivate = project.isPrivate();
+
+    BranchDto branchDto = ComponentTesting.newBranchDto(project);
+    dbClient.branchDao().insert(dbSession, branchDto);
+
+    ComponentDto branch = ComponentTesting.newProjectBranch(project, branchDto);
     ComponentDto module = ComponentTesting.newModuleDto(project);
     ComponentDto dir = ComponentTesting.newDirectory(project, "path");
     ComponentDto file = ComponentTesting.newFileDto(project);
-    dbTester.components().insertComponents(module, dir, file);
+
+    dbTester.components().insertComponents(branch, module, dir, file);
     userSessionRule.addProjectPermission(UserRole.ADMIN, project);
 
     request.setParam(PARAM_PROJECT, project.getDbKey())
@@ -291,6 +299,7 @@ public class UpdateVisibilityActionTest {
       .execute();
 
     assertThat(isPrivateInDb(project)).isEqualTo(!initiallyPrivate);
+    assertThat(isPrivateInDb(branch)).isEqualTo(!initiallyPrivate);
     assertThat(isPrivateInDb(module)).isEqualTo(!initiallyPrivate);
     assertThat(isPrivateInDb(dir)).isEqualTo(!initiallyPrivate);
     assertThat(isPrivateInDb(file)).isEqualTo(!initiallyPrivate);
@@ -300,6 +309,12 @@ public class UpdateVisibilityActionTest {
   public void execute_has_no_effect_if_specified_project_already_has_specified_visibility() {
     ComponentDto project = randomPublicOrPrivateProject();
     boolean initiallyPrivate = project.isPrivate();
+
+    BranchDto branchDto = ComponentTesting.newBranchDto(project);
+    dbClient.branchDao().insert(dbSession, branchDto);
+
+    ComponentDto branch = ComponentTesting.newProjectBranch(project, branchDto)
+      .setPrivate(initiallyPrivate);
     ComponentDto module = ComponentTesting.newModuleDto(project)
       .setPrivate(initiallyPrivate);
     ComponentDto dir = ComponentTesting.newDirectory(project, "path")
@@ -307,7 +322,7 @@ public class UpdateVisibilityActionTest {
       .setPrivate(!initiallyPrivate);
     ComponentDto file = ComponentTesting.newFileDto(project)
       .setPrivate(initiallyPrivate);
-    dbTester.components().insertComponents(module, dir, file);
+    dbTester.components().insertComponents(branch, module, dir, file);
     userSessionRule.addProjectPermission(UserRole.ADMIN, project);
 
     request.setParam(PARAM_PROJECT, project.getDbKey())
@@ -315,6 +330,7 @@ public class UpdateVisibilityActionTest {
       .execute();
 
     assertThat(isPrivateInDb(project)).isEqualTo(initiallyPrivate);
+    assertThat(isPrivateInDb(branch)).isEqualTo(initiallyPrivate);
     assertThat(isPrivateInDb(module)).isEqualTo(initiallyPrivate);
     assertThat(isPrivateInDb(dir)).isEqualTo(!initiallyPrivate);
     assertThat(isPrivateInDb(file)).isEqualTo(initiallyPrivate);
@@ -485,6 +501,20 @@ public class UpdateVisibilityActionTest {
       .checkCanUpdateProjectVisibility(any(BillingValidations.Organization.class), eq(true));
 
     request.setParam(PARAM_PROJECT, project.getDbKey())
+      .setParam(PARAM_VISIBILITY, PUBLIC)
+      .execute();
+  }
+
+  @Test
+  public void fail_when_using_branch_db_key() throws Exception {
+    ComponentDto project = dbTester.components().insertMainBranch();
+    userSessionRule.logIn().addProjectPermission(UserRole.USER, project);
+    ComponentDto branch = dbTester.components().insertProjectBranch(project);
+
+    expectedException.expect(NotFoundException.class);
+    expectedException.expectMessage(String.format("Component key '%s' not found", branch.getDbKey()));
+
+    request.setParam(PARAM_PROJECT, branch.getDbKey())
       .setParam(PARAM_VISIBILITY, PUBLIC)
       .execute();
   }

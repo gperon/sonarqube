@@ -35,11 +35,11 @@ import {
 import { parseError } from '../../code/utils';
 import { reloadUpdateKeyPage } from './utils';
 import RecentHistory from '../../../app/components/RecentHistory';
-import { getProjectAdminProjectModules, getComponent } from '../../../store/rootReducer';
+import { getProjectAdminProjectModules } from '../../../store/rootReducer';
 
 class Key extends React.PureComponent {
   static propTypes = {
-    component: PropTypes.object.isRequired,
+    component: PropTypes.object,
     fetchProjectModules: PropTypes.func.isRequired,
     changeKey: PropTypes.func.isRequired,
     addGlobalErrorMessage: PropTypes.func.isRequired,
@@ -94,12 +94,13 @@ class Key extends React.PureComponent {
 
         {modules == null && <i className="spinner" />}
 
-        {noModules &&
+        {noModules && (
           <div>
             <UpdateForm component={component} onKeyChange={this.handleChangeKey.bind(this)} />
-          </div>}
+          </div>
+        )}
 
-        {hasModules &&
+        {hasModules && (
           <div>
             <div className="big-spacer-bottom">
               <ul className="tabs">
@@ -126,22 +127,23 @@ class Key extends React.PureComponent {
 
             {tab === 'bulk' && <BulkUpdate component={component} />}
 
-            {tab === 'fine' &&
+            {tab === 'fine' && (
               <FineGrainedUpdate
                 component={component}
                 modules={modules}
                 onKeyChange={this.handleChangeKey.bind(this)}
                 onSuccess={this.props.closeAllGlobalMessages}
                 onError={this.props.addGlobalErrorMessage}
-              />}
-          </div>}
+              />
+            )}
+          </div>
+        )}
       </div>
     );
   }
 }
 
 const mapStateToProps = (state, ownProps) => ({
-  component: getComponent(state, ownProps.location.query.id),
   modules: getProjectAdminProjectModules(state, ownProps.location.query.id)
 });
 

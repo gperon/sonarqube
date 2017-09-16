@@ -39,7 +39,7 @@ class Duplications extends React.PureComponent {
   }
 
   renderDuplications() {
-    const { component, measures } = this.props;
+    const { branch, component, measures } = this.props;
     const measure = measures.find(measure => measure.metric.key === 'duplicated_lines_density');
     const duplications = Number(measure.value);
 
@@ -51,12 +51,15 @@ class Duplications extends React.PureComponent {
 
         <div className="display-inline-block text-middle">
           <div className="overview-domain-measure-value">
-            <DrilldownLink component={component.key} metric="duplicated_lines_density">
+            <DrilldownLink
+              branch={branch}
+              component={component.key}
+              metric="duplicated_lines_density">
               {formatMeasure(duplications, 'PERCENT')}
             </DrilldownLink>
           </div>
 
-          <div className="overview-domain-measure-label">
+          <div className="overview-domain-measure-label offset-left">
             {getMetricName('duplications')}
             {this.props.renderHistoryLink('duplicated_lines_density')}
           </div>
@@ -66,7 +69,7 @@ class Duplications extends React.PureComponent {
   }
 
   renderNewDuplications() {
-    const { component, measures, leakPeriod } = this.props;
+    const { branch, component, measures, leakPeriod } = this.props;
     const newDuplicationsMeasure = measures.find(
       measure => measure.metric.key === 'new_duplicated_lines_density'
     );
@@ -80,42 +83,47 @@ class Duplications extends React.PureComponent {
       : null;
 
     const formattedValue =
-      newDuplicationsValue != null
-        ? <div>
-            <DrilldownLink component={component.key} metric={newDuplicationsMeasure.metric.key}>
-              <span className="js-overview-main-new-duplications">
-                {formatMeasure(newDuplicationsValue, 'PERCENT')}
-              </span>
-            </DrilldownLink>
-          </div>
-        : <span>—</span>;
+      newDuplicationsValue != null ? (
+        <div>
+          <DrilldownLink
+            branch={branch}
+            component={component.key}
+            metric={newDuplicationsMeasure.metric.key}>
+            <span className="js-overview-main-new-duplications">
+              {formatMeasure(newDuplicationsValue, 'PERCENT')}
+            </span>
+          </DrilldownLink>
+        </div>
+      ) : (
+        <span>—</span>
+      );
     const label =
-      newLinesValue != null && newLinesValue > 0
-        ? <div className="overview-domain-measure-label">
-            {translate('overview.duplications_on')}
-            <br />
-            <DrilldownLink
-              className="spacer-right overview-domain-secondary-measure-value"
-              component={component.key}
-              metric={newLinesMeasure.metric.key}>
-              <span className="js-overview-main-new-lines">
-                {formatMeasure(newLinesValue, 'SHORT_INT')}
-              </span>
-            </DrilldownLink>
-            {getMetricName('new_lines')}
-          </div>
-        : <div className="overview-domain-measure-label">
-            {getMetricName('new_duplications')}
-          </div>;
+      newLinesValue != null && newLinesValue > 0 ? (
+        <div className="overview-domain-measure-label">
+          {translate('overview.duplications_on')}
+          <br />
+          <DrilldownLink
+            branch={branch}
+            className="spacer-right overview-domain-secondary-measure-value"
+            component={component.key}
+            metric={newLinesMeasure.metric.key}>
+            <span className="js-overview-main-new-lines">
+              {formatMeasure(newLinesValue, 'SHORT_INT')}
+            </span>
+          </DrilldownLink>
+          {getMetricName('new_lines')}
+        </div>
+      ) : (
+        <div className="overview-domain-measure-label">{getMetricName('new_duplications')}</div>
+      );
     return (
       <div className="overview-domain-measure">
-        <div className="overview-domain-measure-value">
-          {formattedValue}
-        </div>
+        <div className="overview-domain-measure-value">{formattedValue}</div>
         {label}
       </div>
     );
   }
+
   renderNutshell() {
     return (
       <div className="overview-domain-nutshell">
@@ -128,6 +136,7 @@ class Duplications extends React.PureComponent {
       </div>
     );
   }
+
   renderLeak() {
     const { leakPeriod } = this.props;
     if (leakPeriod == null) {
@@ -135,14 +144,13 @@ class Duplications extends React.PureComponent {
     }
     return (
       <div className="overview-domain-leak">
-        <div className="overview-domain-measures">
-          {this.renderNewDuplications()}
-        </div>
+        <div className="overview-domain-measures">{this.renderNewDuplications()}</div>
 
         {this.renderTimeline('after')}
       </div>
     );
   }
+
   render() {
     const { measures } = this.props;
     const duplications = measures.find(

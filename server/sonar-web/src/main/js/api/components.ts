@@ -19,21 +19,46 @@
  */
 import { getJSON, postJSON, post, RequestData } from '../helpers/request';
 import throwGlobalError from '../app/utils/throwGlobalError';
+import { Paging, Visibility } from '../app/types';
 
-export function getComponents(data: RequestData): Promise<any> {
-  return getJSON('/api/projects/search', data);
+export interface BaseSearchProjectsParameters {
+  analyzedBefore?: string;
+  onProvisionedOnly?: boolean;
+  organization: string;
+  projects?: string;
+  q?: string;
+  qualifiers?: string;
+  visibility?: Visibility;
 }
 
-export function getProvisioned(data: RequestData): Promise<any> {
-  return getJSON('/api/projects/provisioned', data);
+export interface SearchProjectsParameters extends BaseSearchProjectsParameters {
+  p?: number;
+  ps?: number;
 }
 
-export function getGhosts(data: RequestData): Promise<any> {
-  return getJSON('/api/projects/ghosts', data);
+export interface SearchProjectsResponseComponent {
+  id: string;
+  key: string;
+  lastAnalysisDate?: string;
+  name: string;
+  organization: string;
+  qualifier: string;
+  visibility: Visibility;
 }
 
-export function deleteComponents(data: { projects: string; organization?: string }): Promise<void> {
-  return post('/api/projects/bulk_delete', data);
+export interface SearchProjectsResponse {
+  components: SearchProjectsResponseComponent[];
+  paging: Paging;
+}
+
+export function getComponents(
+  parameters: SearchProjectsParameters
+): Promise<SearchProjectsResponse> {
+  return getJSON('/api/projects/search', parameters);
+}
+
+export function bulkDeleteProjects(parameters: BaseSearchProjectsParameters): Promise<void> {
+  return post('/api/projects/bulk_delete', parameters);
 }
 
 export function deleteProject(project: string): Promise<void> {
@@ -88,8 +113,12 @@ export function getComponentLeaves(
   return getComponentTree('leaves', componentKey, metrics, additional);
 }
 
-export function getComponent(componentKey: string, metrics: string[] = []): Promise<any> {
-  const data = { componentKey, metricKeys: metrics.join(',') };
+export function getComponent(
+  componentKey: string,
+  metrics: string[] = [],
+  branch?: string
+): Promise<any> {
+  const data = { branch, componentKey, metricKeys: metrics.join(',') };
   return getJSON('/api/measures/component', data).then(r => r.component);
 }
 
@@ -97,23 +126,23 @@ export function getTree(component: string, options: RequestData = {}): Promise<a
   return getJSON('/api/components/tree', { ...options, component });
 }
 
-export function getComponentShow(component: string): Promise<any> {
-  return getJSON('/api/components/show', { component });
+export function getComponentShow(component: string, branch?: string): Promise<any> {
+  return getJSON('/api/components/show', { component, branch });
 }
 
 export function getParents(component: string): Promise<any> {
   return getComponentShow(component).then(r => r.ancestors);
 }
 
-export function getBreadcrumbs(component: string): Promise<any> {
-  return getComponentShow(component).then(r => {
+export function getBreadcrumbs(component: string, branch?: string): Promise<any> {
+  return getComponentShow(component, branch).then(r => {
     const reversedAncestors = [...r.ancestors].reverse();
     return [...reversedAncestors, r.component];
   });
 }
 
-export function getComponentData(component: string): Promise<any> {
-  return getComponentShow(component).then(r => r.component);
+export function getComponentData(component: string, branch?: string): Promise<any> {
+  return getComponentShow(component, branch).then(r => r.component);
 }
 
 export function getMyProjects(data: RequestData): Promise<any> {
@@ -121,7 +150,32 @@ export function getMyProjects(data: RequestData): Promise<any> {
   return getJSON(url, data);
 }
 
-export function searchProjects(data: RequestData): Promise<any> {
+export interface Paging {
+  pageIndex: number;
+  pageSize: number;
+  total: number;
+}
+
+export interface Component {
+  organization: string;
+  id: string;
+  key: string;
+  name: string;
+  isFavorite?: boolean;
+  analysisDate?: string;
+  tags: string[];
+  visibility: string;
+  leakPeriodDate?: string;
+}
+
+export interface Facet {
+  property: string;
+  values: Array<{ val: string; count: number }>;
+}
+
+export function searchProjects(
+  data: RequestData
+): Promise<{ components: Component[]; facets: Facet[]; paging: Paging }> {
   const url = '/api/components/search_projects';
   return getJSON(url, data);
 }
@@ -194,12 +248,17 @@ export function getSuggestions(
   return getJSON('/api/components/suggestions', data);
 }
 
-export function getComponentForSourceViewer(component: string): Promise<any> {
-  return getJSON('/api/components/app', { component });
+export function getComponentForSourceViewer(component: string, branch?: string): Promise<any> {
+  return getJSON('/api/components/app', { component, branch });
 }
 
-export function getSources(component: string, from?: number, to?: number): Promise<any> {
-  const data: RequestData = { key: component };
+export function getSources(
+  component: string,
+  from?: number,
+  to?: number,
+  branch?: string
+): Promise<any> {
+  const data: RequestData = { key: component, branch };
   if (from) {
     Object.assign(data, { from });
   }
@@ -209,11 +268,11 @@ export function getSources(component: string, from?: number, to?: number): Promi
   return getJSON('/api/sources/lines', data).then(r => r.sources);
 }
 
-export function getDuplications(component: string): Promise<any> {
-  return getJSON('/api/duplications/show', { key: component });
+export function getDuplications(component: string, branch?: string): Promise<any> {
+  return getJSON('/api/duplications/show', { key: component, branch });
 }
 
-export function getTests(component: string, line: number | string): Promise<any> {
-  const data = { sourceFileKey: component, sourceFileLineNumber: line };
+export function getTests(component: string, line: number | string, branch?: string): Promise<any> {
+  const data = { sourceFileKey: component, sourceFileLineNumber: line, branch };
   return getJSON('/api/tests/list', data).then(r => r.tests);
 }

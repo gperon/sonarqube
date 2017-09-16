@@ -20,12 +20,17 @@
 package org.sonarqube.tests;
 
 import com.sonar.orchestrator.Orchestrator;
+import org.junit.ClassRule;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
+import org.sonarqube.tests.branch.BranchTest;
 import org.sonarqube.tests.issue.AutoAssignTest;
 import org.sonarqube.tests.issue.CommonRulesTest;
 import org.sonarqube.tests.issue.CustomRulesTest;
 import org.sonarqube.tests.issue.IssueActionTest;
 import org.sonarqube.tests.issue.IssueBulkChangeTest;
 import org.sonarqube.tests.issue.IssueChangelogTest;
+import org.sonarqube.tests.issue.IssueCreationDateQPChangedTest;
 import org.sonarqube.tests.issue.IssueCreationTest;
 import org.sonarqube.tests.issue.IssueFilterExtensionTest;
 import org.sonarqube.tests.issue.IssueFilterOnCommonRulesTest;
@@ -51,9 +56,6 @@ import org.sonarqube.tests.test.CoverageTest;
 import org.sonarqube.tests.test.CoverageTrackingTest;
 import org.sonarqube.tests.test.NewCoverageTest;
 import org.sonarqube.tests.test.TestExecutionTest;
-import org.junit.ClassRule;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
 
 import static util.ItUtils.pluginArtifact;
 import static util.ItUtils.xooPlugin;
@@ -85,6 +87,7 @@ import static util.ItUtils.xooPlugin;
   IssueTrackingTest.class,
   IssueWorkflowTest.class,
   NewIssuesMeasureTest.class,
+  IssueCreationDateQPChangedTest.class,
   // debt
   MaintainabilityMeasureTest.class,
   MaintainabilityRatingMeasureTest.class,
@@ -95,12 +98,15 @@ import static util.ItUtils.xooPlugin;
   TechnicalDebtMeasureVariationTest.class,
   TechnicalDebtTest.class,
   // ui
-  IssuesPageTest.class
+  IssuesPageTest.class,
+  // branch
+  BranchTest.class
 })
 public class Category2Suite {
 
   @ClassRule
   public static final Orchestrator ORCHESTRATOR = Orchestrator.builderEnv()
+    .setServerProperty("sonar.search.httpPort", "9025")
     .addPlugin(xooPlugin())
 
     // issue
@@ -109,11 +115,8 @@ public class Category2Suite {
     // 1 second. Required for notification test.
     .setServerProperty("sonar.notifications.delay", "1")
 
-    // reduce xmx and xms from 2g (default) to 1g
-    .setServerProperty("sonar.search.javaOpts", "-Xms512m -Xmx512m -XX:+UseConcMarkSweepGC -XX:CMSInitiatingOccupancyFraction=75 -XX:+UseCMSInitiatingOccupancyOnly" +
-      " -XX:+AlwaysPreTouch -server -Xss1m -Djava.awt.headless=true -Dfile.encoding=UTF-8 -Djna.nosys=true" +
-      " -Djdk.io.permissionsUseCanonicalPath=true -Dio.netty.noUnsafe=true -Dio.netty.noKeySetOptimization=true" +
-      " -Dio.netty.recycler.maxCapacityPerThread=0 -Dlog4j.shutdownHookEnabled=false -Dlog4j2.disable.jmx=true -Dlog4j.skipJansi=true -XX:+HeapDumpOnOutOfMemoryError")
+    // reduce memory for Elasticsearch to 128M
+    .setServerProperty("sonar.search.javaOpts", "-Xms128m -Xmx128m")
 
     .build();
 

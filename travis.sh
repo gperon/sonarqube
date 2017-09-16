@@ -142,15 +142,7 @@ BUILD)
           $MAVEN_ARGS \
           -Pdeploy-sonarsource,release
         
-    #disabling incremental analysis for the time being    
-    INCREMENTAL=false
-    # Triggers a full analysis for every build number ending with 0
-    if [[ "$TRAVIS_BUILD_NUMBER" == *0 ]]; then
-      INCREMENTAL=false
-    fi
-
     mvn sonar:sonar \
-          -Dsonar.incremental=$INCREMENTAL \
           -Dsonar.host.url=$SONAR_HOST_URL \
           -Dsonar.login=$SONAR_TOKEN \
           -Dsonar.projectVersion=$INITIAL_VERSION
@@ -158,7 +150,14 @@ BUILD)
   elif [[ "$TRAVIS_BRANCH" == "branch-"* ]] && [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
     echo 'Build release branch'
 
-    mvn deploy $MAVEN_ARGS -Pdeploy-sonarsource,release
+    mvn org.jacoco:jacoco-maven-plugin:prepare-agent deploy \
+        $MAVEN_ARGS \
+        -Pdeploy-sonarsource,release
+
+    mvn sonar:sonar \
+        -Dsonar.host.url=$SONAR_HOST_URL \
+        -Dsonar.login=$SONAR_TOKEN \
+        -Dsonar.branch.name=$TRAVIS_BRANCH
 
   elif [ "$TRAVIS_PULL_REQUEST" != "false" ] && [ -n "${GITHUB_TOKEN:-}" ]; then
     echo 'Build and analyze internal pull request'
@@ -167,14 +166,26 @@ BUILD)
         $MAVEN_ARGS \
         -Dsource.skip=true \
         -Pdeploy-sonarsource
+
+    # analysis to decorate GitHub pull request
+    # (need support of standard analysis mode in GH plugin)
     mvn sonar:sonar \
+        -Dsonar.host.url=$SONAR_HOST_URL \
+        -Dsonar.login=$SONAR_TOKEN \
         -Dsonar.analysis.mode=preview \
         -Dsonar.github.pullRequest=$TRAVIS_PULL_REQUEST \
         -Dsonar.github.repository=$TRAVIS_REPO_SLUG \
-        -Dsonar.github.oauth=$GITHUB_TOKEN \
-        -Dsonar.host.url=$SONAR_HOST_URL \
-        -Dsonar.login=$SONAR_TOKEN
+        -Dsonar.github.oauth=$GITHUB_TOKEN
 
+    if [ "$TRAVIS_BRANCH" == "master" ]; then
+      # analysis of short-living branch based on another short-living branch
+      # is currently not supported
+      mvn sonar:sonar \
+          -Dsonar.host.url=$SONAR_HOST_URL \
+          -Dsonar.login=$SONAR_TOKEN \
+          -Dsonar.branch.name=$TRAVIS_PULL_REQUEST_BRANCH \
+          -Dsonar.branch.target=$TRAVIS_BRANCH
+    fi
   else
     echo 'Build feature branch or external pull request'
 

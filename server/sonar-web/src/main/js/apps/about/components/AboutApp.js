@@ -33,7 +33,7 @@ import AboutStandards from './AboutStandards';
 import AboutScanners from './AboutScanners';
 import { searchProjects } from '../../../api/components';
 import { getFacet } from '../../../api/issues';
-import { getAppState, getCurrentUser, getSettingValue } from '../../../store/rootReducer';
+import { getAppState, getCurrentUser, getGlobalSettingValue } from '../../../store/rootReducer';
 import { translate } from '../../../helpers/l10n';
 import { fetchAboutPageSettings } from '../actions';
 import AboutAppForSonarQubeDotComLazyLoader from './AboutAppForSonarQubeDotComLazyLoader';
@@ -138,13 +138,12 @@ class AboutApp extends React.PureComponent {
       <div id="about-page" className="page page-limited about-page">
         <div className="about-page-entry">
           <div className="about-page-intro">
-            <h1 className="big-spacer-bottom">
-              {translate('layout.sonar.slogan')}
-            </h1>
-            {!this.props.currentUser.isLoggedIn &&
+            <h1 className="big-spacer-bottom">{translate('layout.sonar.slogan')}</h1>
+            {!this.props.currentUser.isLoggedIn && (
               <Link to="/sessions/new" className="button button-active big-spacer-right">
                 {translate('layout.login')}
-              </Link>}
+              </Link>
+            )}
             <a
               className="button"
               href="https://redirect.sonarsource.com/doc/home.html"
@@ -165,11 +164,12 @@ class AboutApp extends React.PureComponent {
         </div>
 
         {customText != null &&
-          customText.value &&
+        customText.value && (
           <div
             className="about-page-section"
             dangerouslySetInnerHTML={{ __html: customText.value }}
-          />}
+          />
+        )}
 
         <AboutLanguages />
 
@@ -202,8 +202,8 @@ class AboutApp extends React.PureComponent {
 const mapStateToProps = state => ({
   appState: getAppState(state),
   currentUser: getCurrentUser(state),
-  customText: getSettingValue(state, 'sonar.lf.aboutText'),
-  sonarqubeDotCom: getSettingValue(state, 'sonar.lf.sonarqube.com.enabled')
+  customText: getGlobalSettingValue(state, 'sonar.lf.aboutText'),
+  sonarqubeDotCom: getGlobalSettingValue(state, 'sonar.lf.sonarqube.com.enabled')
 });
 
 const mapDispatchToProps = { fetchAboutPageSettings };

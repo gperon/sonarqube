@@ -18,6 +18,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 import { getJSON, post, postJSON, RequestData } from '../helpers/request';
+import { BaseSearchProjectsParameters } from './components';
 
 const PAGE_SIZE = 100;
 
@@ -85,10 +86,30 @@ export function revokePermissionFromGroup(
   return post('/api/permissions/remove_group', data);
 }
 
-/**
- * Get list of permission templates
- */
-export function getPermissionTemplates(organization?: string) {
+export interface PermissionTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  projectKeyPattern?: string;
+  createdAt: string;
+  updatedAt?: string;
+  permissions: Array<{
+    key: string;
+    usersCount: number;
+    groupsCount: number;
+    withProjectCreator?: boolean;
+  }>;
+}
+
+interface GetPermissionTemplatesResponse {
+  permissionTemplates: PermissionTemplate[];
+  defaultTemplates: Array<{ templateId: string; qualifier: string }>;
+  permissions: Array<{ key: string; name: string; description: string }>;
+}
+
+export function getPermissionTemplates(
+  organization?: string
+): Promise<GetPermissionTemplatesResponse> {
   const url = '/api/permissions/search_templates';
   return organization ? getJSON(url, { organization }) : getJSON(url);
 }
@@ -116,7 +137,7 @@ export function applyTemplateToProject(data: RequestData): Promise<void> {
   return post('/api/permissions/apply_template', data);
 }
 
-export function bulkApplyTemplate(data: RequestData): Promise<void> {
+export function bulkApplyTemplate(data: BaseSearchProjectsParameters): Promise<void> {
   return post('/api/permissions/bulk_apply_template', data);
 }
 

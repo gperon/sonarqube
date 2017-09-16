@@ -21,6 +21,7 @@ package org.sonarqube.tests;
 
 import com.sonar.orchestrator.Orchestrator;
 import javax.annotation.Nullable;
+import org.apache.commons.lang.StringUtils;
 import org.junit.rules.ExternalResource;
 import org.sonarqube.pageobjects.Navigation;
 import org.sonarqube.ws.client.WsClient;
@@ -58,6 +59,10 @@ public class Tester extends ExternalResource implements Session {
 
   public Tester(Orchestrator orchestrator) {
     this.orchestrator = orchestrator;
+    String elasticsearchHttpPort = orchestrator.getDistribution().getServerProperty("sonar.search.httpPort");
+    if (StringUtils.isNotBlank(elasticsearchHttpPort)) {
+      this.elasticsearch = new Elasticsearch(Integer.parseInt(elasticsearchHttpPort));
+    }
   }
 
   public Tester disableOrganizations() {
@@ -79,7 +84,7 @@ public class Tester extends ExternalResource implements Session {
   }
 
   @Override
-  protected void before() {
+  public void before() {
     verifyNotStarted();
     rootSession = new SessionImpl(orchestrator, "admin", "admin");
 
@@ -91,12 +96,14 @@ public class Tester extends ExternalResource implements Session {
   }
 
   @Override
-  protected void after() {
+  public void after() {
     if (!disableOrganizations) {
       organizations().deleteNonGuardedOrganizations();
     }
     users().deleteAll();
     projects().deleteAll();
+    settings().deleteAll();
+    qGates().deleteAll();
   }
 
   public Session asAnonymous() {
@@ -179,6 +186,16 @@ public class Tester extends ExternalResource implements Session {
     return rootSession.users();
   }
 
+  @Override
+  public SettingTester settings() {
+    return rootSession.settings();
+  }
+
+  @Override
+  public QGateTester qGates() {
+    return rootSession.qGates();
+  }
+
   private static class SessionImpl implements Session {
     private final WsClient client;
 
@@ -214,6 +231,16 @@ public class Tester extends ExternalResource implements Session {
     @Override
     public UserTester users() {
       return new UserTester(this);
+    }
+
+    @Override
+    public SettingTester settings() {
+      return new SettingTester(this);
+    }
+
+    @Override
+    public QGateTester qGates() {
+      return new QGateTester(this);
     }
   }
 }

@@ -25,7 +25,7 @@ import { Link } from 'react-router';
 import OrganizationsList from './OrganizationsList';
 import { translate } from '../../../helpers/l10n';
 import { fetchIfAnyoneCanCreateOrganizations, fetchMyOrganizations } from './actions';
-import { getAppState, getMyOrganizations, getSettingValue } from '../../../store/rootReducer';
+import { getAppState, getMyOrganizations, getGlobalSettingValue } from '../../../store/rootReducer';
 /*:: import type { Organization } from '../../../store/organizations/duck'; */
 
 class UserOrganizations extends React.PureComponent {
@@ -72,27 +72,30 @@ class UserOrganizations extends React.PureComponent {
         <Helmet title={translate('my_account.organizations')} />
 
         <header className="page-header">
-          <h2 className="page-title">
-            {translate('my_account.organizations')}
-          </h2>
-          {canCreateOrganizations &&
+          <h2 className="page-title">{translate('my_account.organizations')}</h2>
+          {canCreateOrganizations && (
             <div className="page-actions">
               <Link to="/account/organizations/create" className="button">
                 {translate('create')}
               </Link>
-            </div>}
-          {this.props.organizations.length > 0
-            ? <div className="page-description">
-                {translate('my_account.organizations.description')}
-              </div>
-            : <div className="page-description">
-                {translate('my_account.organizations.no_results')}
-              </div>}
+            </div>
+          )}
+          {this.props.organizations.length > 0 ? (
+            <div className="page-description">
+              {translate('my_account.organizations.description')}
+            </div>
+          ) : (
+            <div className="page-description">
+              {translate('my_account.organizations.no_results')}
+            </div>
+          )}
         </header>
 
-        {this.state.loading
-          ? <i className="spinner" />
-          : <OrganizationsList organizations={this.props.organizations} />}
+        {this.state.loading ? (
+          <i className="spinner" />
+        ) : (
+          <OrganizationsList organizations={this.props.organizations} />
+        )}
 
         {this.props.children}
       </div>
@@ -101,7 +104,7 @@ class UserOrganizations extends React.PureComponent {
 }
 
 const mapStateToProps = state => ({
-  anyoneCanCreate: getSettingValue(state, 'sonar.organizations.anyoneCanCreate'),
+  anyoneCanCreate: getGlobalSettingValue(state, 'sonar.organizations.anyoneCanCreate'),
   canAdmin: getAppState(state).canAdmin,
   organizations: getMyOrganizations(state)
 });

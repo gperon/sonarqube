@@ -30,6 +30,7 @@ import { translate } from '../../../helpers/l10n';
 
 /*::
 type Props = {
+  branch?: string,
   history: ?History,
   project: string,
   qualifier: string,
@@ -70,7 +71,11 @@ export default class AnalysesList extends React.PureComponent {
   fetchData() {
     this.setState({ loading: true });
     Promise.all([
-      getProjectActivity({ project: this.props.project, ps: PAGE_SIZE }),
+      getProjectActivity({
+        branch: this.props.branch,
+        project: this.props.project,
+        ps: PAGE_SIZE
+      }),
       getMetrics()
     ]).then(response => {
       if (this.mounted) {
@@ -81,18 +86,14 @@ export default class AnalysesList extends React.PureComponent {
 
   renderList(analyses /*: Array<AnalysisType> */) {
     if (!analyses.length) {
-      return (
-        <p className="spacer-top note">
-          {translate('no_results')}
-        </p>
-      );
+      return <p className="spacer-top note">{translate('no_results')}</p>;
     }
 
     return (
       <ul className="spacer-top">
-        {analyses.map(analysis =>
+        {analyses.map(analysis => (
           <Analysis key={analysis.key} analysis={analysis} qualifier={this.props.qualifier} />
-        )}
+        ))}
       </ul>
     );
   }
@@ -106,11 +107,10 @@ export default class AnalysesList extends React.PureComponent {
 
     return (
       <div className="overview-meta-card">
-        <h4 className="overview-meta-header">
-          {translate('project_activity.page')}
-        </h4>
+        <h4 className="overview-meta-header">{translate('project_activity.page')}</h4>
 
         <PreviewGraph
+          branch={this.props.branch}
           history={this.props.history}
           project={this.props.project}
           metrics={this.state.metrics}
@@ -120,7 +120,11 @@ export default class AnalysesList extends React.PureComponent {
         {this.renderList(analyses)}
 
         <div className="spacer-top small">
-          <Link to={{ pathname: '/project/activity', query: { id: this.props.project } }}>
+          <Link
+            to={{
+              pathname: '/project/activity',
+              query: { id: this.props.project, branch: this.props.branch }
+            }}>
             {translate('show_more')}
           </Link>
         </div>

@@ -33,12 +33,12 @@ import {
 } from '../../projectActivity/utils';
 import { getCustomGraph, getGraph } from '../../../helpers/storage';
 import { formatMeasure, getShortType } from '../../../helpers/measures';
-import { translate } from '../../../helpers/l10n';
 /*:: import type { Serie } from '../../../components/charts/AdvancedTimeline'; */
 /*:: import type { History, Metric } from '../types'; */
 
 /*::
 type Props = {
+  branch?: string,
   history: ?History,
   metrics: Array<Metric>,
   project: string,
@@ -137,7 +137,10 @@ export default class PreviewGraph extends React.PureComponent {
   };
 
   handleClick = () => {
-    this.props.router.push({ pathname: '/project/activity', query: { id: this.props.project } });
+    this.props.router.push({
+      pathname: '/project/activity',
+      query: { id: this.props.project, branch: this.props.branch }
+    });
   };
 
   updateTooltip = (
@@ -150,7 +153,7 @@ export default class PreviewGraph extends React.PureComponent {
     const { graph, selectedDate, series, tooltipIdx, tooltipXPos } = this.state;
     return (
       <AutoSizer disableHeight={true}>
-        {({ width }) =>
+        {({ width }) => (
           <div>
             <AdvancedTimeline
               endDate={null}
@@ -167,8 +170,8 @@ export default class PreviewGraph extends React.PureComponent {
               updateTooltip={this.updateTooltip}
             />
             {selectedDate != null &&
-              tooltipXPos != null &&
-              tooltipIdx != null &&
+            tooltipXPos != null &&
+            tooltipIdx != null && (
               <PreviewGraphTooltips
                 formatValue={this.formatValue}
                 graph={graph}
@@ -178,25 +181,27 @@ export default class PreviewGraph extends React.PureComponent {
                 series={series}
                 tooltipIdx={tooltipIdx}
                 tooltipPos={tooltipXPos}
-              />}
-          </div>}
+              />
+            )}
+          </div>
+        )}
       </AutoSizer>
     );
   }
 
   render() {
     const { series } = this.state;
+    if (!hasHistoryDataValue(series)) {
+      return null;
+    }
+
     return (
       <div
         className="overview-analysis-graph big-spacer-bottom spacer-top"
         onClick={this.handleClick}
         tabIndex={0}
         role="link">
-        {hasHistoryDataValue(series)
-          ? this.renderTimeline()
-          : <div className="note text-center spacer-top big-spacer-bottom">
-              {translate('component_measures.no_history')}
-            </div>}
+        {this.renderTimeline()}
       </div>
     );
   }

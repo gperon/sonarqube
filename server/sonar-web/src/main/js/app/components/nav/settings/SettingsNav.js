@@ -37,17 +37,22 @@ class SettingsNav extends React.PureComponent {
   }
 
   isSecurityActive() {
-    const urls = ['/users', '/groups', '/roles/global', '/permission_templates'];
+    const urls = [
+      '/admin/users',
+      '/admin/groups',
+      '/admin/permissions',
+      '/admin/permission_templates'
+    ];
     return this.isSomethingActive(urls);
   }
 
   isProjectsActive() {
-    const urls = ['/projects_admin', '/background_tasks'];
+    const urls = ['/admin/projects_management', '/admin/background_tasks'];
     return this.isSomethingActive(urls);
   }
 
   isSystemActive() {
-    const urls = ['/updatecenter', '/system'];
+    const urls = ['/admin/update_center', '/admin/system'];
     return this.isSomethingActive(urls);
   }
 
@@ -76,9 +81,7 @@ class SettingsNav extends React.PureComponent {
     return (
       <ContextNavBar id="context-navigation" height={65}>
         <h1 className="navbar-context-header">
-          <strong>
-            {translate('layout.settings')}
-          </strong>
+          <strong>{translate('layout.settings')}</strong>
         </h1>
 
         <NavBarTabs>
@@ -92,27 +95,27 @@ class SettingsNav extends React.PureComponent {
             </a>
             <ul className="dropdown-menu">
               <li>
-                <IndexLink to="/settings" activeClassName="active">
+                <IndexLink to="/admin/settings" activeClassName="active">
                   {translate('settings.page')}
                 </IndexLink>
               </li>
               <li>
-                <IndexLink to="/settings/licenses" activeClassName="active">
+                <IndexLink to="/admin/settings/licenses" activeClassName="active">
                   {translate('property.category.licenses')}
                 </IndexLink>
               </li>
               <li>
-                <IndexLink to="/settings/encryption" activeClassName="active">
+                <IndexLink to="/admin/settings/encryption" activeClassName="active">
                   {translate('property.category.security.encryption')}
                 </IndexLink>
               </li>
               <li>
-                <IndexLink to="/settings/server_id" activeClassName="active">
+                <IndexLink to="/admin/settings/server_id" activeClassName="active">
                   {translate('property.category.server_id')}
                 </IndexLink>
               </li>
               <li>
-                <IndexLink to="/metrics" activeClassName="active">
+                <IndexLink to="/admin/custom_metrics" activeClassName="active">
                   Custom Metrics
                 </IndexLink>
               </li>
@@ -126,28 +129,31 @@ class SettingsNav extends React.PureComponent {
             </a>
             <ul className="dropdown-menu">
               <li>
-                <IndexLink to="/users" activeClassName="active">
+                <IndexLink to="/admin/users" activeClassName="active">
                   {translate('users.page')}
                 </IndexLink>
               </li>
-              {!this.props.customOrganizations &&
+              {!this.props.customOrganizations && (
                 <li>
-                  <IndexLink to="/groups" activeClassName="active">
+                  <IndexLink to="/admin/groups" activeClassName="active">
                     {translate('user_groups.page')}
                   </IndexLink>
-                </li>}
-              {!this.props.customOrganizations &&
+                </li>
+              )}
+              {!this.props.customOrganizations && (
                 <li>
-                  <IndexLink to="/roles/global" activeClassName="active">
+                  <IndexLink to="/admin/permissions" activeClassName="active">
                     {translate('global_permissions.page')}
                   </IndexLink>
-                </li>}
-              {!this.props.customOrganizations &&
+                </li>
+              )}
+              {!this.props.customOrganizations && (
                 <li>
-                  <IndexLink to="/permission_templates" activeClassName="active">
+                  <IndexLink to="/admin/permission_templates" activeClassName="active">
                     {translate('permission_templates')}
                   </IndexLink>
-                </li>}
+                </li>
+              )}
             </ul>
           </li>
 
@@ -156,14 +162,15 @@ class SettingsNav extends React.PureComponent {
               {translate('sidebar.projects')} <i className="icon-dropdown" />
             </a>
             <ul className="dropdown-menu">
-              {!this.props.customOrganizations &&
+              {!this.props.customOrganizations && (
                 <li>
-                  <IndexLink to="/projects_admin" activeClassName="active">
+                  <IndexLink to="/admin/projects_management" activeClassName="active">
                     Management
                   </IndexLink>
-                </li>}
+                </li>
+              )}
               <li>
-                <IndexLink to="/background_tasks" activeClassName="active">
+                <IndexLink to="/admin/background_tasks" activeClassName="active">
                   {translate('background_tasks.page')}
                 </IndexLink>
               </li>
@@ -176,12 +183,12 @@ class SettingsNav extends React.PureComponent {
             </a>
             <ul className="dropdown-menu">
               <li>
-                <IndexLink to="/updatecenter" activeClassName="active">
+                <IndexLink to="/admin/update_center" activeClassName="active">
                   {translate('update_center.page')}
                 </IndexLink>
               </li>
               <li>
-                <IndexLink to="/system" activeClassName="active">
+                <IndexLink to="/admin/system" activeClassName="active">
                   {translate('system_info.page')}
                 </IndexLink>
               </li>

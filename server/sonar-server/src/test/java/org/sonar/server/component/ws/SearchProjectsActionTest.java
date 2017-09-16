@@ -160,10 +160,12 @@ public class SearchProjectsActionTest {
 
     Param sort = def.param("s");
     assertThat(sort.defaultValue()).isEqualTo("name");
-    assertThat(sort.possibleValues()).containsExactlyInAnyOrder("coverage",
+    assertThat(sort.possibleValues()).containsExactlyInAnyOrder(
+      "coverage",
       "reliability_rating",
       "duplicated_lines_density",
       "ncloc_language_distribution",
+      "lines",
       "new_lines",
       "security_rating",
       "new_reliability_rating",
@@ -1056,6 +1058,19 @@ public class SearchProjectsActionTest {
       .containsExactly(
         tuple(privateProject.getDbKey(), privateProject.isPrivate() ? "private" : "public"),
         tuple(publicProject.getDbKey(), publicProject.isPrivate() ? "private" : "public"));
+  }
+
+  @Test
+  public void does_not_return_branches() {
+    ComponentDto project = db.components().insertMainBranch();
+    authorizationIndexerTester.allowOnlyAnyone(project);
+    ComponentDto branch = db.components().insertProjectBranch(project);
+    projectMeasuresIndexer.indexOnStartup(null);
+
+    SearchProjectsWsResponse result = call(request);
+
+    assertThat(result.getComponentsList()).extracting(Component::getKey)
+      .containsExactlyInAnyOrder(project.getDbKey());
   }
 
   @Test

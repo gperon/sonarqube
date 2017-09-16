@@ -31,6 +31,7 @@ import { enhanceComponent, getBubbleMetrics, isFileType } from '../utils';
 /*:: import type { Metric } from '../../../store/metrics/actions'; */
 
 /*:: type Props = {|
+  branch?: string,
   className?: string,
   component: Component,
   currentUser: { isLoggedIn: boolean },
@@ -78,7 +79,7 @@ export default class MeasureOverview extends React.PureComponent {
   }
 
   fetchComponents = (props /*: Props */) => {
-    const { component, domain, metrics } = props;
+    const { branch, component, domain, metrics } = props;
     if (isFileType(component)) {
       return this.setState({ components: [], paging: null });
     }
@@ -88,6 +89,7 @@ export default class MeasureOverview extends React.PureComponent {
       metricsKey.push(colors.map(metric => metric.key));
     }
     const options = {
+      branch,
       s: 'metric',
       metricSort: size.key,
       asc: false,
@@ -112,11 +114,11 @@ export default class MeasureOverview extends React.PureComponent {
   };
 
   renderContent() {
-    const { component } = this.props;
+    const { branch, component } = this.props;
     if (isFileType(component)) {
       return (
         <div className="measure-details-viewer">
-          <SourceViewer component={component.key} />
+          <SourceViewer branch={branch} component={component.key} />
         </div>
       );
     }
@@ -133,7 +135,7 @@ export default class MeasureOverview extends React.PureComponent {
   }
 
   render() {
-    const { component, currentUser, leakPeriod, rootComponent } = this.props;
+    const { branch, component, currentUser, leakPeriod, rootComponent } = this.props;
     const isLoggedIn = currentUser && currentUser.isLoggedIn;
     const isFile = isFileType(component);
     return (
@@ -143,17 +145,19 @@ export default class MeasureOverview extends React.PureComponent {
             <div className="layout-page-main-inner">
               <Breadcrumbs
                 backToFirst={true}
+                branch={branch}
                 className="measure-breadcrumbs spacer-right text-ellipsis"
                 component={component}
                 handleSelect={this.props.updateSelected}
                 rootComponent={rootComponent}
               />
               {component.key !== rootComponent.key &&
-                isLoggedIn &&
+              isLoggedIn && (
                 <MeasureFavoriteContainer
                   component={component.key}
                   className="measure-favorite spacer-right"
-                />}
+                />
+              )}
               <PageActions
                 current={this.state.components.length}
                 loading={this.props.loading}
@@ -165,8 +169,9 @@ export default class MeasureOverview extends React.PureComponent {
         </div>
         <div className="layout-page-main-inner measure-details-content">
           <div className="clearfix big-spacer-bottom">
-            {leakPeriod != null &&
-              <LeakPeriodLegend className="pull-right" component={component} period={leakPeriod} />}
+            {leakPeriod != null && (
+              <LeakPeriodLegend className="pull-right" component={component} period={leakPeriod} />
+            )}
           </div>
           {!this.props.loading && this.renderContent()}
         </div>

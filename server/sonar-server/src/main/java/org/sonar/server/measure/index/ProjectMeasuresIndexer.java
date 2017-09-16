@@ -20,6 +20,7 @@
 package org.sonar.server.measure.index;
 
 import com.google.common.collect.ImmutableSet;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -46,7 +47,6 @@ import org.sonar.server.es.ProjectIndexer;
 import org.sonar.server.permission.index.AuthorizationScope;
 import org.sonar.server.permission.index.NeedAuthorizationIndexer;
 
-import static org.sonar.server.es.DefaultIndexSettings.REFRESH_IMMEDIATE;
 import static org.sonar.server.measure.index.ProjectMeasuresIndexDefinition.INDEX_TYPE_PROJECT_MEASURES;
 
 public class ProjectMeasuresIndexer implements ProjectIndexer, NeedAuthorizationIndexer {
@@ -78,8 +78,8 @@ public class ProjectMeasuresIndexer implements ProjectIndexer, NeedAuthorization
   }
 
   @Override
-  public void indexOnAnalysis(String projectUuid) {
-    doIndex(Size.REGULAR, projectUuid);
+  public void indexOnAnalysis(String branchUuid) {
+    doIndex(Size.REGULAR, branchUuid);
   }
 
   @Override
@@ -127,7 +127,7 @@ public class ProjectMeasuresIndexer implements ProjectIndexer, NeedAuthorization
       }
     }
 
-    // the remaining uuids reference issues that don't exist in db. They must
+    // the remaining uuids reference projects that don't exist in db. They must
     // be deleted from index.
     projectUuids.forEach(projectUuid -> bulkIndexer.addDeletion(INDEX_TYPE_PROJECT_MEASURES, projectUuid, projectUuid));
 
@@ -136,9 +136,9 @@ public class ProjectMeasuresIndexer implements ProjectIndexer, NeedAuthorization
 
   private void doIndex(Size size, @Nullable String projectUuid) {
     try (DbSession dbSession = dbClient.openSession(false);
-         ProjectMeasuresIndexerIterator rowIt = ProjectMeasuresIndexerIterator.create(dbSession, projectUuid)) {
+      ProjectMeasuresIndexerIterator rowIt = ProjectMeasuresIndexerIterator.create(dbSession, projectUuid)) {
 
-      BulkIndexer bulkIndexer = createBulkIndexer(size, IndexingListener.NOOP);
+      BulkIndexer bulkIndexer = createBulkIndexer(size, IndexingListener.FAIL_ON_ERROR);
       bulkIndexer.start();
       while (rowIt.hasNext()) {
         ProjectMeasures doc = rowIt.next();
@@ -172,6 +172,7 @@ public class ProjectMeasuresIndexer implements ProjectIndexer, NeedAuthorization
       .setTags(project.getTags())
       .setAnalysedAt(analysisDate == null ? null : new Date(analysisDate))
       .setMeasuresFromMap(projectMeasures.getMeasures().getNumericMeasures())
-      .setLanguages(projectMeasures.getMeasures().getLanguages());
+      .setLanguages(new ArrayList<>(projectMeasures.getMeasures().getNclocByLanguages().keySet()))
+      .setNclocLanguageDistributionFromMap(projectMeasures.getMeasures().getNclocByLanguages());
   }
 }

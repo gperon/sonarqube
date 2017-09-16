@@ -19,12 +19,13 @@
  */
 package org.sonarqube.ws.client.project;
 
-import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nullable;
+import org.sonar.api.resources.Qualifiers;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Collections.singletonList;
 import static java.util.Objects.requireNonNull;
 import static org.sonarqube.ws.client.project.ProjectsWsParameters.MAX_PAGE_SIZE;
 
@@ -36,6 +37,10 @@ public class SearchWsRequest {
   private final String visibility;
   private final Integer page;
   private final Integer pageSize;
+  private final String analyzedBefore;
+  private final boolean onProvisionedOnly;
+  private final List<String> projects;
+  private final List<String> projectIds;
 
   public SearchWsRequest(Builder builder) {
     this.organization = builder.organization;
@@ -44,6 +49,10 @@ public class SearchWsRequest {
     this.visibility = builder.visibility;
     this.page = builder.page;
     this.pageSize = builder.pageSize;
+    this.analyzedBefore = builder.analyzedBefore;
+    this.onProvisionedOnly = builder.onProvisionedOnly;
+    this.projects = builder.projects;
+    this.projectIds = builder.projectIds;
   }
 
   @CheckForNull
@@ -75,17 +84,40 @@ public class SearchWsRequest {
     return visibility;
   }
 
+  @CheckForNull
+  public String getAnalyzedBefore() {
+    return analyzedBefore;
+  }
+
+  public boolean isOnProvisionedOnly() {
+    return onProvisionedOnly;
+  }
+
+  @CheckForNull
+  public List<String> getProjects() {
+    return projects;
+  }
+
+  @CheckForNull
+  public List<String> getProjectIds() {
+    return projectIds;
+  }
+
   public static Builder builder() {
     return new Builder();
   }
 
   public static class Builder {
     private String organization;
-    private List<String> qualifiers = new ArrayList<>();
+    private List<String> qualifiers = singletonList(Qualifiers.PROJECT);
     private Integer page;
     private Integer pageSize;
     private String query;
     private String visibility;
+    private String analyzedBefore;
+    private boolean onProvisionedOnly = false;
+    private List<String> projects;
+    private List<String> projectIds;
 
     public Builder setOrganization(@Nullable String organization) {
       this.organization = organization;
@@ -117,10 +149,31 @@ public class SearchWsRequest {
       return this;
     }
 
+    public Builder setAnalyzedBefore(@Nullable String lastAnalysisBefore) {
+      this.analyzedBefore = lastAnalysisBefore;
+      return this;
+    }
+
+    public Builder setOnProvisionedOnly(boolean onProvisionedOnly) {
+      this.onProvisionedOnly = onProvisionedOnly;
+      return this;
+    }
+
+    public Builder setProjects(@Nullable List<String> projects) {
+      this.projects = projects;
+      return this;
+    }
+
+    public Builder setProjectIds(@Nullable List<String> projectIds) {
+      this.projectIds = projectIds;
+      return this;
+    }
+
     public SearchWsRequest build() {
+      checkArgument(projects==null || !projects.isEmpty(), "Project key list must not be empty");
+      checkArgument(projectIds==null || !projectIds.isEmpty(), "Project id list must not be empty");
       checkArgument(pageSize == null || pageSize <= MAX_PAGE_SIZE, "Page size must not be greater than %s", MAX_PAGE_SIZE);
       return new SearchWsRequest(this);
     }
   }
-
 }

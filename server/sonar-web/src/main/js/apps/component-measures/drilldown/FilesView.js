@@ -28,6 +28,7 @@ import { scrollToElement } from '../../../helpers/scrolling';
 /*:: import type { Metric } from '../../../store/metrics/actions'; */
 
 /*:: type Props = {|
+  branch?: string,
   components: Array<ComponentEnhanced>,
   fetchMore: () => void,
   handleSelect: string => void,
@@ -117,6 +118,7 @@ export default class ListView extends React.PureComponent {
     return (
       <div ref={elem => (this.listContainer = elem)}>
         <ComponentsList
+          branch={this.props.branch}
           components={this.props.components}
           metrics={this.props.metrics}
           metric={this.props.metric}
@@ -124,12 +126,13 @@ export default class ListView extends React.PureComponent {
           selectedComponent={this.props.selectedKey}
         />
         {this.props.paging &&
-          this.props.components.length > 0 &&
+        this.props.components.length > 0 && (
           <ListFooter
             count={this.props.components.length}
             total={this.props.paging.total}
             loadMore={this.props.fetchMore}
-          />}
+          />
+        )}
       </div>
     );
   }

@@ -21,12 +21,13 @@ package org.sonar.server.app;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Random;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 import org.sonar.api.config.internal.MapSettings;
-import org.sonar.process.DefaultProcessCommands;
+import org.sonar.process.sharedmemoryfile.DefaultProcessCommands;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.sonar.process.ProcessEntryPoint.PROPERTY_PROCESS_INDEX;
@@ -135,6 +136,23 @@ public class ProcessCommandWrapperImplTest {
     try (DefaultProcessCommands processCommands = DefaultProcessCommands.secondary(tmpDir, PROCESS_NUMBER)) {
       assertThat(processCommands.isOperational()).isTrue();
     }
+  }
+
+  @Test
+  public void isCeOperational_reads_shared_memory_operational_flag_in_location_3() throws IOException {
+    File tmpDir = temp.newFolder().getAbsoluteFile();
+    settings.setProperty(PROPERTY_SHARED_PATH, tmpDir.getAbsolutePath());
+
+    boolean expected = new Random().nextBoolean();
+    if (expected) {
+      try (DefaultProcessCommands processCommands = DefaultProcessCommands.secondary(tmpDir, 3)) {
+        processCommands.setOperational();
+      }
+    }
+
+    ProcessCommandWrapperImpl underTest = new ProcessCommandWrapperImpl(settings.asConfig());
+
+    assertThat(underTest.isCeOperational()).isEqualTo(expected);
   }
 
 }

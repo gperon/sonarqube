@@ -80,12 +80,18 @@ public class SearchAction implements ComponentsWsAction {
   public void define(WebService.NewController context) {
     WebService.NewAction action = context.createAction(ACTION_SEARCH)
       .setSince("6.3")
-      .setDescription("Search for components.<br>" +
-        "Returns the components with the 'Browse' permission.")
+      .setDescription("Search for components")
       .addPagingParams(100)
-      .addSearchQuery("sona", "component names", "component keys")
       .setResponseExample(getClass().getResource("search-components-example.json"))
       .setHandler(this);
+
+    action.createParam(Param.TEXT_QUERY)
+      .setDescription("Limit search to: <ul>" +
+        "<li>component names that contain the supplied string</li>" +
+        "<li>component keys that are exactly the same as the supplied string</li>" +
+        "</ul>")
+      .setExampleValue("sonar");
+
     action
       .createParam(PARAM_ORGANIZATION)
       .setDescription("Organization key")
@@ -93,6 +99,7 @@ public class SearchAction implements ComponentsWsAction {
       .setInternal(true)
       .setExampleValue("my-org")
       .setSince("6.3");
+
     action
       .createParam(PARAM_LANGUAGE)
       .setDescription("Language key. If provided, only components for the given language are returned.")

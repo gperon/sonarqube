@@ -19,10 +19,8 @@
  */
 package org.sonar.server.test.index;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import org.elasticsearch.action.search.SearchRequestBuilder;
@@ -69,9 +67,9 @@ public class TestIndexer implements ProjectIndexer {
   @Override
   public void indexOnStartup(Set<IndexType> uninitializedIndexTypes) {
     try (DbSession dbSession = dbClient.openSession(false);
-         TestResultSetIterator rowIt = TestResultSetIterator.create(dbClient, dbSession, null)) {
+      TestResultSetIterator rowIt = TestResultSetIterator.create(dbClient, dbSession, null)) {
 
-      BulkIndexer bulkIndexer = new BulkIndexer(esClient, TestIndexDefinition.INDEX_TYPE_TEST, Size.LARGE);
+      BulkIndexer bulkIndexer = new BulkIndexer(esClient, INDEX_TYPE_TEST, Size.LARGE);
       bulkIndexer.start();
       addTestsToBulkIndexer(rowIt, bulkIndexer);
       bulkIndexer.stop();
@@ -79,12 +77,12 @@ public class TestIndexer implements ProjectIndexer {
   }
 
   @Override
-  public void indexOnAnalysis(String projectUuid) {
-    BulkIndexer bulkIndexer = new BulkIndexer(esClient, TestIndexDefinition.INDEX_TYPE_TEST, Size.REGULAR);
+  public void indexOnAnalysis(String branchUuid) {
+    BulkIndexer bulkIndexer = new BulkIndexer(esClient, INDEX_TYPE_TEST, Size.REGULAR);
     bulkIndexer.start();
-    addProjectDeletionToBulkIndexer(bulkIndexer, projectUuid);
+    addProjectDeletionToBulkIndexer(bulkIndexer, branchUuid);
     try (DbSession dbSession = dbClient.openSession(false);
-         TestResultSetIterator rowIt = TestResultSetIterator.create(dbClient, dbSession, projectUuid)) {
+      TestResultSetIterator rowIt = TestResultSetIterator.create(dbClient, dbSession, branchUuid)) {
       addTestsToBulkIndexer(rowIt, bulkIndexer);
     }
     bulkIndexer.stop();
@@ -115,17 +113,6 @@ public class TestIndexer implements ProjectIndexer {
     }
   }
 
-  @VisibleForTesting
-  protected IndexingResult doIndex(Iterator<FileSourcesUpdaterHelper.Row> dbRows, Size bulkSize, IndexingListener listener) {
-    BulkIndexer bulk = new BulkIndexer(esClient, INDEX_TYPE_TEST, bulkSize, listener);
-    bulk.start();
-    while (dbRows.hasNext()) {
-      FileSourcesUpdaterHelper.Row row = dbRows.next();
-      row.getUpdateRequests().forEach(bulk::add);
-    }
-    return bulk.stop();
-  }
-
   public void deleteByFile(String fileUuid) {
     SearchRequestBuilder searchRequest = esClient.prepareSearch(INDEX_TYPE_TEST)
       .setQuery(QueryBuilders.termQuery(FIELD_FILE_UUID, fileUuid));
@@ -134,19 +121,17 @@ public class TestIndexer implements ProjectIndexer {
 
   @Override
   public IndexingResult index(DbSession dbSession, Collection<EsQueueDto> items) {
+    // The items are to be deleted
     if (items.isEmpty()) {
       return new IndexingResult();
     }
 
     IndexingListener listener = new OneToManyResilientIndexingListener(dbClient, dbSession, items);
-    BulkIndexer bulkIndexer = new BulkIndexer(esClient, TestIndexDefinition.INDEX_TYPE_TEST, Size.REGULAR, listener);
+    BulkIndexer bulkIndexer = new BulkIndexer(esClient, INDEX_TYPE_TEST, Size.REGULAR, listener);
     bulkIndexer.start();
     items.forEach(i -> {
       String projectUuid = i.getDocId();
       addProjectDeletionToBulkIndexer(bulkIndexer, projectUuid);
-      try (TestResultSetIterator rowIt = TestResultSetIterator.create(dbClient, dbSession, projectUuid)) {
-        addTestsToBulkIndexer(rowIt, bulkIndexer);
-      }
     });
 
     return bulkIndexer.stop();

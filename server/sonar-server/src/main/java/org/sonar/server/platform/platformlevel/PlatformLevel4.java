@@ -31,10 +31,12 @@ import org.sonar.api.rules.XMLRuleParser;
 import org.sonar.api.server.rule.RulesDefinitionXmlLoader;
 import org.sonar.ce.CeModule;
 import org.sonar.ce.settings.ProjectConfigurationFactory;
+import org.sonar.cluster.localclient.HazelcastLocalClient;
 import org.sonar.core.component.DefaultResourceTypes;
 import org.sonar.core.timemachine.Periods;
 import org.sonar.server.authentication.AuthenticationModule;
 import org.sonar.server.batch.BatchWsModule;
+import org.sonar.server.branch.BranchFeatureProxyImpl;
 import org.sonar.server.ce.ws.CeWsModule;
 import org.sonar.server.component.ComponentCleanerService;
 import org.sonar.server.component.ComponentFinder;
@@ -55,10 +57,12 @@ import org.sonar.server.es.IndexCreator;
 import org.sonar.server.es.IndexDefinitions;
 import org.sonar.server.es.ProjectIndexersImpl;
 import org.sonar.server.es.RecoveryIndexer;
+import org.sonar.server.es.metadata.EsDbCompatibilityImpl;
 import org.sonar.server.es.metadata.MetadataIndex;
 import org.sonar.server.es.metadata.MetadataIndexDefinition;
 import org.sonar.server.event.NewAlerts;
 import org.sonar.server.favorite.FavoriteModule;
+import org.sonar.server.health.NodeHealthModule;
 import org.sonar.server.issue.AddTagsAction;
 import org.sonar.server.issue.AssignAction;
 import org.sonar.server.issue.CommentAction;
@@ -115,7 +119,8 @@ import org.sonar.server.platform.web.WebPagesFilter;
 import org.sonar.server.platform.web.requestid.HttpRequestIdModule;
 import org.sonar.server.platform.ws.ChangeLogLevelAction;
 import org.sonar.server.platform.ws.DbMigrationStatusAction;
-import org.sonar.server.platform.ws.InfoAction;
+import org.sonar.server.platform.ws.HealthActionModule;
+import org.sonar.server.platform.ws.InfoActionModule;
 import org.sonar.server.platform.ws.L10nWs;
 import org.sonar.server.platform.ws.LogsAction;
 import org.sonar.server.platform.ws.MigrateDbAction;
@@ -141,6 +146,7 @@ import org.sonar.server.plugins.ws.UninstallAction;
 import org.sonar.server.plugins.ws.UpdatesAction;
 import org.sonar.server.project.ws.ProjectsWsModule;
 import org.sonar.server.projectanalysis.ProjectAnalysisModule;
+import org.sonar.server.projectbranch.ws.BranchWsModule;
 import org.sonar.server.projectlink.ws.ProjectLinksModule;
 import org.sonar.server.projecttag.ws.ProjectTagsWsModule;
 import org.sonar.server.property.InternalPropertiesImpl;
@@ -185,6 +191,7 @@ import org.sonar.server.source.ws.LinesAction;
 import org.sonar.server.source.ws.RawAction;
 import org.sonar.server.source.ws.ScmAction;
 import org.sonar.server.source.ws.SourcesWs;
+import org.sonar.server.telemetry.TelemetryModule;
 import org.sonar.server.test.index.TestIndex;
 import org.sonar.server.test.index.TestIndexDefinition;
 import org.sonar.server.test.index.TestIndexer;
@@ -235,7 +242,12 @@ public class PlatformLevel4 extends PlatformLevel {
     addIfStartupLeader(
       IndexCreator.class,
       MetadataIndexDefinition.class,
-      MetadataIndex.class);
+      MetadataIndex.class,
+      EsDbCompatibilityImpl.class);
+
+    addIfCluster(
+      HazelcastLocalClient.class,
+      NodeHealthModule.class);
 
     add(
       PluginDownloader.class,
@@ -364,6 +376,7 @@ public class PlatformLevel4 extends PlatformLevel {
       GroupPermissionChanger.class,
 
       // components
+      BranchWsModule.class,
       ProjectsWsModule.class,
       ProjectsEsModule.class,
       ProjectTagsWsModule.class,
@@ -471,11 +484,10 @@ public class PlatformLevel4 extends PlatformLevel {
       // System
       ServerLogging.class,
       RestartAction.class,
-      InfoAction.class,
+      InfoActionModule.class,
       PingAction.class,
       UpgradesAction.class,
       StatusAction.class,
-      SystemWs.class,
       SystemMonitor.class,
       SettingsMonitor.class,
       SonarQubeMonitor.class,
@@ -487,6 +499,8 @@ public class PlatformLevel4 extends PlatformLevel {
       LogsAction.class,
       ChangeLogLevelAction.class,
       DbMigrationStatusAction.class,
+      HealthActionModule.class,
+      SystemWs.class,
 
       // Server id
       ServerIdWsModule.class,
@@ -503,6 +517,9 @@ public class PlatformLevel4 extends PlatformLevel {
       UninstallAction.class,
       CancelAllAction.class,
       PluginsWs.class,
+
+      // Branch
+      BranchFeatureProxyImpl.class,
 
       // privileged plugins
       PrivilegedPluginsBootstraper.class,
@@ -529,6 +546,10 @@ public class PlatformLevel4 extends PlatformLevel {
 
       RecoveryIndexer.class,
       ProjectIndexersImpl.class);
+    addIfStartupLeader(
+      // Telemetry
+      TelemetryModule.class);
+
     addAll(level4AddedComponents);
   }
 

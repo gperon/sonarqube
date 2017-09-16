@@ -25,6 +25,7 @@ import ListItem from './ListItem';
 
 /*::
 type Props = {|
+  branch?: string,
   checked: Array<string>,
   component?: Component,
   issues: Array<Issue>,
@@ -43,12 +44,13 @@ export default class IssuesList extends React.PureComponent {
   /*:: props: Props; */
 
   render() {
-    const { checked, component, issues, openPopup, selectedIssue } = this.props;
+    const { branch, checked, component, issues, openPopup, selectedIssue } = this.props;
 
     return (
       <div>
-        {issues.map((issue, index) =>
+        {issues.map((issue, index) => (
           <ListItem
+            branch={branch}
             checked={checked.includes(issue.key)}
             component={component}
             key={issue.key}
@@ -63,7 +65,7 @@ export default class IssuesList extends React.PureComponent {
             previousIssue={index > 0 ? issues[index - 1] : null}
             selected={selectedIssue != null && selectedIssue.key === issue.key}
           />
-        )}
+        ))}
       </div>
     );
   }

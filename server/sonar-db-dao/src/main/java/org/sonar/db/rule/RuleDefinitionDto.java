@@ -57,6 +57,8 @@ public class RuleDefinitionDto {
 
   private RuleKey key;
 
+  private String pluginKey;
+
   private long createdAt;
   private long updatedAt;
 
@@ -290,6 +292,16 @@ public class RuleDefinitionDto {
 
   public RuleDefinitionDto setUpdatedAt(long updatedAt) {
     this.updatedAt = updatedAt;
+    return this;
+  }
+
+  @CheckForNull
+  public String getPluginKey() {
+    return pluginKey;
+  }
+
+  public RuleDefinitionDto setPluginKey(@Nullable String pluginKey) {
+    this.pluginKey = pluginKey;
     return this;
   }
 

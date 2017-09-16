@@ -20,10 +20,10 @@
 // @flow
 import React from 'react';
 import Helmet from 'react-helmet';
-import moment from 'moment';
 import ProjectActivityPageHeader from './ProjectActivityPageHeader';
 import ProjectActivityAnalysesList from './ProjectActivityAnalysesList';
 import ProjectActivityGraphs from './ProjectActivityGraphs';
+import { parseDate } from '../../../helpers/dates';
 import { translate } from '../../../helpers/l10n';
 import './projectActivity.css';
 /*:: import type { Analysis, MeasureHistory, Metric, Query } from '../types'; */
@@ -89,7 +89,7 @@ export default function ProjectActivityApp(props /*: Props */) {
         <div className="project-activity-layout-page-main">
           <ProjectActivityGraphs
             analyses={analyses}
-            leakPeriodDate={moment(props.project.leakPeriodDate).toDate()}
+            leakPeriodDate={parseDate(props.project.leakPeriodDate)}
             loading={props.graphLoading}
             measuresHistory={measuresHistory}
             metrics={props.metrics}

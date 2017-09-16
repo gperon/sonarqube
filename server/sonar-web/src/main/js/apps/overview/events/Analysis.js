@@ -21,7 +21,7 @@
 import React from 'react';
 import { sortBy } from 'lodash';
 import Event from './Event';
-import FormattedDate from '../../../components/ui/FormattedDate';
+import DateTooltipFormatter from '../../../components/intl/DateTooltipFormatter';
 import { translate } from '../../../helpers/l10n';
 /*:: import type { Analysis as AnalysisType, Event as EventType } from '../../projectActivity/types'; */
 
@@ -46,17 +46,17 @@ export default function Analysis(props /*: Props */) {
     <li className="overview-analysis">
       <div className="small little-spacer-bottom">
         <strong>
-          <FormattedDate date={analysis.date} format="LL" />
+          <DateTooltipFormatter date={analysis.date} placement="right" />
         </strong>
       </div>
 
-      {sortedEvents.length > 0
-        ? <div className="project-activity-events">
-            {sortedEvents.map(event => <Event event={event} key={event.key} />)}
-          </div>
-        : <span className="note">
-            {translate('project_activity.analyzed', props.qualifier)}
-          </span>}
+      {sortedEvents.length > 0 ? (
+        <div className="project-activity-events">
+          {sortedEvents.map(event => <Event event={event} key={event.key} />)}
+        </div>
+      ) : (
+        <span className="note">{translate('project_activity.analyzed', props.qualifier)}</span>
+      )}
     </li>
   );
 }

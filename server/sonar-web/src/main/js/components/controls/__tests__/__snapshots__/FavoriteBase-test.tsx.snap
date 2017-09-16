@@ -1,0 +1,25 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`should render favorite 1`] = `
+<a
+  className="link-no-underline"
+  href="#"
+  onClick={[Function]}
+>
+  <FavoriteIcon
+    favorite={true}
+  />
+</a>
+`;
+
+exports[`should render not favorite 1`] = `
+<a
+  className="link-no-underline"
+  href="#"
+  onClick={[Function]}
+>
+  <FavoriteIcon
+    favorite={false}
+  />
+</a>
+`;

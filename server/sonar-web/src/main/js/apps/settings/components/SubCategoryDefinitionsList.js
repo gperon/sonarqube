@@ -27,6 +27,7 @@ import { getSubCategoryName, getSubCategoryDescription } from '../utils';
 
 export default class SubCategoryDefinitionsList extends React.PureComponent {
   static propTypes = {
+    branch: PropTypes.string,
     component: PropTypes.object,
     settings: PropTypes.array.isRequired
   };
@@ -52,23 +53,23 @@ export default class SubCategoryDefinitionsList extends React.PureComponent {
 
     return (
       <ul className="settings-sub-categories-list">
-        {sortedSubCategories.map(subCategory =>
+        {sortedSubCategories.map(subCategory => (
           <li key={subCategory.key}>
-            <h2 className="settings-sub-category-name">
-              {subCategory.name}
-            </h2>
-            {subCategory.description != null &&
+            <h2 className="settings-sub-category-name">{subCategory.name}</h2>
+            {subCategory.description != null && (
               <div
                 className="settings-sub-category-description markdown"
                 dangerouslySetInnerHTML={{ __html: subCategory.description }}
-              />}
+              />
+            )}
             <DefinitionsList
-              settings={bySubCategory[subCategory.key]}
+              branch={this.props.branch}
               component={this.props.component}
+              settings={bySubCategory[subCategory.key]}
             />
             {this.renderEmailForm(subCategory.key)}
           </li>
-        )}
+        ))}
       </ul>
     );
   }

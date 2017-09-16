@@ -23,12 +23,15 @@ import com.google.common.base.Joiner;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import org.assertj.core.api.Assertions;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.sonar.api.server.ws.WebService;
+import org.sonar.api.server.ws.WebService.Param;
 import org.sonar.db.DbTester;
 import org.sonar.db.component.ComponentDto;
 import org.sonar.db.component.ComponentTesting;
@@ -54,16 +57,23 @@ import static org.mockito.Mockito.mock;
 import static org.sonar.api.server.ws.WebService.Param.PAGE;
 import static org.sonar.api.server.ws.WebService.Param.PAGE_SIZE;
 import static org.sonar.api.server.ws.WebService.Param.TEXT_QUERY;
+import static org.sonar.api.utils.DateUtils.formatDate;
+import static org.sonar.api.utils.DateUtils.parseDateTime;
 import static org.sonar.core.util.Protobuf.setNullable;
 import static org.sonar.db.component.ComponentTesting.newDirectory;
 import static org.sonar.db.component.ComponentTesting.newFileDto;
 import static org.sonar.db.component.ComponentTesting.newModuleDto;
 import static org.sonar.db.component.ComponentTesting.newPrivateProjectDto;
 import static org.sonar.db.component.ComponentTesting.newView;
+import static org.sonar.db.component.SnapshotTesting.newAnalysis;
 import static org.sonar.db.permission.OrganizationPermission.ADMINISTER;
 import static org.sonar.db.permission.OrganizationPermission.ADMINISTER_QUALITY_PROFILES;
 import static org.sonar.test.JsonAssert.assertJson;
+import static org.sonarqube.ws.client.project.ProjectsWsParameters.PARAM_ANALYZED_BEFORE;
+import static org.sonarqube.ws.client.project.ProjectsWsParameters.PARAM_ON_PROVISIONED_ONLY;
 import static org.sonarqube.ws.client.project.ProjectsWsParameters.PARAM_ORGANIZATION;
+import static org.sonarqube.ws.client.project.ProjectsWsParameters.PARAM_PROJECTS;
+import static org.sonarqube.ws.client.project.ProjectsWsParameters.PARAM_PROJECT_IDS;
 import static org.sonarqube.ws.client.project.ProjectsWsParameters.PARAM_VISIBILITY;
 
 public class SearchActionTest {
@@ -84,18 +94,19 @@ public class SearchActionTest {
   private DefaultOrganizationProvider defaultOrganizationProvider = TestDefaultOrganizationProvider.from(db);
 
   private WsActionTester ws = new WsActionTester(
-    new SearchAction(db.getDbClient(), userSession, defaultOrganizationProvider, new ProjectsWsSupport(db.getDbClient(), mock(BillingValidationsProxy.class))));
+    new SearchAction(db.getDbClient(), userSession, new ProjectsWsSupport(db.getDbClient(), defaultOrganizationProvider, mock(BillingValidationsProxy.class))));
 
   @Test
-  public void search_by_key_query() throws IOException {
+  public void search_by_key_query_with_partial_match_case_insensitive() throws IOException {
     userSession.addPermission(ADMINISTER, db.getDefaultOrganization());
     db.components().insertComponents(
       ComponentTesting.newPrivateProjectDto(db.getDefaultOrganization()).setDbKey("project-_%-key"),
+      ComponentTesting.newPrivateProjectDto(db.getDefaultOrganization()).setDbKey("PROJECT-_%-KEY"),
       ComponentTesting.newPrivateProjectDto(db.getDefaultOrganization()).setDbKey("project-key-without-escaped-characters"));
 
-    SearchWsResponse response = call(SearchWsRequest.builder().setQuery("project-_%-key").build());
+    SearchWsResponse response = call(SearchWsRequest.builder().setQuery("JeCt-_%-k").build());
 
-    assertThat(response.getComponentsList()).extracting(Component::getKey).containsOnly("project-_%-key");
+    assertThat(response.getComponentsList()).extracting(Component::getKey).containsOnly("project-_%-key", "PROJECT-_%-KEY");
   }
 
   @Test
@@ -205,6 +216,35 @@ public class SearchActionTest {
   }
 
   @Test
+  public void search_for_old_projects() {
+    userSession.addPermission(ADMINISTER, db.getDefaultOrganization());
+    long aLongTimeAgo = 1_000_000_000L;
+    long recentTime = 3_000_000_000L;
+    ComponentDto oldProject = db.components().insertPublicProject();
+    db.getDbClient().snapshotDao().insert(db.getSession(), newAnalysis(oldProject).setCreatedAt(aLongTimeAgo));
+    ComponentDto recentProject = db.components().insertPublicProject();
+    db.getDbClient().snapshotDao().insert(db.getSession(), newAnalysis(recentProject).setCreatedAt(recentTime));
+    db.commit();
+
+    SearchWsResponse result = call(SearchWsRequest.builder().setAnalyzedBefore(formatDate(new Date(recentTime))).build());
+
+    assertThat(result.getComponentsList()).extracting(Component::getKey)
+      .containsExactlyInAnyOrder(oldProject.getKey())
+      .doesNotContain(recentProject.getKey());
+  }
+
+  @Test
+  public void does_not_return_branches_when_searching_by_key() {
+    ComponentDto project = db.components().insertMainBranch();
+    ComponentDto branch = db.components().insertProjectBranch(project);
+    userSession.addPermission(ADMINISTER, db.getDefaultOrganization());
+
+    SearchWsResponse response = call(SearchWsRequest.builder().build());
+
+    assertThat(response.getComponentsList()).extracting(Component::getKey).containsOnly(project.getDbKey());
+  }
+
+  @Test
   public void result_is_paginated() throws IOException {
     userSession.addPermission(ADMINISTER, db.getDefaultOrganization());
     List<ComponentDto> componentDtoList = new ArrayList<>();
@@ -216,6 +256,52 @@ public class SearchActionTest {
     SearchWsResponse response = call(SearchWsRequest.builder().setPage(2).setPageSize(3).build());
 
     assertThat(response.getComponentsList()).extracting(Component::getKey).containsExactly("project-key-4", "project-key-5", "project-key-6");
+  }
+
+  @Test
+  public void provisioned_projects() {
+    userSession.addPermission(ADMINISTER, db.getDefaultOrganization());
+    ComponentDto provisionedProject = db.components().insertPrivateProject();
+    ComponentDto analyzedProject = db.components().insertPrivateProject();
+    db.components().insertSnapshot(newAnalysis(analyzedProject));
+
+    SearchWsResponse response = call(SearchWsRequest.builder().setOnProvisionedOnly(true).build());
+
+    assertThat(response.getComponentsList()).extracting(Component::getKey)
+      .containsExactlyInAnyOrder(provisionedProject.getKey())
+      .doesNotContain(analyzedProject.getKey());
+  }
+
+  @Test
+  public void search_by_component_keys() {
+    userSession.addPermission(ADMINISTER, db.getDefaultOrganization());
+    ComponentDto jdk = db.components().insertPrivateProject();
+    ComponentDto sonarqube = db.components().insertPrivateProject();
+    ComponentDto sonarlint = db.components().insertPrivateProject();
+
+    SearchWsResponse result = call(SearchWsRequest.builder()
+      .setProjects(Arrays.asList(jdk.getKey(), sonarqube.getKey()))
+      .build());
+
+    assertThat(result.getComponentsList()).extracting(Component::getKey)
+      .containsExactlyInAnyOrder(jdk.getKey(), sonarqube.getKey())
+      .doesNotContain(sonarlint.getKey());
+  }
+
+  @Test
+  public void search_by_component_uuids() {
+    userSession.addPermission(ADMINISTER, db.getDefaultOrganization());
+    ComponentDto jdk = db.components().insertPrivateProject();
+    ComponentDto sonarqube = db.components().insertPrivateProject();
+    ComponentDto sonarlint = db.components().insertPrivateProject();
+
+    SearchWsResponse result = call(SearchWsRequest.builder()
+      .setProjectIds(Arrays.asList(jdk.uuid(), sonarqube.uuid()))
+      .build());
+
+    assertThat(result.getComponentsList()).extracting(Component::getKey)
+      .containsExactlyInAnyOrder(jdk.getKey(), sonarqube.getKey())
+      .doesNotContain(sonarlint.getKey());
   }
 
   @Test
@@ -243,62 +329,83 @@ public class SearchActionTest {
   }
 
   @Test
-  public void verify_define() {
+  public void definition() {
     WebService.Action action = ws.getDef();
     assertThat(action.key()).isEqualTo("search");
     assertThat(action.isPost()).isFalse();
-    assertThat(action.description()).isEqualTo("Search for projects or views.<br>Requires 'System Administrator' permission");
-    assertThat(action.isInternal()).isTrue();
+    assertThat(action.description()).isEqualTo("Search for projects or views to administrate them.<br>Requires 'System Administrator' permission");
+    assertThat(action.isInternal()).isFalse();
     assertThat(action.since()).isEqualTo("6.3");
     assertThat(action.handler()).isEqualTo(ws.getDef().handler());
-    assertThat(action.params()).hasSize(6);
+    assertThat(action.params()).extracting(Param::key)
+      .containsExactlyInAnyOrder("organization", "q", "qualifiers", "p", "ps", "visibility", "analyzedBefore", "onProvisionedOnly", "projects", "projectIds");
     assertThat(action.responseExample()).isEqualTo(getClass().getResource("search-example.json"));
 
-    WebService.Param organization = action.param("organization");
+    Param organization = action.param("organization");
     Assertions.assertThat(organization.description()).isEqualTo("The key of the organization");
     Assertions.assertThat(organization.isInternal()).isTrue();
     Assertions.assertThat(organization.isRequired()).isFalse();
     Assertions.assertThat(organization.since()).isEqualTo("6.3");
 
-    WebService.Param qParam = action.param("q");
+    Param qParam = action.param("q");
     assertThat(qParam.isRequired()).isFalse();
-    assertThat(qParam.description()).isEqualTo("Limit search to component names or component keys that contain the supplied string.");
+    assertThat(qParam.description()).isEqualTo("Limit search to: " +
+      "<ul>" +
+      "<li>component names that contain the supplied string</li>" +
+      "<li>component keys that contain the supplied string</li>" +
+      "</ul>");
 
-    WebService.Param qualifierParam = action.param("qualifiers");
+    Param qualifierParam = action.param("qualifiers");
     assertThat(qualifierParam.isRequired()).isFalse();
     assertThat(qualifierParam.description()).isEqualTo("Comma-separated list of component qualifiers. Filter the results with the specified qualifiers");
     assertThat(qualifierParam.possibleValues()).containsOnly("TRK", "VW", "APP");
     assertThat(qualifierParam.defaultValue()).isEqualTo("TRK");
 
-    WebService.Param pParam = action.param("p");
+    Param pParam = action.param("p");
     assertThat(pParam.isRequired()).isFalse();
     assertThat(pParam.defaultValue()).isEqualTo("1");
     assertThat(pParam.description()).isEqualTo("1-based page number");
 
-    WebService.Param psParam = action.param("ps");
+    Param psParam = action.param("ps");
     assertThat(psParam.isRequired()).isFalse();
     assertThat(psParam.defaultValue()).isEqualTo("100");
     assertThat(psParam.description()).isEqualTo("Page size. Must be greater than 0 and less than 500");
 
-    WebService.Param visibilityParam = action.param("visibility");
+    Param visibilityParam = action.param("visibility");
     assertThat(visibilityParam.isRequired()).isFalse();
     assertThat(visibilityParam.description()).isEqualTo("Filter the projects that should be visible to everyone (public), or only specific user/groups (private).<br/>" +
       "If no visibility is specified, the default project visibility of the organization will be used.");
+
+    Param lastAnalysisBefore = action.param("analyzedBefore");
+    assertThat(lastAnalysisBefore.isRequired()).isFalse();
+    assertThat(lastAnalysisBefore.since()).isEqualTo("6.6");
+
+    Param onProvisionedOnly = action.param("onProvisionedOnly");
+    assertThat(onProvisionedOnly.possibleValues()).containsExactlyInAnyOrder("true", "false", "yes", "no");
+    assertThat(onProvisionedOnly.defaultValue()).isEqualTo("false");
+    assertThat(onProvisionedOnly.since()).isEqualTo("6.6");
   }
 
   @Test
-  public void verify_response_example() throws URISyntaxException, IOException {
+  public void json_example() throws URISyntaxException, IOException {
     OrganizationDto organization = db.organizations().insertForKey("my-org-1");
     userSession.addPermission(ADMINISTER, organization);
+    ComponentDto publicProject = newPrivateProjectDto(organization, "project-uuid-1").setName("Project Name 1").setDbKey("project-key-1").setPrivate(false);
+    ComponentDto privateProject = newPrivateProjectDto(organization, "project-uuid-2").setName("Project Name 1").setDbKey("project-key-2");
     db.components().insertComponents(
-      newPrivateProjectDto(organization, "project-uuid-1").setName("Project Name 1").setDbKey("project-key-1").setPrivate(false),
-      newPrivateProjectDto(organization, "project-uuid-2").setName("Project Name 1").setDbKey("project-key-2"));
+      publicProject,
+      privateProject);
+    db.getDbClient().snapshotDao().insert(db.getSession(), newAnalysis(publicProject).setCreatedAt(parseDateTime("2017-03-01T11:39:03+0300").getTime()));
+    db.getDbClient().snapshotDao().insert(db.getSession(), newAnalysis(privateProject).setCreatedAt(parseDateTime("2017-03-02T15:21:47+0300").getTime()));
+    db.commit();
 
     String response = ws.newRequest()
       .setMediaType(MediaTypes.JSON)
       .setParam(PARAM_ORGANIZATION, organization.getKey())
       .execute().getInput();
+
     assertJson(response).isSimilarTo(ws.getDef().responseExampleAsString());
+    assertJson(ws.getDef().responseExampleAsString()).isSimilarTo(response);
   }
 
   private SearchWsResponse call(SearchWsRequest wsRequest) {
@@ -312,6 +419,10 @@ public class SearchActionTest {
     setNullable(wsRequest.getPage(), page -> request.setParam(PAGE, String.valueOf(page)));
     setNullable(wsRequest.getPageSize(), pageSize -> request.setParam(PAGE_SIZE, String.valueOf(pageSize)));
     setNullable(wsRequest.getVisibility(), v -> request.setParam(PARAM_VISIBILITY, v));
+    setNullable(wsRequest.getAnalyzedBefore(), d -> request.setParam(PARAM_ANALYZED_BEFORE, d));
+    setNullable(wsRequest.getProjects(), l -> request.setParam(PARAM_PROJECTS, String.join(",", l)));
+    setNullable(wsRequest.getProjectIds(), l -> request.setParam(PARAM_PROJECT_IDS, String.join(",", l)));
+    request.setParam(PARAM_ON_PROVISIONED_ONLY, String.valueOf(wsRequest.isOnProvisionedOnly()));
     return request.executeProtobuf(SearchWsResponse.class);
   }
 

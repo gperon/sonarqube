@@ -19,7 +19,9 @@
  */
 package org.sonarqube.ws.client.system;
 
+import org.sonarqube.ws.WsSystem;
 import org.sonarqube.ws.client.BaseService;
+import org.sonarqube.ws.client.GetRequest;
 import org.sonarqube.ws.client.PostRequest;
 import org.sonarqube.ws.client.WsConnector;
 
@@ -28,7 +30,15 @@ public class SystemService extends BaseService {
     super(wsConnector, "api/system");
   }
 
+  public WsSystem.HealthResponse health() {
+    return call(new GetRequest(path("health")), WsSystem.HealthResponse.parser());
+  }
+
   public void restart() {
     call(new PostRequest(path("restart")));
+  }
+
+  public WsSystem.StatusResponse status() {
+    return call(new GetRequest(path("status")), WsSystem.StatusResponse.parser());
   }
 }

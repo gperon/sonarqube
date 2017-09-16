@@ -82,9 +82,12 @@ public class RuleCreator {
 
     RuleKey customRuleKey = RuleKey.of(templateRule.getRepositoryKey(), newRule.ruleKey());
 
-    loadRule(customRuleKey, dbSession)
-      .map(existingRule -> updateExistingRule(existingRule, newRule, dbSession))
-      .orElseGet(() -> createCustomRule(customRuleKey, newRule, templateRule, dbSession));
+    Optional<RuleDefinitionDto> definition = loadRule(customRuleKey, dbSession);
+    if (definition.isPresent()) {
+      updateExistingRule(definition.get(), newRule, dbSession);
+    } else {
+      createCustomRule(customRuleKey, newRule, templateRule, dbSession);
+    }
 
     ruleIndexer.commitAndIndex(dbSession, customRuleKey);
     return customRuleKey;
@@ -155,6 +158,7 @@ public class RuleCreator {
   private RuleKey createCustomRule(RuleKey ruleKey, NewCustomRule newRule, RuleDto templateRuleDto, DbSession dbSession) {
     RuleDefinitionDto ruleDefinition = new RuleDefinitionDto()
       .setRuleKey(ruleKey)
+      .setPluginKey(templateRuleDto.getPluginKey())
       .setTemplateId(templateRuleDto.getId())
       .setConfigKey(templateRuleDto.getConfigKey())
       .setName(newRule.name())

@@ -20,7 +20,7 @@
 // @flow
 import React from 'react';
 import Tooltip from '../../../components/controls/Tooltip';
-import FormattedDate from '../../../components/ui/FormattedDate';
+import DateTooltipFormatter from '../../../components/intl/DateTooltipFormatter';
 import { getApplicationLeak } from '../../../api/application';
 import { translate } from '../../../helpers/l10n';
 
@@ -75,15 +75,17 @@ export default class ApplicationLeakPeriodLegend extends React.Component {
   };
 
   renderOverlay = () =>
-    this.state.leaks != null
-      ? <ul className="text-left">
-          {this.state.leaks.map(leak =>
-            <li key={leak.project}>
-              {leak.projectName}: <FormattedDate date={leak.date} format="LL" />
-            </li>
-          )}
-        </ul>
-      : <i className="spinner spinner-margin" />;
+    this.state.leaks != null ? (
+      <ul className="text-left">
+        {this.state.leaks.map(leak => (
+          <li key={leak.project}>
+            {leak.projectName}: <DateTooltipFormatter date={leak.date} />
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <i className="spinner spinner-margin" />
+    );
 
   render() {
     return (

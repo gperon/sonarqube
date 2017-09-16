@@ -19,9 +19,10 @@
  */
 //@flow
 import React from 'react';
+import { setProjectTags } from '../../../api/components';
 import { translate } from '../../../helpers/l10n';
 import TagsList from '../../../components/tags/TagsList';
-import ProjectTagsSelectorContainer from '../../projects/components/ProjectTagsSelectorContainer';
+import MetaTagsSelector from './MetaTagsSelector';
 
 /*::
 type Props = {
@@ -31,7 +32,8 @@ type Props = {
     configuration?: {
       showSettings?: boolean
     }
-  }
+  },
+  onComponentChange: {} => void
 };
 */
 
@@ -104,6 +106,13 @@ export default class MetaTags extends React.PureComponent {
     };
   }
 
+  handleSetProjectTags = (tags /*: Array<string> */) => {
+    setProjectTags({ project: this.props.component.key, tags: tags.join(',') }).then(
+      () => this.props.onComponentChange({ tags }),
+      () => {}
+    );
+  };
+
   render() {
     const { tags, key } = this.props.component;
     const { popupOpen, popupPosition } = this.state;
@@ -117,14 +126,16 @@ export default class MetaTags extends React.PureComponent {
             ref={tagsList => (this.tagsList = tagsList)}>
             <TagsList tags={tags.length ? tags : [translate('no_tags')]} allowUpdate={true} />
           </button>
-          {popupOpen &&
+          {popupOpen && (
             <div ref={tagsSelector => (this.tagsSelector = tagsSelector)}>
-              <ProjectTagsSelectorContainer
+              <MetaTagsSelector
                 position={popupPosition}
                 project={key}
                 selectedTags={tags}
+                setProjectTags={this.handleSetProjectTags}
               />
-            </div>}
+            </div>
+          )}
         </div>
       );
     } else {

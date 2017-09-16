@@ -23,7 +23,7 @@ import classNames from 'classnames';
 import Events from './Events';
 import AddEventForm from './forms/AddEventForm';
 import RemoveAnalysisForm from './forms/RemoveAnalysisForm';
-import FormattedDate from '../../../components/ui/FormattedDate';
+import TimeTooltipFormatter from '../../../components/intl/TimeTooltipFormatter';
 import { translate } from '../../../helpers/l10n';
 /*:: import type { Analysis } from '../types'; */
 
@@ -65,11 +65,11 @@ export default class ProjectActivityAnalysis extends React.PureComponent {
         role="listitem"
         tabIndex="0">
         <div className="project-activity-time spacer-right">
-          <FormattedDate className="text-middle" date={date} format="LT" tooltipFormat="LTS" />
+          <TimeTooltipFormatter className="text-middle" date={date} placement="right" />
         </div>
         <div className="project-activity-analysis-icon big-spacer-right" title={analysisTitle} />
 
-        {canAdmin &&
+        {canAdmin && (
           <div className="project-activity-analysis-actions spacer-left">
             <div className="dropdown display-inline-block">
               <button
@@ -80,14 +80,15 @@ export default class ProjectActivityAnalysis extends React.PureComponent {
               </button>
               <ul className="dropdown-menu dropdown-menu-right">
                 {!hasVersion &&
-                  this.props.canCreateVersion &&
+                this.props.canCreateVersion && (
                   <li>
                     <AddEventForm
                       addEvent={this.props.addVersion}
                       analysis={analysis}
                       addEventButtonText="project_activity.add_version"
                     />
-                  </li>}
+                  </li>
+                )}
                 <li>
                   <AddEventForm
                     addEvent={this.props.addCustomEvent}
@@ -96,18 +97,20 @@ export default class ProjectActivityAnalysis extends React.PureComponent {
                   />
                 </li>
                 {!isFirst && <li role="separator" className="divider" />}
-                {!isFirst &&
+                {!isFirst && (
                   <li>
                     <RemoveAnalysisForm
                       analysis={analysis}
                       deleteAnalysis={this.props.deleteAnalysis}
                     />
-                  </li>}
+                  </li>
+                )}
               </ul>
             </div>
-          </div>}
+          </div>
+        )}
 
-        {events.length > 0 &&
+        {events.length > 0 && (
           <Events
             analysis={analysis.key}
             canAdmin={canAdmin}
@@ -115,7 +118,8 @@ export default class ProjectActivityAnalysis extends React.PureComponent {
             deleteEvent={this.props.deleteEvent}
             events={events}
             isFirst={this.props.isFirst}
-          />}
+          />
+        )}
       </li>
     );
   }

@@ -35,6 +35,7 @@ import { isDiffMetric } from '../../../helpers/measures';
 /*:: import type { MeasureEnhanced } from '../../../components/measure/types'; */
 
 /*:: type Props = {|
+  branch?: string,
   component: Component,
   components: Array<Component>,
   leakPeriod?: Period,
@@ -76,14 +77,15 @@ export default class MeasureHeader extends React.PureComponent {
     const hasNext = selectedIdx < components.length - 1;
     return (
       <div className="display-inline-block">
-        {components.length > 0 &&
+        {components.length > 0 && (
           <span className="note spacer-right">
             {translateWithParameters(
               'component_measures.x_of_y',
               selectedIdx + 1,
               components.length
             )}
-          </span>}
+          </span>
+        )}
         <div className="button-group">
           {hasPrevious && <button onClick={this.handleSelectPrevious}>&lt;</button>}
           {hasNext && <button onClick={this.handleSelectNext}>&gt;</button>}
@@ -93,7 +95,7 @@ export default class MeasureHeader extends React.PureComponent {
   }
 
   render() {
-    const { component, components, leakPeriod, measure, secondaryMeasure } = this.props;
+    const { branch, component, components, leakPeriod, measure, secondaryMeasure } = this.props;
     const metric = measure.metric;
     const isDiff = isDiffMetric(metric.key);
     const hasHistory = !isDiff && ['TRK', 'VW', 'SVW', 'APP'].includes(component.qualifier);
@@ -106,47 +108,50 @@ export default class MeasureHeader extends React.PureComponent {
             {getLocalizedMetricName(metric)}
             <span className="measure-details-value spacer-left">
               <strong>
-                {isDiff
-                  ? <Measure className="domain-measures-leak" measure={measure} metric={metric} />
-                  : <Measure measure={measure} metric={metric} />}
+                {isDiff ? (
+                  <Measure className="domain-measures-leak" measure={measure} metric={metric} />
+                ) : (
+                  <Measure measure={measure} metric={metric} />
+                )}
               </strong>
             </span>
-            {hasHistory &&
+            {hasHistory && (
               <Tooltip
                 placement="right"
                 overlay={translate('component_measures.show_metric_history')}>
                 <Link
                   className="js-show-history spacer-left button button-small button-compact"
-                  to={getComponentMeasureHistory(component.key, metric.key)}>
+                  to={getComponentMeasureHistory(component.key, metric.key, branch)}>
                   <HistoryIcon />
                 </Link>
-              </Tooltip>}
+              </Tooltip>
+            )}
           </div>
           <div className="measure-details-primary-actions">
             {hasComponents && isFileType(component) && this.renderFileNav()}
-            {leakPeriod != null &&
-              <LeakPeriodLegend
-                className="spacer-left"
-                component={component}
-                period={leakPeriod}
-              />}
+            {leakPeriod != null && (
+              <LeakPeriodLegend className="spacer-left" component={component} period={leakPeriod} />
+            )}
           </div>
         </div>
         {secondaryMeasure &&
-          secondaryMeasure.metric.key === 'ncloc_language_distribution' &&
+        secondaryMeasure.metric.key === 'ncloc_language_distribution' && (
           <div className="measure-details-secondary">
             <LanguageDistribution alignTicks={true} distribution={secondaryMeasure.value} />
-          </div>}
+          </div>
+        )}
         {secondaryMeasure &&
-          secondaryMeasure.metric.key === 'function_complexity_distribution' &&
+        secondaryMeasure.metric.key === 'function_complexity_distribution' && (
           <div className="measure-details-secondary">
             <ComplexityDistribution distribution={secondaryMeasure.value} of="function" />
-          </div>}
+          </div>
+        )}
         {secondaryMeasure &&
-          secondaryMeasure.metric.key === 'file_complexity_distribution' &&
+        secondaryMeasure.metric.key === 'file_complexity_distribution' && (
           <div className="measure-details-secondary">
             <ComplexityDistribution distribution={secondaryMeasure.value} of="file" />
-          </div>}
+          </div>
+        )}
       </div>
     );
   }

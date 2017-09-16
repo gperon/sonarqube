@@ -23,6 +23,7 @@ import java.io.File;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.util.List;
+import java.util.Random;
 import javax.net.ssl.SSLSocketFactory;
 import okhttp3.ConnectionSpec;
 import okhttp3.mockwebserver.MockResponse;
@@ -30,6 +31,7 @@ import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -96,6 +98,21 @@ public class HttpConnectorTest {
   }
 
   @Test
+  public void add_headers_to_GET_request() throws Exception {
+    answerHelloWorld();
+    GetRequest request = new GetRequest("api/issues/search")
+      .setHeader("X-Foo", "fooz")
+      .setHeader("X-Bar", "barz");
+
+    underTest = HttpConnector.newBuilder().url(serverUrl).build();
+    underTest.call(request);
+
+    RecordedRequest recordedRequest = server.takeRequest();
+    assertThat(recordedRequest.getHeader("X-Foo")).isEqualTo("fooz");
+    assertThat(recordedRequest.getHeader("X-Bar")).isEqualTo("barz");
+  }
+
+  @Test
   public void use_basic_authentication() throws Exception {
     answerHelloWorld();
     underTest = HttpConnector.newBuilder()
@@ -142,6 +159,23 @@ public class HttpConnectorTest {
 
     RecordedRequest recordedRequest = server.takeRequest();
     assertThat(recordedRequest.getHeader("Authorization")).isEqualTo(basic("theToken", ""));
+  }
+
+  @Test
+  public void systemPassCode_sets_header_when_value_is_not_null() throws InterruptedException {
+    answerHelloWorld();
+    String systemPassCode = new Random().nextBoolean() ? "" : RandomStringUtils.randomAlphanumeric(21);
+    underTest = HttpConnector.newBuilder()
+      .url(serverUrl)
+      .systemPassCode(systemPassCode)
+      .build();
+
+    GetRequest request = new GetRequest("api/issues/search");
+    underTest.call(request);
+
+    RecordedRequest recordedRequest = server.takeRequest();
+    assertThat(recordedRequest.getHeader("X-sonar-passcode"))
+      .isEqualTo(systemPassCode);
   }
 
   @Test
@@ -256,6 +290,22 @@ public class HttpConnectorTest {
     assertThat(recordedRequest.getMethod()).isEqualTo("POST");
     assertThat(recordedRequest.getPath()).isEqualTo("/api/issues/search");
     assertThat(recordedRequest.getBody().readUtf8()).isEqualTo("severity=MAJOR");
+    assertThat(recordedRequest.getHeader("Accept")).isEqualTo("application/x-protobuf");
+  }
+
+  @Test
+  public void add_header_to_POST_request() throws Exception {
+    answerHelloWorld();
+    PostRequest request = new PostRequest("api/issues/search")
+      .setHeader("X-Foo", "fooz")
+      .setHeader("X-Bar", "barz");
+
+    underTest = HttpConnector.newBuilder().url(serverUrl).build();
+    underTest.call(request);
+
+    RecordedRequest recordedRequest = server.takeRequest();
+    assertThat(recordedRequest.getHeader("X-Foo")).isEqualTo("fooz");
+    assertThat(recordedRequest.getHeader("X-Bar")).isEqualTo("barz");
   }
 
   @Test
