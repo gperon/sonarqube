@@ -4,12 +4,13 @@
   <parent>
     <groupId>org.sonarsource.sonarqube</groupId>
     <artifactId>server</artifactId>
-    <version>6.6-SNAPSHOT</version>
+    <version>7.0-SNAPSHOT</version>
     <relativePath>../</relativePath>
   </parent>
 
   <artifactId>sonar-process</artifactId>
   <name>SonarQube :: Process</name>
+  <description>Library shared by all kinds of server processes: main, web and compute engine</description>
 
   <properties>
     <sonar.exclusions>target/generated-sources/**/*</sonar.exclusions>
@@ -17,8 +18,8 @@
 
   <dependencies>
     <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>sonar-cluster</artifactId>
+      <groupId>com.hazelcast</groupId>
+      <artifactId>hazelcast</artifactId>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
@@ -45,8 +46,8 @@
       <artifactId>commons-lang</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.yaml</groupId>
-      <artifactId>snakeyaml</artifactId>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
     </dependency>
     <dependency>
       <groupId>com.google.code.findbugs</groupId>
@@ -87,18 +88,8 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-server</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.squareup.okhttp3</groupId>
-      <artifactId>okhttp</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>

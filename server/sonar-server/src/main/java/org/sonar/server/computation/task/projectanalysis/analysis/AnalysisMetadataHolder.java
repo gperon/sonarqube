@@ -20,7 +20,6 @@
 package org.sonar.server.computation.task.projectanalysis.analysis;
 
 import java.util.Map;
-import java.util.Optional;
 import javax.annotation.CheckForNull;
 import org.sonar.server.qualityprofile.QualityProfile;
 
@@ -56,11 +55,6 @@ public interface AnalysisMetadataHolder {
   boolean isFirstAnalysis();
 
   /**
-   * Whether this is an incremental analysis or a full analysis.
-   */
-  boolean isIncrementalAnalysis();
-
-  /**
    * Return the last analysis of the project.
    * If it's the first analysis, it will return null.
    *
@@ -77,17 +71,21 @@ public interface AnalysisMetadataHolder {
   boolean isShortLivingBranch();
 
   /**
+   * Convenience method equivalent to do the check using {@link #getBranch()}
+   *
+   * @throws IllegalStateException if branch has not been set
+   */
+  boolean isLongLivingBranch();
+
+  /**
    * @throws IllegalStateException if cross project duplication flag has not been set
    */
   boolean isCrossProjectDuplicationEnabled();
 
   /**
-   * Branch is present whatever the type of branch (long or short, main or not). However
-   * it is absent when analyzing a pull request.
-   *
-   * @throws IllegalStateException if branch has not been set
+   * Branch being analyzed. Can be of any type: long or short, main or not. 
    */
-  Optional<Branch> getBranch();
+  Branch getBranch();
 
   /**
    * The project as represented by the main branch. It is used to load settings

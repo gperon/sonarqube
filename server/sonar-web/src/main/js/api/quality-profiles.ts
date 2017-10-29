@@ -26,8 +26,21 @@ import {
   postJSON,
   RequestData
 } from '../helpers/request';
+import { Paging } from '../app/types';
+import throwGlobalError from '../app/utils/throwGlobalError';
+
+export interface ProfileActions {
+  copy?: boolean;
+  edit?: boolean;
+  setAsDefault?: boolean;
+}
+
+export interface Actions {
+  create?: boolean;
+}
 
 export interface Profile {
+  actions?: ProfileActions;
   key: string;
   name: string;
   language: string;
@@ -46,14 +59,26 @@ export interface Profile {
   projectCount?: number;
 }
 
-export function searchQualityProfiles(data: {
+export interface SearchQualityProfilesParameters {
+  defaults?: boolean;
+  language?: string;
   organization?: string;
-  projectKey?: string;
-}): Promise<Profile[]> {
-  return getJSON('/api/qualityprofiles/search', data).then(r => r.profiles);
+  project?: string;
+  qualityProfile?: string;
 }
 
-export function getQualityProfiles(data: {
+export interface SearchQualityProfilesResponse {
+  actions?: Actions;
+  profiles: Profile[];
+}
+
+export function searchQualityProfiles(
+  parameters: SearchQualityProfilesParameters
+): Promise<SearchQualityProfilesResponse> {
+  return getJSON('/api/qualityprofiles/search', parameters);
+}
+
+export function getQualityProfile(data: {
   compareToSonarWay?: boolean;
   profile: string;
 }): Promise<any> {
@@ -128,4 +153,67 @@ export function associateProject(profileKey: string, projectKey: string): Promis
 
 export function dissociateProject(profileKey: string, projectKey: string): Promise<void> {
   return post('/api/qualityprofiles/remove_project', { profileKey, projectKey });
+}
+
+export interface SearchUsersGroupsParameters {
+  language: string;
+  organization?: string;
+  qualityProfile: string;
+  q?: string;
+  selected?: 'all' | 'selected' | 'deselected';
+}
+
+export interface SearchUsersResponse {
+  users: Array<{
+    avatar?: string;
+    login: string;
+    name: string;
+    selected?: boolean;
+  }>;
+  paging: Paging;
+}
+
+export function searchUsers(parameters: SearchUsersGroupsParameters): Promise<SearchUsersResponse> {
+  return getJSON('/api/qualityprofiles/search_users', parameters).catch(throwGlobalError);
+}
+
+export interface SearchGroupsResponse {
+  groups: Array<{ name: string }>;
+  paging: Paging;
+}
+
+export function searchGroups(
+  parameters: SearchUsersGroupsParameters
+): Promise<SearchGroupsResponse> {
+  return getJSON('/api/qualityprofiles/search_groups', parameters).catch(throwGlobalError);
+}
+
+export interface AddRemoveUserParameters {
+  language: string;
+  login: string;
+  organization?: string;
+  qualityProfile: string;
+}
+
+export function addUser(parameters: AddRemoveUserParameters): Promise<void | Response> {
+  return post('/api/qualityprofiles/add_user', parameters).catch(throwGlobalError);
+}
+
+export function removeUser(parameters: AddRemoveUserParameters): Promise<void | Response> {
+  return post('/api/qualityprofiles/remove_user', parameters).catch(throwGlobalError);
+}
+
+export interface AddRemoveGroupParameters {
+  group: string;
+  language: string;
+  organization?: string;
+  qualityProfile: string;
+}
+
+export function addGroup(parameters: AddRemoveGroupParameters): Promise<void | Response> {
+  return post('/api/qualityprofiles/add_group', parameters).catch(throwGlobalError);
+}
+
+export function removeGroup(parameters: AddRemoveGroupParameters): Promise<void | Response> {
+  return post('/api/qualityprofiles/remove_group', parameters).catch(throwGlobalError);
 }

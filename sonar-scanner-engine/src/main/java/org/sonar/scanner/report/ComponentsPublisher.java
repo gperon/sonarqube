@@ -117,11 +117,6 @@ public class ComponentsPublisher implements ReportPublisherStep {
       if (lang != null) {
         builder.setLanguage(lang);
       }
-    } else if (component instanceof InputDir) {
-      FileStatus status = getDirectoryStatus(component, children);
-      if (status != null) {
-        builder.setStatus(status);
-      }
     }
 
     String path = getPath(component);
@@ -150,25 +145,6 @@ public class ComponentsPublisher implements ReportPublisherStep {
     }
   }
 
-  @CheckForNull
-  private static FileStatus getDirectoryStatus(InputComponent component, Collection<InputComponent> children) {
-    if (children.isEmpty()) {
-      // directory must have issues, otherwise wouldn't be written
-      return null;
-    }
-
-    boolean hasChangedFiles = children.stream()
-      .filter(c -> c instanceof InputFile)
-      .map(c -> (DefaultInputFile) c)
-      .anyMatch(f -> f.isPublished() && f.status() != Status.SAME);
-
-    if (!hasChangedFiles) {
-      // this means that SonarJava didn't analyze the directory
-      return FileStatus.SAME;
-    }
-    return null;
-  }
-
   private boolean shouldSkipComponent(DefaultInputComponent component, Collection<InputComponent> children) {
     if (component instanceof InputModule && children.isEmpty() && branchConfiguration.isShortLivingBranch()) {
       // no children on a module in short branch analysis -> skip it (except root)
@@ -188,9 +164,8 @@ public class ComponentsPublisher implements ReportPublisherStep {
     return false;
   }
 
-  private static void writeVersion(DefaultInputModule module, ScannerReport.Component.Builder builder) {
-    ProjectDefinition def = module.definition();
-    String version = getVersion(def);
+  private void writeVersion(DefaultInputModule module, ScannerReport.Component.Builder builder) {
+    String version = getVersion(module);
     if (version != null) {
       builder.setVersion(version);
     }
@@ -215,13 +190,15 @@ public class ComponentsPublisher implements ReportPublisherStep {
     throw new IllegalStateException("Unkown component: " + component.getClass());
   }
 
-  private static String getVersion(ProjectDefinition def) {
-    String version = def.getOriginalVersion();
+  private String getVersion(DefaultInputModule module) {
+    String version = module.getOriginalVersion();
     if (StringUtils.isNotBlank(version)) {
       return version;
     }
 
-    return def.getParent() != null ? getVersion(def.getParent()) : null;
+    DefaultInputModule parent = moduleHierarchy.parent(module);
+
+    return parent != null ? getVersion(parent) : null;
   }
 
   private static void writeLinks(InputComponent c, ScannerReport.Component.Builder builder) {
@@ -257,7 +234,7 @@ public class ComponentsPublisher implements ReportPublisherStep {
   @CheckForNull
   private static String getName(DefaultInputModule module) {
     if (StringUtils.isNotEmpty(module.definition().getBranch())) {
-      return module.definition().getOriginalName() + " " + module.definition().getBranch();
+      return module.definition().getName() + " " + module.definition().getBranch();
     } else {
       return module.definition().getOriginalName();
     }

@@ -28,6 +28,8 @@ import org.sonar.server.notification.NotificationDispatcher;
 import org.sonar.server.notification.NotificationDispatcherMetadata;
 import org.sonar.server.notification.NotificationManager;
 
+import static org.sonar.server.notification.NotificationManager.SubscriberPermissionsOnProject.ALL_MUST_HAVE_ROLE_USER;
+
 /**
  * This dispatcher means: "notify me each new alert event".
  *
@@ -56,9 +58,10 @@ public class NewAlerts extends NotificationDispatcher {
 
   @Override
   public void dispatch(Notification notification, Context context) {
-    String projectUuid = notification.getFieldValue("projectUuid");
-    if (projectUuid != null) {
-      Multimap<String, NotificationChannel> subscribedRecipients = notifications.findSubscribedRecipientsForDispatcher(this, projectUuid);
+    String projectKey = notification.getFieldValue("projectKey");
+    if (projectKey != null) {
+      Multimap<String, NotificationChannel> subscribedRecipients = notifications
+          .findSubscribedRecipientsForDispatcher(this, projectKey, ALL_MUST_HAVE_ROLE_USER);
 
       for (Map.Entry<String, Collection<NotificationChannel>> channelsByRecipients : subscribedRecipients.asMap().entrySet()) {
         String userLogin = channelsByRecipients.getKey();

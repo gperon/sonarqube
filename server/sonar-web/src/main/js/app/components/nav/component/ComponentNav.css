@@ -25,4 +25,15 @@
 .navbar-context-meta-branch-menu-item {
   display: flex !important;
   justify-content: space-between;
+  align-items: center;
+}
+
+.navbar-context-meta-branch-menu-item-name {
+  flex: 1;
+  max-width: 300px;
+}
+
+.navbar-context-meta-branch-menu-item-actions {
+  height: 12px;
+  margin-left: 32px;
 }

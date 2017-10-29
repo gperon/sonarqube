@@ -6,12 +6,12 @@
   <parent>
     <groupId>org.sonarsource.parent</groupId>
     <artifactId>parent</artifactId>
-    <version>40</version>
+    <version>41</version>
   </parent>
   <groupId>org.sonarsource.sonarqube</groupId>
   <artifactId>sonarqube</artifactId>
   <packaging>pom</packaging>
-  <version>6.6-SNAPSHOT</version>
+  <version>7.0-SNAPSHOT</version>
   <name>SonarQube</name>
   <url>http://www.sonarqube.org/</url>
   <description>Open source platform for continuous inspection of code quality</description>
@@ -48,13 +48,13 @@
   <properties>
     <!-- see http://repo1.maven.org/maven2/org/sonarsource/dotnet/sonar-csharp-plugin/ -->
     <!-- Do not forget to exclude any new transitive dependencies -->
-    <sonarCSharp.version>5.10.1.1411</sonarCSharp.version>
+    <sonarCSharp.version>6.5.0.3766</sonarCSharp.version>
     <!-- see http://repo1.maven.org/maven2/org/sonarsource/java/sonar-java-plugin/ -->
     <!-- Do not forget to exclude any new transitive dependencies -->
-    <sonarJava.version>4.12.0.11033</sonarJava.version>
+    <sonarJava.version>4.14.0.11784</sonarJava.version>
     <!-- see http://repo1.maven.org/maven2/org/sonarsource/javascript/sonar-javascript-plugin/ -->
     <!-- Do not forget to exclude any new transitive dependencies -->
-    <sonarJavaScript.version>3.1.1.5128</sonarJavaScript.version>
+    <sonarJavaScript.version>3.2.0.5506</sonarJavaScript.version>
     <!-- see http://repo1.maven.org/maven2/org/sonarsource/php/sonar-php-plugin/ -->
     <!-- Do not forget to exclude any new transitive dependencies -->
     <sonarPhp.version>2.10.0.2087</sonarPhp.version>
@@ -67,28 +67,32 @@
     <!-- see http://repo1.maven.org/maven2/org/sonarsource/xml/sonar-xml-plugin/ -->
     <!-- Do not forget to exclude any new transitive dependencies -->
     <sonarXml.version>1.4.3.1027</sonarXml.version>
-    <sonarGit.version>1.2</sonarGit.version>
-    <sonarSvn.version>1.5.0.715</sonarSvn.version>
+    <!-- see https://repo1.maven.org/maven2/org/sonarsource/typescript/sonar-typescript-plugin/ -->
+    <sonarTs.version>1.1.0.1079</sonarTs.version>
+    <!-- see http://repo1.maven.org/maven2/org/sonarsource/scm/git/sonar-scm-git-plugin/ -->
+    <sonarGit.version>1.3.0.869</sonarGit.version>
+    <!-- see http://repo1.maven.org/maven2/org/sonarsource/scm/svn/sonar-scm-svn-plugin/ -->
+    <sonarSvn.version>1.6.0.860</sonarSvn.version>
     <sonarUpdateCenter.version>1.18.0.487</sonarUpdateCenter.version>
     <h2.version>1.3.176</h2.version>
     <jetty.version>8.1.12.v20130726</jetty.version>
-    <logback.version>1.1.7</logback.version>
-    <slf4j.version>1.7.24</slf4j.version>
+    <logback.version>1.2.3</logback.version>
+    <slf4j.version>1.7.25</slf4j.version>
 
     <!-- Be aware that Log4j is used by Elasticsearch client -->
     <log4j.version>2.8.2</log4j.version>
-    <tomcat.version>8.5.16</tomcat.version>
-    <elasticsearch.version>5.5.1</elasticsearch.version>
-    <orchestrator.version>3.15.0.1090</orchestrator.version>
+    <tomcat.version>8.5.23</tomcat.version>
+    <elasticsearch.version>5.6.3</elasticsearch.version>
+    <orchestrator.version>3.15.0.1256</orchestrator.version>
     <okhttp.version>3.7.0</okhttp.version>
     <jackson.version>2.6.6</jackson.version>
-
+    <jjwt.version>0.9.0</jjwt.version>
     <protobuf.version>3.0.0-beta-2</protobuf.version>
 
-    <hazelcast.version>3.8.4</hazelcast.version>
+    <hazelcast.version>3.8.6</hazelcast.version>
 
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.min.version>3.2</maven.min.version>
+    <maven.min.version>3.3.9</maven.min.version>
     <timestamp>${maven.build.timestamp}</timestamp>
     <maven.build.timestamp.format>yyyy-MM-dd'T'HH:mm:ssZ</maven.build.timestamp.format>
     <license.title>SonarQube</license.title>
@@ -104,16 +108,12 @@
     <artifactsToPublish>${project.groupId}:sonar-application:zip</artifactsToPublish>
   </properties>
 
-  <prerequisites>
-    <maven>3.2</maven>
-  </prerequisites>
-
   <build>
     <extensions>
       <extension>
         <groupId>kr.motd.maven</groupId>
         <artifactId>os-maven-plugin</artifactId>
-        <version>1.4.1.Final</version>
+        <version>1.5.0.Final</version>
       </extension>
     </extensions>
 
@@ -123,12 +123,12 @@
         <plugin>
           <groupId>com.github.eirslett</groupId>
           <artifactId>frontend-maven-plugin</artifactId>
-          <version>1.4</version>
+          <version>1.6</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-assembly-plugin</artifactId>
-          <version>2.4</version>
+          <version>3.1.0</version>
           <configuration>
             <archiverConfig>
               <!-- Workaround for http://jira.codehaus.org/browse/MASSEMBLY-422 -->
@@ -143,7 +143,7 @@
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>build-helper-maven-plugin</artifactId>
-          <version>1.12</version>
+          <version>3.0.0</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -153,12 +153,12 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-dependency-plugin</artifactId>
-          <version>2.10</version>
+          <version>3.0.2</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-enforcer-plugin</artifactId>
-          <version>1.4.1</version>
+          <version>3.0.0-M1</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -182,7 +182,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-javadoc-plugin</artifactId>
-          <version>2.10.4</version>
+          <version>3.0.0-M1</version>
           <configuration>
             <author>false</author>
             <linksource>true</linksource>
@@ -201,12 +201,12 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-resources-plugin</artifactId>
-          <version>3.0.1</version>
+          <version>3.0.2</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-shade-plugin</artifactId>
-          <version>3.0.0</version>
+          <version>3.1.0</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -216,12 +216,12 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
-          <version>2.20</version>
+          <version>2.20.1</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-war-plugin</artifactId>
-          <version>2.6</version>
+          <version>3.2.0</version>
         </plugin>
         <plugin>
           <!-- not thread safe -->
@@ -237,10 +237,11 @@
         <plugin>
           <groupId>org.owasp</groupId>
           <artifactId>dependency-check-maven</artifactId>
-          <version>1.2.11</version>
+          <version>3.0.1</version>
           <configuration>
             <failBuildOnCVSS>8</failBuildOnCVSS>
-            <suppressionFile>cve-false-positives.xml</suppressionFile>
+            <suppressionFile>dependency-check-suppressions.xml</suppressionFile>
+            <enableExperimental>true</enableExperimental>
           </configuration>
         </plugin>
         <plugin>
@@ -272,7 +273,7 @@
         <plugin>
           <groupId>com.github.genthaler</groupId>
           <artifactId>beanshell-maven-plugin</artifactId>
-          <version>1.2</version>
+          <version>1.4</version>
         </plugin>
       </plugins>
     </pluginManagement>
@@ -339,6 +340,7 @@
               <goal>run</goal>
             </goals>
             <configuration>
+              <quiet>true</quiet>
               <script>
                 <![CDATA[
                 String[] timezones = new String[] {"GMT-9", "UTC", "GMT+9"};
@@ -451,11 +453,6 @@
       </dependency>
       <dependency>
         <groupId>${project.groupId}</groupId>
-        <artifactId>sonar-cluster</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>${project.groupId}</groupId>
         <artifactId>sonar-server</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -514,6 +511,18 @@
           <exclusion>
             <groupId>org.tmatesoft.svnkit</groupId>
             <artifactId>svnkit</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.sonarsource.typescript</groupId>
+        <artifactId>sonar-typescript-plugin</artifactId>
+        <version>${sonarTs.version}</version>
+        <type>sonar-plugin</type>
+        <exclusions>
+          <exclusion>
+            <groupId>org.sonarsource.analyzer-commons</groupId>
+            <artifactId>sonar-analyzer-commons</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
@@ -696,6 +705,14 @@
           is needed for the zip bundle
           -->
           <exclusion>
+            <groupId>xalan</groupId>
+            <artifactId>xalan</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>xerces</groupId>
+            <artifactId>xercesImpl</artifactId>
+          </exclusion>
+          <exclusion>
             <groupId>org.sonarsource.xml</groupId>
             <artifactId>xml-squid</artifactId>
           </exclusion>
@@ -777,22 +794,15 @@
         <version>1.4</version>
       </dependency>
       <dependency>
-        <!-- See SONAR-2512 -->
-        <groupId>commons-beanutils</groupId>
-        <artifactId>commons-beanutils</artifactId>
-        <version>1.8.3</version>
-        <exclusions>
-          <exclusion>
-            <groupId>commons-logging</groupId>
-            <artifactId>commons-logging</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
         <groupId>com.ibm.icu</groupId>
         <artifactId>icu4j</artifactId>
         <!-- animal-sniffer doesn't work with 2.6.1 -->
         <version>3.4.4</version>
+      </dependency>
+      <dependency>
+        <groupId>javax.xml.bind</groupId>
+        <artifactId>jaxb-api</artifactId>
+        <version>2.3.0</version>
       </dependency>
       <dependency>
         <groupId>com.googlecode.json-simple</groupId>
@@ -808,7 +818,7 @@
       <dependency>
         <groupId>io.jsonwebtoken</groupId>
         <artifactId>jjwt</artifactId>
-        <version>0.6.0</version>
+        <version>${jjwt.version}</version>
       </dependency>
       <dependency>
         <groupId>com.fasterxml.jackson.core</groupId>

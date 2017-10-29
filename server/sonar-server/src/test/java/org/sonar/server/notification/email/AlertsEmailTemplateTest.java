@@ -58,13 +58,35 @@ public class AlertsEmailTemplateTest {
     assertThat(message.getSubject(), is("Quality gate status changed on \"Foo\""));
     assertThat(message.getMessage(), is("" +
       "Project: Foo\n" +
+      "Version: V1-SNAP\n" +
       "Quality gate status: Orange (was Red)\n" +
       "\n" +
       "Quality gate thresholds:\n" +
       "  - violations > 4\n" +
       "  - coverage < 75%\n" +
       "\n" +
-      "See it in SonarQube: http://nemo.sonarsource.org/dashboard?id=org.sonar.foo:foo"));
+      "More details at: http://nemo.sonarsource.org/dashboard?id=org.sonar.foo:foo"));
+  }
+
+  @Test
+  public void shouldFormatAlertWithSeveralMessagesOnBranch() {
+    Notification notification = createNotification("Orange (was Red)", "violations > 4, coverage < 75%", "WARN", "false")
+        .setFieldValue("branch", "feature");
+
+    EmailMessage message = template.format(notification);
+    assertThat(message.getMessageId(), is("alerts/45"));
+    assertThat(message.getSubject(), is("Quality gate status changed on \"Foo (feature)\""));
+    assertThat(message.getMessage(), is("" +
+      "Project: Foo\n" +
+      "Branch: feature\n" +
+      "Version: V1-SNAP\n" +
+      "Quality gate status: Orange (was Red)\n" +
+      "\n" +
+      "Quality gate thresholds:\n" +
+      "  - violations > 4\n" +
+      "  - coverage < 75%\n" +
+      "\n" +
+      "More details at: http://nemo.sonarsource.org/dashboard?id=org.sonar.foo:foo&branch=feature"));
   }
 
   @Test
@@ -76,13 +98,14 @@ public class AlertsEmailTemplateTest {
     assertThat(message.getSubject(), is("New quality gate threshold reached on \"Foo\""));
     assertThat(message.getMessage(), is("" +
       "Project: Foo\n" +
+      "Version: V1-SNAP\n" +
       "Quality gate status: Orange (was Red)\n" +
       "\n" +
       "New quality gate thresholds:\n" +
       "  - violations > 4\n" +
       "  - coverage < 75%\n" +
       "\n" +
-      "See it in SonarQube: http://nemo.sonarsource.org/dashboard?id=org.sonar.foo:foo"));
+      "More details at: http://nemo.sonarsource.org/dashboard?id=org.sonar.foo:foo"));
   }
 
   @Test
@@ -94,17 +117,18 @@ public class AlertsEmailTemplateTest {
     assertThat(message.getSubject(), is("New quality gate threshold reached on \"Foo\""));
     assertThat(message.getMessage(), is("" +
       "Project: Foo\n" +
+      "Version: V1-SNAP\n" +
       "Quality gate status: Orange (was Red)\n" +
       "\n" +
       "New quality gate threshold: violations > 4\n" +
       "\n" +
-      "See it in SonarQube: http://nemo.sonarsource.org/dashboard?id=org.sonar.foo:foo"));
+      "More details at: http://nemo.sonarsource.org/dashboard?id=org.sonar.foo:foo"));
   }
 
   @Test
-  public void shouldFormatNewAlertWithOneMessageOnBranch() {
+  public void shouldFormatNewAlertWithoutVersion() {
     Notification notification = createNotification("Orange (was Red)", "violations > 4", "WARN", "true")
-      .setFieldValue("branch", "feature");
+        .setFieldValue("projectVersion", null);
 
     EmailMessage message = template.format(notification);
     assertThat(message.getMessageId(), is("alerts/45"));
@@ -115,7 +139,26 @@ public class AlertsEmailTemplateTest {
       "\n" +
       "New quality gate threshold: violations > 4\n" +
       "\n" +
-      "See it in SonarQube: http://nemo.sonarsource.org/dashboard?id=org.sonar.foo:foo&branch=feature"));
+      "More details at: http://nemo.sonarsource.org/dashboard?id=org.sonar.foo:foo"));
+  }
+
+  @Test
+  public void shouldFormatNewAlertWithOneMessageOnBranch() {
+    Notification notification = createNotification("Orange (was Red)", "violations > 4", "WARN", "true")
+      .setFieldValue("branch", "feature");
+
+    EmailMessage message = template.format(notification);
+    assertThat(message.getMessageId(), is("alerts/45"));
+    assertThat(message.getSubject(), is("New quality gate threshold reached on \"Foo (feature)\""));
+    assertThat(message.getMessage(), is("" +
+      "Project: Foo\n" +
+      "Branch: feature\n" +
+      "Version: V1-SNAP\n" +
+      "Quality gate status: Orange (was Red)\n" +
+      "\n" +
+      "New quality gate threshold: violations > 4\n" +
+      "\n" +
+      "More details at: http://nemo.sonarsource.org/dashboard?id=org.sonar.foo:foo&branch=feature"));
   }
 
   @Test
@@ -127,10 +170,29 @@ public class AlertsEmailTemplateTest {
     assertThat(message.getSubject(), is("\"Foo\" is back to green"));
     assertThat(message.getMessage(), is("" +
       "Project: Foo\n" +
+      "Version: V1-SNAP\n" +
       "Quality gate status: Green (was Red)\n" +
       "\n" +
       "\n" +
-      "See it in SonarQube: http://nemo.sonarsource.org/dashboard?id=org.sonar.foo:foo"));
+      "More details at: http://nemo.sonarsource.org/dashboard?id=org.sonar.foo:foo"));
+  }
+
+  @Test
+  public void shouldFormatBackToGreenMessageOnBranch() {
+    Notification notification = createNotification("Green (was Red)", "", "OK", "false")
+        .setFieldValue("branch", "feature");
+
+    EmailMessage message = template.format(notification);
+    assertThat(message.getMessageId(), is("alerts/45"));
+    assertThat(message.getSubject(), is("\"Foo (feature)\" is back to green"));
+    assertThat(message.getMessage(), is("" +
+      "Project: Foo\n" +
+      "Branch: feature\n" +
+      "Version: V1-SNAP\n" +
+      "Quality gate status: Green (was Red)\n" +
+      "\n" +
+      "\n" +
+      "More details at: http://nemo.sonarsource.org/dashboard?id=org.sonar.foo:foo&branch=feature"));
   }
 
   private Notification createNotification(String alertName, String alertText, String alertLevel, String isNewAlert) {
@@ -138,6 +200,7 @@ public class AlertsEmailTemplateTest {
         .setFieldValue("projectName", "Foo")
         .setFieldValue("projectKey", "org.sonar.foo:foo")
         .setFieldValue("projectId", "45")
+        .setFieldValue("projectVersion", "V1-SNAP")
         .setFieldValue("alertName", alertName)
         .setFieldValue("alertText", alertText)
         .setFieldValue("alertLevel", alertLevel)

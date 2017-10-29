@@ -20,7 +20,7 @@
 // @flow
 import React from 'react';
 import Modal from 'react-modal';
-import Select from 'react-select';
+import Select, { Creatable } from 'react-select';
 import { pickBy, sortBy } from 'lodash';
 import SearchSelect from '../../../components/controls/SearchSelect';
 import Checkbox from '../../../components/controls/Checkbox';
@@ -368,52 +368,34 @@ export default class BulkChangeModal extends React.PureComponent {
     return this.renderField('severity', 'issue.set_severity', affected, input);
   };
 
-  renderAddTagsField = () => {
+  renderTagsField = (field /*: string */, label /*: string */, allowCreate /*: boolean */) => {
     const affected /*: number */ = this.state.issues.filter(hasAction('set_tags')).length;
 
     if (this.state.tags == null || affected === 0) {
       return null;
     }
 
-    const options = this.state.tags.map(tag => ({ label: tag, value: tag }));
+    const Component = allowCreate ? Creatable : Select;
+
+    const options = [...this.state.tags, ...(this.state[field] || [])].map(tag => ({
+      label: tag,
+      value: tag
+    }));
 
     const input = (
-      <Select
+      <Component
         clearable={false}
-        id="add_tags"
+        id={field}
         multi={true}
-        onChange={this.handleMultiSelectFieldChange('addTags')}
+        onChange={this.handleMultiSelectFieldChange(field)}
         options={options}
+        promptTextCreator={promptCreateTag}
         searchable={true}
-        value={this.state.addTags}
+        value={this.state[field]}
       />
     );
 
-    return this.renderField('addTags', 'issue.add_tags', affected, input);
-  };
-
-  renderRemoveTagsField = () => {
-    const affected /*: number */ = this.state.issues.filter(hasAction('set_tags')).length;
-
-    if (this.state.tags == null || affected === 0) {
-      return null;
-    }
-
-    const options = this.state.tags.map(tag => ({ label: tag, value: tag }));
-
-    const input = (
-      <Select
-        clearable={false}
-        id="remove_tags"
-        multi={true}
-        onChange={this.handleMultiSelectFieldChange('removeTags')}
-        options={options}
-        searchable={true}
-        value={this.state.removeTags}
-      />
-    );
-
-    return this.renderField('removeTags', 'issue.remove_tags', affected, input);
+    return this.renderField(field, label, affected, input);
   };
 
   renderTransitionsField = () => {
@@ -509,8 +491,8 @@ export default class BulkChangeModal extends React.PureComponent {
           {this.renderAssigneeField()}
           {this.renderTypeField()}
           {this.renderSeverityField()}
-          {this.renderAddTagsField()}
-          {this.renderRemoveTagsField()}
+          {this.renderTagsField('addTags', 'issue.add_tags', true)}
+          {this.renderTagsField('removeTags', 'issue.remove_tags', false)}
           {this.renderTransitionsField()}
           {this.renderCommentField()}
           {this.renderNotificationsField()}
@@ -539,4 +521,8 @@ export default class BulkChangeModal extends React.PureComponent {
       </Modal>
     );
   }
+}
+
+function promptCreateTag(label /*: string */) {
+  return `+ ${label}`;
 }

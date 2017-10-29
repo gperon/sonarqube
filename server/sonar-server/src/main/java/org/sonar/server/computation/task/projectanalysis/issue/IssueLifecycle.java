@@ -21,8 +21,12 @@ package org.sonar.server.computation.task.projectanalysis.issue;
 
 import com.google.common.annotations.VisibleForTesting;
 import java.util.Date;
+import java.util.Optional;
 import org.sonar.api.issue.Issue;
+import org.sonar.api.issue.IssueComment;
 import org.sonar.core.issue.DefaultIssue;
+import org.sonar.core.issue.DefaultIssueComment;
+import org.sonar.core.issue.FieldDiffs;
 import org.sonar.core.issue.IssueChangeContext;
 import org.sonar.core.util.Uuids;
 import org.sonar.server.computation.task.projectanalysis.analysis.AnalysisMetadataHolder;
@@ -33,7 +37,6 @@ import org.sonar.server.issue.workflow.IssueWorkflow;
  * Sets the appropriate fields when an issue is :
  * <ul>
  *   <li>newly created</li>
- *   <li>reused in incremental analysis</li>
  *   <li>merged the related base issue</li>
  *   <li>relocated (only manual issues)</li>
  * </ul>
@@ -44,13 +47,16 @@ public class IssueLifecycle {
   private final IssueChangeContext changeContext;
   private final IssueFieldsSetter updater;
   private final DebtCalculator debtCalculator;
+  private final AnalysisMetadataHolder analysisMetadataHolder;
 
   public IssueLifecycle(AnalysisMetadataHolder analysisMetadataHolder, IssueWorkflow workflow, IssueFieldsSetter updater, DebtCalculator debtCalculator) {
-    this(IssueChangeContext.createScan(new Date(analysisMetadataHolder.getAnalysisDate())), workflow, updater, debtCalculator);
+    this(analysisMetadataHolder, IssueChangeContext.createScan(new Date(analysisMetadataHolder.getAnalysisDate())), workflow, updater, debtCalculator);
   }
 
   @VisibleForTesting
-  IssueLifecycle(IssueChangeContext changeContext, IssueWorkflow workflow, IssueFieldsSetter updater, DebtCalculator debtCalculator) {
+  IssueLifecycle(AnalysisMetadataHolder analysisMetadataHolder, IssueChangeContext changeContext, IssueWorkflow workflow, IssueFieldsSetter updater,
+    DebtCalculator debtCalculator) {
+    this.analysisMetadataHolder = analysisMetadataHolder;
     this.workflow = workflow;
     this.updater = updater;
     this.debtCalculator = debtCalculator;
@@ -65,16 +71,62 @@ public class IssueLifecycle {
     issue.setEffort(debtCalculator.calculate(issue));
   }
 
-  public void copyExistingOpenIssue(DefaultIssue raw, DefaultIssue base) {
+  public void copyExistingOpenIssueFromLongLivingBranch(DefaultIssue raw, DefaultIssue base, String fromLongBranchName) {
     raw.setKey(Uuids.create());
     raw.setNew(false);
-    raw.setCopied(true);
-    copyFields(raw, base);
+    copyIssueAttributes(raw, base);
+    raw.setFieldChange(changeContext, IssueFieldsSetter.FROM_LONG_BRANCH, fromLongBranchName, analysisMetadataHolder.getBranch().getName());
+  }
 
-    if (base.manualSeverity()) {
-      raw.setManualSeverity(true);
-      raw.setSeverity(base.severity());
+  public void mergeConfirmedOrResolvedFromShortLivingBranch(DefaultIssue raw, DefaultIssue base, String fromShortBranchName) {
+    copyIssueAttributes(raw, base);
+    raw.setFieldChange(changeContext, IssueFieldsSetter.FROM_SHORT_BRANCH, fromShortBranchName, analysisMetadataHolder.getBranch().getName());
+  }
+
+  private void copyIssueAttributes(DefaultIssue to, DefaultIssue from) {
+    to.setCopied(true);
+    copyFields(to, from);
+    if (from.manualSeverity()) {
+      to.setManualSeverity(true);
+      to.setSeverity(from.severity());
     }
+    copyChanges(to, from);
+  }
+
+  private static void copyChanges(DefaultIssue raw, DefaultIssue base) {
+    base.comments().forEach(c -> raw.addComment(copy(raw.key(), c)));
+    base.changes().forEach(c -> copy(raw.key(), c).ifPresent(raw::addChange));
+  }
+
+  /**
+   * Copy a comment from another issue
+   */
+  private static DefaultIssueComment copy(String issueKey, IssueComment c) {
+    DefaultIssueComment comment = new DefaultIssueComment();
+    comment.setIssueKey(issueKey);
+    comment.setKey(Uuids.create());
+    comment.setUserLogin(c.userLogin());
+    comment.setMarkdownText(c.markdownText());
+    comment.setCreatedAt(c.createdAt()).setUpdatedAt(c.updatedAt());
+    comment.setNew(true);
+    return comment;
+  }
+
+  /**
+   * Copy a diff from another issue
+   */
+  private static Optional<FieldDiffs> copy(String issueKey, FieldDiffs c) {
+    FieldDiffs result = new FieldDiffs();
+    result.setIssueKey(issueKey);
+    result.setUserLogin(c.userLogin());
+    result.setCreationDate(c.creationDate());
+    // Don't copy "file" changelogs as they refer to file uuids that might later be purged
+    c.diffs().entrySet().stream().filter(e -> !e.getKey().equals(IssueFieldsSetter.FILE))
+      .forEach(e -> result.setDiff(e.getKey(), e.getValue().oldValue(), e.getValue().newValue()));
+    if (result.diffs().isEmpty()) {
+      return Optional.empty();
+    }
+    return Optional.of(result);
   }
 
   public void mergeExistingOpenIssue(DefaultIssue raw, DefaultIssue base) {

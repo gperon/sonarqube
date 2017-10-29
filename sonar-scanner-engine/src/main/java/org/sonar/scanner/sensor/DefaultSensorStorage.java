@@ -62,6 +62,7 @@ import org.sonar.scanner.protocol.output.ScannerReportWriter;
 import org.sonar.scanner.report.ReportPublisher;
 import org.sonar.scanner.report.ScannerReportUtils;
 import org.sonar.scanner.repository.ContextPropertiesCache;
+import org.sonar.scanner.scan.branch.BranchConfiguration;
 import org.sonar.scanner.scan.measure.MeasureCache;
 
 import static java.util.stream.Collectors.toList;
@@ -146,6 +147,7 @@ public class DefaultSensorStorage implements SensorStorage {
   private final ContextPropertiesCache contextPropertiesCache;
   private final Configuration settings;
   private final ScannerMetrics scannerMetrics;
+  private final BranchConfiguration branchConfiguration;
   private final Map<Metric<?>, Metric<?>> deprecatedCoverageMetricMapping = new HashMap<>();
   private final Set<Metric<?>> coverageMetrics = new HashSet<>();
   private final Set<Metric<?>> byLineMetrics = new HashSet<>();
@@ -153,7 +155,7 @@ public class DefaultSensorStorage implements SensorStorage {
 
   public DefaultSensorStorage(MetricFinder metricFinder, ModuleIssues moduleIssues, Configuration settings,
     ReportPublisher reportPublisher, MeasureCache measureCache, SonarCpdBlockIndex index,
-    ContextPropertiesCache contextPropertiesCache, ScannerMetrics scannerMetrics) {
+    ContextPropertiesCache contextPropertiesCache, ScannerMetrics scannerMetrics, BranchConfiguration branchConfiguration) {
     this.metricFinder = metricFinder;
     this.moduleIssues = moduleIssues;
     this.settings = settings;
@@ -162,6 +164,7 @@ public class DefaultSensorStorage implements SensorStorage {
     this.index = index;
     this.contextPropertiesCache = contextPropertiesCache;
     this.scannerMetrics = scannerMetrics;
+    this.branchConfiguration = branchConfiguration;
 
     coverageMetrics.add(UNCOVERED_LINES);
     coverageMetrics.add(LINES_TO_COVER);
@@ -200,14 +203,15 @@ public class DefaultSensorStorage implements SensorStorage {
   @Override
   public void store(Measure newMeasure) {
     if (newMeasure.inputComponent() instanceof DefaultInputFile) {
-      ((DefaultInputFile) newMeasure.inputComponent()).setPublished(true);
+      DefaultInputFile defaultInputFile = (DefaultInputFile) newMeasure.inputComponent();
+      if (shouldSkipStorage(defaultInputFile)) {
+        return;
+      }
+      defaultInputFile.setPublished(true);
     }
     saveMeasure(newMeasure.inputComponent(), (DefaultMeasure<?>) newMeasure);
   }
 
-  /**
-   * Thread safe
-   */
   private void logOnce(String metricKey, String msg, Object... params) {
     if (alreadyLogged.add(metricKey)) {
       LOG.warn(msg, params);
@@ -216,7 +220,11 @@ public class DefaultSensorStorage implements SensorStorage {
 
   public void saveMeasure(InputComponent component, DefaultMeasure<?> measure) {
     if (component.isFile()) {
-      ((DefaultInputFile) component).setPublished(true);
+      DefaultInputFile defaultInputFile = (DefaultInputFile) component;
+      if (shouldSkipStorage(defaultInputFile)) {
+        return;
+      }
+      defaultInputFile.setPublished(true);
     }
 
     if (isDeprecatedMetric(measure.metric().key())) {
@@ -346,13 +354,21 @@ public class DefaultSensorStorage implements SensorStorage {
     }
   }
 
+  private boolean shouldSkipStorage(DefaultInputFile defaultInputFile) {
+    return branchConfiguration.isShortLivingBranch() && defaultInputFile.status() == InputFile.Status.SAME;
+  }
+
   /**
    * Thread safe assuming that each issues for each file are only written once.
    */
   @Override
   public void store(Issue issue) {
     if (issue.primaryLocation().inputComponent() instanceof DefaultInputFile) {
-      ((DefaultInputFile) issue.primaryLocation().inputComponent()).setPublished(true);
+      DefaultInputFile defaultInputFile = (DefaultInputFile) issue.primaryLocation().inputComponent();
+      if (shouldSkipStorage(defaultInputFile)) {
+        return;
+      }
+      defaultInputFile.setPublished(true);
     }
     moduleIssues.initAndAddIssue(issue);
   }
@@ -361,6 +377,9 @@ public class DefaultSensorStorage implements SensorStorage {
   public void store(DefaultHighlighting highlighting) {
     ScannerReportWriter writer = reportPublisher.getWriter();
     DefaultInputFile inputFile = (DefaultInputFile) highlighting.inputFile();
+    if (shouldSkipStorage(inputFile)) {
+      return;
+    }
     inputFile.setPublished(true);
     int componentRef = inputFile.batchId();
     if (writer.hasComponentData(FileStructure.Domain.SYNTAX_HIGHLIGHTINGS, componentRef)) {
@@ -386,6 +405,9 @@ public class DefaultSensorStorage implements SensorStorage {
   public void store(DefaultSymbolTable symbolTable) {
     ScannerReportWriter writer = reportPublisher.getWriter();
     DefaultInputFile inputFile = (DefaultInputFile) symbolTable.inputFile();
+    if (shouldSkipStorage(inputFile)) {
+      return;
+    }
     inputFile.setPublished(true);
     int componentRef = inputFile.batchId();
     if (writer.hasComponentData(FileStructure.Domain.SYMBOLS, componentRef)) {
@@ -418,6 +440,9 @@ public class DefaultSensorStorage implements SensorStorage {
   @Override
   public void store(DefaultCoverage defaultCoverage) {
     DefaultInputFile inputFile = (DefaultInputFile) defaultCoverage.inputFile();
+    if (shouldSkipStorage(inputFile)) {
+      return;
+    }
     inputFile.setPublished(true);
     if (defaultCoverage.linesToCover() > 0) {
       saveCoverageMetricInternal(inputFile, LINES_TO_COVER, new DefaultMeasure<Integer>().forMetric(LINES_TO_COVER).withValue(defaultCoverage.linesToCover()));
@@ -441,6 +466,9 @@ public class DefaultSensorStorage implements SensorStorage {
   @Override
   public void store(DefaultCpdTokens defaultCpdTokens) {
     DefaultInputFile inputFile = (DefaultInputFile) defaultCpdTokens.inputFile();
+    if (shouldSkipStorage(inputFile)) {
+      return;
+    }
     inputFile.setPublished(true);
     PmdBlockChunker blockChunker = new PmdBlockChunker(getBlockSize(inputFile.language()));
     List<Block> blocks = blockChunker.chunk(inputFile.key(), defaultCpdTokens.getTokenLines());
@@ -454,8 +482,11 @@ public class DefaultSensorStorage implements SensorStorage {
 
   @Override
   public void store(AnalysisError analysisError) {
-    ((DefaultInputFile) analysisError.inputFile()).setPublished(true);
-    // no op
+    DefaultInputFile defaultInputFile = (DefaultInputFile) analysisError.inputFile();
+    if (shouldSkipStorage(defaultInputFile)) {
+      return;
+    }
+    defaultInputFile.setPublished(true);
   }
 
   @Override

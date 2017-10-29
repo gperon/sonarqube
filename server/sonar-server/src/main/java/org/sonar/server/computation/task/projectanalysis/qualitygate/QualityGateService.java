@@ -22,6 +22,7 @@ package org.sonar.server.computation.task.projectanalysis.qualitygate;
 import com.google.common.base.Optional;
 
 public interface QualityGateService {
+
   /**
    * Retrieve the {@link QualityGate} from the database with the specified id, it it exists.
    */

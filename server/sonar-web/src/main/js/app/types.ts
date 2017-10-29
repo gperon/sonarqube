@@ -23,6 +23,7 @@ export enum BranchType {
 }
 
 export interface MainBranch {
+  analysisDate?: string;
   isMain: true;
   name: string;
   status?: {
@@ -31,6 +32,7 @@ export interface MainBranch {
 }
 
 export interface LongLivingBranch {
+  analysisDate?: string;
   isMain: false;
   name: string;
   status?: {
@@ -40,6 +42,7 @@ export interface LongLivingBranch {
 }
 
 export interface ShortLivingBranch {
+  analysisDate?: string;
   isMain: false;
   isOrphan?: true;
   mergeBranch: string;
@@ -54,7 +57,7 @@ export interface ShortLivingBranch {
 
 export type Branch = MainBranch | LongLivingBranch | ShortLivingBranch;
 
-export interface ComponentExtension {
+export interface Extension {
   key: string;
   name: string;
 }
@@ -67,7 +70,8 @@ export interface Component {
     qualifier: string;
   }>;
   configuration?: ComponentConfiguration;
-  extensions?: ComponentExtension[];
+  description?: string;
+  extensions?: Extension[];
   isFavorite?: boolean;
   key: string;
   name: string;
@@ -78,8 +82,8 @@ export interface Component {
   version?: string;
 }
 
-export interface ComponentConfiguration {
-  extensions?: ComponentExtension[];
+interface ComponentConfiguration {
+  extensions?: Extension[];
   showBackgroundTasks?: boolean;
   showLinks?: boolean;
   showManualMeasures?: boolean;

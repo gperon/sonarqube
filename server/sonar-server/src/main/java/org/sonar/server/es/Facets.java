@@ -20,10 +20,12 @@
 package org.sonar.server.es;
 
 import java.util.Collections;
+import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 import javax.annotation.CheckForNull;
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.lang.builder.ToStringStyle;
@@ -38,6 +40,7 @@ import org.elasticsearch.search.aggregations.bucket.missing.Missing;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.aggregations.metrics.sum.Sum;
 
+import static org.sonar.api.utils.DateUtils.parseDateTime;
 import static org.sonarqube.ws.client.issue.IssuesWsParameters.FACET_MODE_EFFORT;
 
 public class Facets {
@@ -46,13 +49,16 @@ public class Facets {
   private static final java.lang.String NO_DATA_PREFIX = "no_data_";
 
   private final LinkedHashMap<String, LinkedHashMap<String, Long>> facetsByName;
+  private final TimeZone timeZone;
 
-  public Facets(LinkedHashMap<String, LinkedHashMap<String, Long>> facetsByName) {
+  public Facets(LinkedHashMap<String, LinkedHashMap<String, Long>> facetsByName, TimeZone timeZone) {
     this.facetsByName = facetsByName;
+    this.timeZone = timeZone;
   }
 
-  public Facets(SearchResponse response) {
+  public Facets(SearchResponse response, TimeZone timeZone) {
     this.facetsByName = new LinkedHashMap<>();
+    this.timeZone = timeZone;
     Aggregations aggregations = response.getAggregations();
     if (aggregations != null) {
       for (Aggregation facet : aggregations) {
@@ -128,12 +134,18 @@ public class Facets {
   private void processDateHistogram(Histogram aggregation) {
     LinkedHashMap<String, Long> facet = getOrCreateFacet(aggregation.getName());
     for (Histogram.Bucket value : aggregation.getBuckets()) {
+      String day = dateTimeToDate(value.getKeyAsString(), timeZone);
       if (value.getAggregations().getAsMap().containsKey(FACET_MODE_EFFORT)) {
-        facet.put(value.getKeyAsString(), Math.round(((Sum) value.getAggregations().get(FACET_MODE_EFFORT)).getValue()));
+        facet.put(day, Math.round(((Sum) value.getAggregations().get(FACET_MODE_EFFORT)).getValue()));
       } else {
-        facet.put(value.getKeyAsString(), value.getDocCount());
+        facet.put(day, value.getDocCount());
       }
     }
+  }
+
+  private static String dateTimeToDate(String timestamp, TimeZone timeZone) {
+    Date date = parseDateTime(timestamp);
+    return date.toInstant().atZone(timeZone.toZoneId()).toLocalDate().toString();
   }
 
   private void processSum(Sum aggregation) {
@@ -179,11 +191,6 @@ public class Facets {
   }
 
   private LinkedHashMap<String, Long> getOrCreateFacet(String facetName) {
-    LinkedHashMap<String, Long> facet = facetsByName.get(facetName);
-    if (facet == null) {
-      facet = new LinkedHashMap<>();
-      facetsByName.put(facetName, facet);
-    }
-    return facet;
+    return facetsByName.computeIfAbsent(facetName, n -> new LinkedHashMap<>());
   }
 }

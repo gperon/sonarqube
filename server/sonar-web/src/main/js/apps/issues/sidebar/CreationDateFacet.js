@@ -106,7 +106,7 @@ export default class CreationDateFacet extends React.PureComponent {
       createdAt: undefined,
       createdInLast: undefined,
       sinceLeakPeriod: undefined,
-      [property]: toShortNotSoISOString(parseDate(value))
+      [property]: value ? toShortNotSoISOString(parseDate(value)) : undefined
     });
   };
 
@@ -119,6 +119,34 @@ export default class CreationDateFacet extends React.PureComponent {
 
   handleLeakPeriodClick = () => this.resetTo({ sinceLeakPeriod: true });
 
+  getValues() {
+    const { createdAfter, createdAt, createdBefore, createdInLast, sinceLeakPeriod } = this.props;
+    const { formatDate } = this.context.intl;
+    const values = [];
+    if (createdAfter) {
+      values.push(formatDate(createdAfter, longFormatterOption));
+    }
+    if (createdAt) {
+      values.push(formatDate(createdAt, longFormatterOption));
+    }
+    if (createdBefore) {
+      values.push(formatDate(createdBefore, longFormatterOption));
+    }
+    if (createdInLast === '1w') {
+      values.push(translate('issues.facet.createdAt.last_week'));
+    }
+    if (createdInLast === '1m') {
+      values.push(translate('issues.facet.createdAt.last_month'));
+    }
+    if (createdInLast === '1y') {
+      values.push(translate('issues.facet.createdAt.last_year'));
+    }
+    if (sinceLeakPeriod) {
+      values.push(translate('issues.leak_period'));
+    }
+    return values;
+  }
+
   renderBarChart() {
     const { createdBefore, stats } = this.props;
 
@@ -128,33 +156,33 @@ export default class CreationDateFacet extends React.PureComponent {
 
     const periods = Object.keys(stats);
 
-    if (periods.length < 2) {
+    if (periods.length < 2 || periods.every(period => !stats[period])) {
       return null;
     }
 
     const { formatDate } = this.context.intl;
-    const beforeDate = createdBefore ? createdBefore : undefined;
     const data = periods.map((start, index) => {
       const startDate = parseDate(start);
-      let nextStartDate = index < periods.length - 1 ? periods[index + 1] : beforeDate;
       let endDate;
-      if (nextStartDate) {
-        nextStartDate = parseDate(nextStartDate);
-        endDate = parseDate(nextStartDate);
+      if (index < periods.length - 1) {
+        endDate = parseDate(periods[index + 1]);
         endDate.setDate(endDate.getDate() - 1);
+      } else {
+        endDate = createdBefore && parseDate(createdBefore);
       }
 
       let tooltip =
         formatMeasure(stats[start], 'SHORT_INT') +
         '<br/>' +
         formatDate(startDate, longFormatterOption);
-      if (endDate && !isSameDay(endDate, startDate)) {
-        tooltip += ' – ' + formatDate(endDate, longFormatterOption);
+      const tooltipEndDate = endDate || Date.now();
+      if (!isSameDay(tooltipEndDate, startDate)) {
+        tooltip += ' – ' + formatDate(tooltipEndDate, longFormatterOption);
       }
 
       return {
         createdAfter: startDate,
-        createdBefore: nextStartDate,
+        createdBefore: endDate,
         tooltip,
         x: index,
         y: stats[start]
@@ -199,12 +227,16 @@ export default class CreationDateFacet extends React.PureComponent {
       <div className="search-navigator-date-facet-selection">
         <DateInput
           className="search-navigator-date-facet-selection-dropdown-left"
+          inputClassName="search-navigator-date-facet-selection-input"
+          maxDate={createdBefore ? toShortNotSoISOString(createdBefore) : '+0'}
           onChange={this.handlePeriodChangeAfter}
           placeholder={translate('from')}
           value={createdAfter ? toShortNotSoISOString(createdAfter) : undefined}
         />
         <DateInput
           className="search-navigator-date-facet-selection-dropdown-right"
+          inputClassName="search-navigator-date-facet-selection-input"
+          minDate={createdAfter ? toShortNotSoISOString(createdAfter) : undefined}
           onChange={this.handlePeriodChangeBefore}
           placeholder={translate('to')}
           value={createdBefore ? toShortNotSoISOString(createdBefore) : undefined}
@@ -284,7 +316,7 @@ export default class CreationDateFacet extends React.PureComponent {
           onClear={this.handleClear}
           onClick={this.handleHeaderClick}
           open={this.props.open}
-          values={this.hasValue() ? 1 : 0}
+          values={this.getValues()}
         />
 
         {this.props.open && this.renderInner()}

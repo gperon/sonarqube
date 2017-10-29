@@ -19,10 +19,8 @@
  */
 package org.sonar.ce.container;
 
-import com.hazelcast.core.HazelcastInstance;
 import java.io.File;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.util.Date;
 import java.util.Properties;
 import java.util.stream.Collectors;
@@ -33,15 +31,12 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.picocontainer.ComponentAdapter;
 import org.picocontainer.MutablePicoContainer;
-import org.sonar.NetworkUtils;
 import org.sonar.api.CoreProperties;
 import org.sonar.api.database.DatabaseProperties;
 import org.sonar.api.utils.DateUtils;
 import org.sonar.api.utils.System2;
 import org.sonar.ce.CeDistributedInformationImpl;
 import org.sonar.ce.StandaloneCeDistributedInformation;
-import org.sonar.cluster.internal.HazelcastTestHelper;
-import org.sonar.cluster.localclient.HazelcastLocalClient;
 import org.sonar.db.DbTester;
 import org.sonar.db.property.PropertyDto;
 import org.sonar.process.ProcessId;
@@ -51,9 +46,6 @@ import org.sonar.process.Props;
 import static java.lang.String.valueOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
-import static org.sonar.cluster.ClusterProperties.CLUSTER_ENABLED;
-import static org.sonar.cluster.ClusterProperties.CLUSTER_LOCALENDPOINT;
-import static org.sonar.cluster.ClusterProperties.CLUSTER_NODE_TYPE;
 import static org.sonar.process.ProcessEntryPoint.PROPERTY_PROCESS_INDEX;
 import static org.sonar.process.ProcessEntryPoint.PROPERTY_SHARED_PATH;
 import static org.sonar.process.ProcessProperties.PATH_DATA;
@@ -83,33 +75,7 @@ public class ComputeEngineContainerImplTest {
   }
 
   @Test
-  public void real_start_with_cluster() throws IOException {
-    int port = NetworkUtils.INSTANCE.getNextAvailablePort(InetAddress.getLoopbackAddress());
-    HazelcastInstance hzInstance = HazelcastTestHelper.createHazelcastCluster(NetworkUtils.INSTANCE.getHostname(), port);
-
-    Properties properties = getProperties();
-    properties.setProperty(CLUSTER_NODE_TYPE, "application");
-    properties.setProperty(CLUSTER_ENABLED, "true");
-    properties.setProperty(CLUSTER_LOCALENDPOINT, String.format("%s:%d", hzInstance.getCluster().getLocalMember().getAddress().getHost(), port));
-
-    // required persisted properties
-    insertProperty(CoreProperties.SERVER_ID, "a_startup_id");
-    insertProperty(CoreProperties.SERVER_STARTTIME, DateUtils.formatDateTime(new Date()));
-
-    underTest
-      .start(new Props(properties));
-
-    MutablePicoContainer picoContainer = underTest.getComponentContainer().getPicoContainer();
-    assertThat(
-      picoContainer.getComponentAdapters().stream()
-        .map(ComponentAdapter::getComponentImplementation)
-        .collect(Collectors.toList())).contains((Class) HazelcastLocalClient.class,
-          (Class) CeDistributedInformationImpl.class);
-    underTest.stop();
-  }
-
-  @Test
-  public void real_start_without_cluster() throws IOException {
+  public void test_real_start() throws IOException {
     Properties properties = getProperties();
 
     // required persisted properties
@@ -123,13 +89,14 @@ public class ComputeEngineContainerImplTest {
     assertThat(picoContainer.getComponentAdapters())
       .hasSize(
         CONTAINER_ITSELF
-          + 72 // level 4
-          + 4 // content of CeConfigurationModule
+          + 75 // level 4
+          + 6 // content of CeConfigurationModule
           + 4 // content of CeQueueModule
           + 4 // content of CeHttpModule
           + 3 // content of CeTaskCommonsModule
           + 4 // content of ProjectAnalysisTaskModule
-          + 5 // content of CeTaskProcessorModule
+          + 7 // content of CeTaskProcessorModule
+          + 4 // content of ReportAnalysisFailureNotificationModule
           + 3 // CeCleaningModule + its content
           + 1 // CeDistributedInformation
     );
@@ -139,21 +106,21 @@ public class ComputeEngineContainerImplTest {
     );
     assertThat(picoContainer.getParent().getParent().getComponentAdapters()).hasSize(
       CONTAINER_ITSELF
-        + 12 // MigrationConfigurationModule
+        + 13 // MigrationConfigurationModule
         + 17 // level 2
     );
     assertThat(picoContainer.getParent().getParent().getParent().getComponentAdapters()).hasSize(
       COMPONENTS_IN_LEVEL_1_AT_CONSTRUCTION
-        + 25 // level 1
-        + 49 // content of DaoModule
+        + 26 // level 1
+        + 52 // content of DaoModule
         + 3 // content of EsSearchModule
-        + 64 // content of CorePropertyDefinitions
+        + 67 // content of CorePropertyDefinitions
         + 1 // StopFlagContainer
     );
     assertThat(
       picoContainer.getComponentAdapters().stream()
         .map(ComponentAdapter::getComponentImplementation)
-        .collect(Collectors.toList())).doesNotContain((Class) HazelcastLocalClient.class,
+        .collect(Collectors.toList())).doesNotContain(
           (Class) CeDistributedInformationImpl.class).contains(
             (Class) StandaloneCeDistributedInformation.class);
     assertThat(picoContainer.getParent().getParent().getParent().getParent()).isNull();

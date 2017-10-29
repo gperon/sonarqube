@@ -26,7 +26,7 @@ export function fetchQualityGatesAppDetails(): Promise<any> {
 
 export interface QualityGate {
   isDefault?: boolean;
-  id: string;
+  id: number;
   name: string;
 }
 
@@ -36,7 +36,7 @@ export function fetchQualityGates(): Promise<QualityGate[]> {
       r.qualitygates.map((qualityGate: any) => {
         return {
           ...qualityGate,
-          id: String(qualityGate.id),
+          id: qualityGate.id,
           isDefault: qualityGate.id === r.default
         };
       }),
@@ -84,8 +84,8 @@ export function deleteCondition(id: string): Promise<void> {
   return post('/api/qualitygates/delete_condition', { id });
 }
 
-export function getGateForProject(projectKey: string): Promise<QualityGate | undefined> {
-  return getJSON('/api/qualitygates/get_by_project', { projectKey }).then(
+export function getGateForProject(project: string): Promise<QualityGate | undefined> {
+  return getJSON('/api/qualitygates/get_by_project', { project }).then(
     r =>
       r.qualityGate && {
         id: r.qualityGate.id,
@@ -96,14 +96,14 @@ export function getGateForProject(projectKey: string): Promise<QualityGate | und
 }
 
 export function associateGateWithProject(
-  gateId: string,
+  gateId: number,
   projectKey: string
 ): Promise<void | Response> {
   return post('/api/qualitygates/select', { gateId, projectKey }).catch(throwGlobalError);
 }
 
 export function dissociateGateWithProject(
-  gateId: string,
+  gateId: number,
   projectKey: string
 ): Promise<void | Response> {
   return post('/api/qualitygates/deselect', { gateId, projectKey }).catch(throwGlobalError);

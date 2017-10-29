@@ -25,7 +25,6 @@ import { translate, translateWithParameters } from '../../../helpers/l10n';
 import { Profile } from '../types';
 
 interface Props {
-  canAdmin: boolean;
   languages: Array<{ key: string; name: string }>;
   location: { query: { [p: string]: string } };
   onRequestFail: (reason: any) => void;
@@ -38,7 +37,6 @@ export default class ProfilesList extends React.PureComponent<Props> {
   renderProfiles(profiles: Profile[]) {
     return profiles.map(profile => (
       <ProfilesListRow
-        canAdmin={this.props.canAdmin}
         key={profile.key}
         onRequestFail={this.props.onRequestFail}
         organization={this.props.organization}
@@ -67,7 +65,7 @@ export default class ProfilesList extends React.PureComponent<Props> {
           <th className="text-right nowrap">{translate('quality_profiles.list.rules')}</th>
           <th className="text-right nowrap">{translate('quality_profiles.list.updated')}</th>
           <th className="text-right nowrap">{translate('quality_profiles.list.used')}</th>
-          {this.props.canAdmin && <th>&nbsp;</th>}
+          <th>&nbsp;</th>
         </tr>
       </thead>
     );
@@ -101,7 +99,7 @@ export default class ProfilesList extends React.PureComponent<Props> {
         )}
 
         {languagesToShow.map(languageKey => (
-          <div key={languageKey} className="quality-profile-box quality-profiles-table">
+          <div key={languageKey} className="boxed-group boxed-group-inner quality-profiles-table">
             <table data-language={languageKey} className="data zebra zebra-hover">
               {profilesToShow[languageKey] != null &&
                 this.renderHeader(languageKey, profilesToShow[languageKey].length)}

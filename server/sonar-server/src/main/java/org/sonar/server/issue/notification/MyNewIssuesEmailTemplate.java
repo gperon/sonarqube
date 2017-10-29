@@ -19,13 +19,12 @@
  */
 package org.sonar.server.issue.notification;
 
+import java.util.Date;
 import org.sonar.api.config.EmailSettings;
 import org.sonar.api.i18n.I18n;
 import org.sonar.api.notifications.Notification;
 import org.sonar.api.utils.DateUtils;
 import org.sonar.server.issue.notification.NewIssuesStatistics.Metric;
-
-import java.util.Date;
 
 /**
  * Creates email message for notification "my-new-issues".
@@ -47,10 +46,12 @@ public class MyNewIssuesEmailTemplate extends AbstractNewIssuesEmailTemplate {
   }
 
   @Override
-  protected String subject(Notification notification, String projectName) {
-    return String.format("You have %s new issues on project %s",
-      notification.getFieldValue(Metric.SEVERITY + COUNT),
-      projectName);
+  protected String subject(Notification notification, String fullProjectName) {
+    int issueCount = Integer.parseInt(notification.getFieldValue(Metric.RULE_TYPE + COUNT));
+    return String.format("You have %s new issue%s on project %s",
+      issueCount,
+      issueCount > 1 ? "s" : "",
+      fullProjectName);
   }
 
   @Override
@@ -70,7 +71,7 @@ public class MyNewIssuesEmailTemplate extends AbstractNewIssuesEmailTemplate {
       }
       url += "&createdAt=" + encode(DateUtils.formatDateTime(date));
       message
-        .append("See it in SonarQube: ")
+        .append("More details at: ")
         .append(url)
         .append(NEW_LINE);
     }

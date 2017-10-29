@@ -47,6 +47,7 @@ public class CorePropertyDefinitions {
   public static final String ORGANIZATIONS_CREATE_PERSONAL_ORG = "sonar.organizations.createPersonalOrg";
   public static final String ONBOARDING_TUTORIAL_SHOW_TO_NEW_USERS = "sonar.onboardingTutorial.showToNewUsers";
   public static final String DISABLE_NOTIFICATION_ON_BUILT_IN_QPROFILES = "sonar.builtInQualityProfiles.disableNotificationOnUpdate";
+  public static final String EDITIONS_CONFIG_URL = "sonar.editions.jsonUrl";
 
   private CorePropertyDefinitions() {
     // only static stuff
@@ -63,6 +64,7 @@ public class CorePropertyDefinitions {
     defs.addAll(WebhookProperties.all());
     defs.addAll(TelemetryProperties.all());
     defs.addAll(ScannerProperties.all());
+    defs.addAll(WebProperties.all());
 
     defs.addAll(asList(
       PropertyDefinition.builder(PROP_PASSWORD)
@@ -104,14 +106,14 @@ public class CorePropertyDefinitions {
         .build(),
       PropertyDefinition.builder(CoreProperties.PREVIEW_INCLUDE_PLUGINS)
         .name("Plugins accepted for Preview mode")
-        .description("List of plugin keys. Those plugins will be used during preview analyses.")
+        .description("DEPRECATED - List of plugin keys. Those plugins will be used during preview analyses.")
         .category(CoreProperties.CATEGORY_GENERAL)
         .multiValues(true)
         .defaultValue(CoreProperties.PREVIEW_INCLUDE_PLUGINS_DEFAULT_VALUE)
         .build(),
       PropertyDefinition.builder(CoreProperties.PREVIEW_EXCLUDE_PLUGINS)
         .name("Plugins excluded for Preview mode")
-        .description("List of plugin keys. Those plugins will not be used during preview analyses.")
+        .description("DEPRECATED - List of plugin keys. Those plugins will not be used during preview analyses.")
         .category(CoreProperties.CATEGORY_GENERAL)
         .multiValues(true)
         .defaultValue(CoreProperties.PREVIEW_EXCLUDE_PLUGINS_DEFAULT_VALUE)
@@ -217,10 +219,12 @@ public class CorePropertyDefinitions {
       PropertyDefinition.builder(CoreProperties.CPD_CROSS_PROJECT)
         .defaultValue(Boolean.toString(false))
         .name("Cross project duplication detection")
-        .description("By default, SonarQube detects duplications at project level. This means that a block "
+        .description("DEPRECATED - By default, SonarQube detects duplications at project level. This means that a block "
           + "duplicated on two different projects won't be reported. Setting this parameter to \"true\" "
           + "allows to detect duplicates across projects. Note that activating "
-          + "this property will slightly increase each SonarQube analysis time.")
+          + "this property will significantly increase each SonarQube analysis time, "
+          + "and therefore badly impact the performances of report processing as more and more projects "
+          + "are getting involved in this cross project duplication mechanism.")
         .onQualifiers(Qualifiers.PROJECT)
         .category(CoreProperties.CATEGORY_GENERAL)
         .subCategory(CoreProperties.SUBCATEGORY_DUPLICATIONS)
@@ -248,6 +252,15 @@ public class CorePropertyDefinitions {
       PropertyDefinition.builder(ORGANIZATIONS_CREATE_PERSONAL_ORG)
         .name("Create an organization for each new user.")
         .defaultValue(Boolean.toString(false))
+        .category(CATEGORY_ORGANIZATIONS)
+        .type(BOOLEAN)
+        .hidden()
+        .build(),
+
+      // EDITIONS
+      PropertyDefinition.builder(EDITIONS_CONFIG_URL)
+        .name("Defines URL of JSON file with the definitions of SonarSource editions.")
+        .defaultValue("https://update.sonarsource.org/editions.json")
         .category(CATEGORY_ORGANIZATIONS)
         .type(BOOLEAN)
         .hidden()

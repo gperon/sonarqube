@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import org.assertj.core.api.ListAssert;
 import org.junit.Rule;
@@ -47,6 +48,7 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.emptySet;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.entry;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.assertj.guava.api.Assertions.assertThat;
 import static org.sonar.db.component.ComponentTesting.newDirectory;
@@ -581,6 +583,34 @@ public class ComponentDaoTest {
   }
 
   @Test
+  public void select_uuids_by_key_from_project() {
+    ComponentDto project = db.components().insertPrivateProject();
+    ComponentDto removedProject = db.components().insertPrivateProject(p -> p.setEnabled(false));
+    ComponentDto module = db.components().insertComponent(newModuleDto(project));
+    ComponentDto removedModule = db.components().insertComponent(newModuleDto(project).setEnabled(false));
+    ComponentDto subModule = db.components().insertComponent(newModuleDto(module));
+    ComponentDto removedSubModule = db.components().insertComponent(newModuleDto(module).setEnabled(false));
+    ComponentDto directory = db.components().insertComponent(newDirectory(subModule, "src"));
+    ComponentDto removedDirectory = db.components().insertComponent(newDirectory(subModule, "src2").setEnabled(false));
+    ComponentDto file = db.components().insertComponent(newFileDto(subModule, directory));
+    ComponentDto removedFile = db.components().insertComponent(newFileDto(subModule, directory).setEnabled(false));
+
+    Map<String, String> uuidsByKey = underTest.selectUuidsByKeyFromProjectKey(dbSession, project.getDbKey())
+      .stream().collect(Collectors.toMap(KeyWithUuidDto::key, KeyWithUuidDto::uuid));
+
+    assertThat(uuidsByKey).containsOnly(
+      entry(project.getDbKey(), project.uuid()),
+      entry(module.getDbKey(), module.uuid()),
+      entry(removedModule.getDbKey(), removedModule.uuid()),
+      entry(subModule.getDbKey(), subModule.uuid()),
+      entry(removedSubModule.getDbKey(), removedSubModule.uuid()),
+      entry(directory.getDbKey(), directory.uuid()),
+      entry(removedDirectory.getDbKey(), removedDirectory.uuid()),
+      entry(file.getDbKey(), file.uuid()),
+      entry(removedFile.getDbKey(), removedFile.uuid()));
+  }
+
+  @Test
   public void select_enabled_modules_from_project() {
     ComponentDto project = db.components().insertPrivateProject();
     ComponentDto removedProject = db.components().insertPrivateProject(p -> p.setEnabled(false));
@@ -658,6 +688,36 @@ public class ComponentDaoTest {
     assertThat(underTest.selectProjects(dbSession))
       .extracting(ComponentDto::uuid)
       .containsOnly(project.uuid());
+  }
+
+  @Test
+  public void select_all_roots_by_organization() {
+    OrganizationDto organization = db.organizations().insert();
+    ComponentDto project1 = db.components().insertPrivateProject(organization);
+    ComponentDto module = db.components().insertComponent(newModuleDto(project1));
+    ComponentDto directory = db.components().insertComponent(newDirectory(module, "dir"));
+    ComponentDto file = db.components().insertComponent(newFileDto(module, directory));
+    ComponentDto project2 = db.components().insertPrivateProject(organization);
+    ComponentDto view = db.components().insertView(organization);
+    ComponentDto application = db.components().insertApplication(organization);
+    OrganizationDto otherOrganization = db.organizations().insert();
+    ComponentDto projectOnOtherOrganization = db.components().insertPrivateProject(otherOrganization);
+
+    assertThat(underTest.selectAllRootsByOrganization(dbSession, organization.getUuid()))
+      .extracting(ComponentDto::uuid)
+      .containsExactlyInAnyOrder(project1.uuid(), project2.uuid(), view.uuid(), application.uuid());
+  }
+
+  @Test
+  public void select_all_roots_by_organization_does_not_return_branches() {
+    OrganizationDto organization = db.organizations().insert();
+    ComponentDto project = db.components().insertMainBranch(organization);
+    ComponentDto branch = db.components().insertProjectBranch(project);
+
+    assertThat(underTest.selectAllRootsByOrganization(dbSession, organization.getUuid()))
+      .extracting(ComponentDto::uuid)
+      .containsExactlyInAnyOrder(project.uuid())
+      .doesNotContain(branch.uuid());
   }
 
   @Test

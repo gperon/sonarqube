@@ -25,6 +25,9 @@ import CoverageRating from '../../../components/ui/CoverageRating';
 import DuplicationsRating from '../../../components/ui/DuplicationsRating';
 import SizeRating from '../../../components/ui/SizeRating';
 import { translate } from '../../../helpers/l10n';
+import BugIcon from '../../../components/icons-components/BugIcon';
+import CodeSmellIcon from '../../../components/icons-components/CodeSmellIcon';
+import VulnerabilityIcon from '../../../components/icons-components/VulnerabilityIcon';
 
 interface Props {
   measures: { [key: string]: string | undefined };
@@ -40,28 +43,56 @@ export default function ProjectCardOverallMeasures({ measures }: Props) {
       <div className="project-card-measure smaller-card" data-key="reliability_rating">
         <div className="project-card-measure-inner">
           <div className="project-card-measure-number">
+            <Measure
+              className="spacer-right"
+              measure={{
+                metric: { key: 'bugs', type: 'SHORT_INT' },
+                value: measures['bugs']
+              }}
+            />
             <Rating value={measures['reliability_rating']} />
           </div>
-          <div className="project-card-measure-label">{translate('metric_domain.Reliability')}</div>
+          <div className="project-card-measure-label-with-icon">
+            <BugIcon className="little-spacer-right vertical-bottom" />
+            {translate('metric.bugs.name')}
+          </div>
         </div>
       </div>
 
-      <div className="project-card-measure smaller-card" data-key="security_rating">
+      <div className="project-card-measure" data-key="security_rating">
         <div className="project-card-measure-inner">
           <div className="project-card-measure-number">
+            <Measure
+              className="spacer-right"
+              measure={{
+                metric: { key: 'vulnerabilities', type: 'SHORT_INT' },
+                value: measures['vulnerabilities']
+              }}
+            />
             <Rating value={measures['security_rating']} />
           </div>
-          <div className="project-card-measure-label">{translate('metric_domain.Security')}</div>
+          <div className="project-card-measure-label-with-icon">
+            <VulnerabilityIcon className="little-spacer-right vertical-bottom" />
+            {translate('metric.vulnerabilities.name')}
+          </div>
         </div>
       </div>
 
       <div className="project-card-measure" data-key="sqale_rating">
         <div className="project-card-measure-inner">
           <div className="project-card-measure-number">
+            <Measure
+              className="spacer-right"
+              measure={{
+                metric: { key: 'code_smells', type: 'SHORT_INT' },
+                value: measures['code_smells']
+              }}
+            />
             <Rating value={measures['sqale_rating']} />
           </div>
-          <div className="project-card-measure-label">
-            {translate('metric_domain.Maintainability')}
+          <div className="project-card-measure-label-with-icon">
+            <CodeSmellIcon className="little-spacer-right vertical-bottom" />
+            {translate('metric.code_smells.name')}
           </div>
         </div>
       </div>
@@ -76,7 +107,7 @@ export default function ProjectCardOverallMeasures({ measures }: Props) {
             )}
             <Measure
               measure={{
-                metric: { key: 'coverage', name: 'coverage', type: 'PERCENT' },
+                metric: { key: 'coverage', type: 'PERCENT' },
                 value: measures['coverage']
               }}
             />
@@ -95,11 +126,7 @@ export default function ProjectCardOverallMeasures({ measures }: Props) {
             )}
             <Measure
               measure={{
-                metric: {
-                  key: 'duplicated_lines_density',
-                  name: 'duplicated_lines_density',
-                  type: 'PERCENT'
-                },
+                metric: { key: 'duplicated_lines_density', type: 'PERCENT' },
                 value: measures['duplicated_lines_density']
               }}
             />
@@ -111,18 +138,18 @@ export default function ProjectCardOverallMeasures({ measures }: Props) {
       </div>
 
       {measures['ncloc'] != null && (
-        <div className="project-card-measure pull-right" data-key="ncloc">
+        <div className="project-card-measure project-card-ncloc" data-key="ncloc">
           <div className="project-card-measure-inner pull-right">
             <div className="project-card-measure-number">
-              <span className="spacer-right">
-                <SizeRating value={Number(measures['ncloc'])} />
-              </span>
               <Measure
                 measure={{
-                  metric: { key: 'ncloc', name: 'ncloc', type: 'SHORT_INT' },
+                  metric: { key: 'ncloc', type: 'SHORT_INT' },
                   value: measures['ncloc']
                 }}
               />
+              <span className="spacer-left">
+                <SizeRating value={Number(measures['ncloc'])} />
+              </span>
             </div>
             <div className="project-card-measure-label">
               <ProjectCardLanguages distribution={measures['ncloc_language_distribution']} />

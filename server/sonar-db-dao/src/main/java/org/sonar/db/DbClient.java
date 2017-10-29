@@ -26,6 +26,7 @@ import org.sonar.db.ce.CeQueueDao;
 import org.sonar.db.ce.CeScannerContextDao;
 import org.sonar.db.ce.CeTaskCharacteristicDao;
 import org.sonar.db.ce.CeTaskInputDao;
+import org.sonar.db.component.AnalysisPropertiesDao;
 import org.sonar.db.component.BranchDao;
 import org.sonar.db.component.ComponentDao;
 import org.sonar.db.component.ComponentKeyUpdaterDao;
@@ -58,6 +59,8 @@ import org.sonar.db.qualitygate.QualityGateDao;
 import org.sonar.db.qualityprofile.ActiveRuleDao;
 import org.sonar.db.qualityprofile.DefaultQProfileDao;
 import org.sonar.db.qualityprofile.QProfileChangeDao;
+import org.sonar.db.qualityprofile.QProfileEditGroupsDao;
+import org.sonar.db.qualityprofile.QProfileEditUsersDao;
 import org.sonar.db.qualityprofile.QualityProfileDao;
 import org.sonar.db.rule.RuleDao;
 import org.sonar.db.rule.RuleRepositoryDao;
@@ -126,6 +129,9 @@ public class DbClient {
   private final EsQueueDao esQueueDao;
   private final PluginDao pluginDao;
   private final BranchDao branchDao;
+  private final AnalysisPropertiesDao analysisPropertiesDao;
+  private final QProfileEditUsersDao qProfileEditUsersDao;
+  private final QProfileEditGroupsDao qProfileEditGroupsDao;
 
   public DbClient(Database database, MyBatis myBatis, DBSessions dbSessions, Dao... daos) {
     this.database = database;
@@ -185,6 +191,9 @@ public class DbClient {
     esQueueDao = getDao(map, EsQueueDao.class);
     pluginDao = getDao(map, PluginDao.class);
     branchDao = getDao(map, BranchDao.class);
+    analysisPropertiesDao = getDao(map, AnalysisPropertiesDao.class);
+    qProfileEditUsersDao = getDao(map, QProfileEditUsersDao.class);
+    qProfileEditGroupsDao = getDao(map, QProfileEditGroupsDao.class);
   }
 
   public DbSession openSession(boolean batch) {
@@ -237,6 +246,10 @@ public class DbClient {
 
   public SnapshotDao snapshotDao() {
     return snapshotDao;
+  }
+
+  public AnalysisPropertiesDao analysisPropertiesDao() {
+    return analysisPropertiesDao;
   }
 
   public ComponentDao componentDao() {
@@ -389,6 +402,14 @@ public class DbClient {
 
   public BranchDao branchDao() {
     return branchDao;
+  }
+
+  public QProfileEditUsersDao qProfileEditUsersDao() {
+    return qProfileEditUsersDao;
+  }
+
+  public QProfileEditGroupsDao qProfileEditGroupsDao() {
+    return qProfileEditGroupsDao;
   }
 
   protected <K extends Dao> K getDao(Map<Class, Dao> map, Class<K> clazz) {

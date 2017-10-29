@@ -25,12 +25,19 @@ import org.junit.Test;
 import org.sonar.api.issue.Issue;
 import org.sonar.api.notifications.Notification;
 import org.sonar.api.notifications.NotificationChannel;
+import org.sonar.api.web.UserRole;
 import org.sonar.server.notification.NotificationDispatcher;
 import org.sonar.server.notification.NotificationDispatcherMetadata;
 import org.sonar.server.notification.NotificationManager;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.Mockito.when;
 
 public class DoNotFixNotificationDispatcherTest {
   NotificationManager notifications = mock(NotificationManager.class);
@@ -61,9 +68,10 @@ public class DoNotFixNotificationDispatcherTest {
     recipients.put("simon", emailChannel);
     recipients.put("freddy", twitterChannel);
     recipients.put("godin", twitterChannel);
-    when(notifications.findNotificationSubscribers(underTest, "struts")).thenReturn(recipients);
+    when(notifications.findSubscribedRecipientsForDispatcher(underTest, "struts", new NotificationManager.SubscriberPermissionsOnProject(UserRole.USER))).thenReturn(recipients);
 
-    Notification fpNotif = new IssueChangeNotification().setFieldValue("projectKey", "struts")
+    Notification fpNotif = new IssueChangeNotification()
+      .setFieldValue("projectKey", "struts")
       .setFieldValue("changeAuthor", "godin")
       .setFieldValue("new.resolution", Issue.RESOLUTION_FALSE_POSITIVE)
       .setFieldValue("assignee", "freddy");
@@ -81,11 +89,6 @@ public class DoNotFixNotificationDispatcherTest {
    */
   @Test
   public void ignore_other_resolutions() {
-    Multimap<String, NotificationChannel> recipients = HashMultimap.create();
-    recipients.put("simon", emailChannel);
-    recipients.put("freddy", twitterChannel);
-    when(notifications.findNotificationSubscribers(underTest, "struts")).thenReturn(recipients);
-
     Notification fixedNotif = new IssueChangeNotification().setFieldValue("projectKey", "struts")
       .setFieldValue("changeAuthor", "godin")
       .setFieldValue("new.resolution", Issue.RESOLUTION_FIXED)

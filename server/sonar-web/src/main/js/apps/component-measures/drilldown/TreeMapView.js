@@ -19,7 +19,7 @@
  */
 // @flow
 import React from 'react';
-import { AutoSizer } from 'react-virtualized';
+import AutoSizer from 'react-virtualized/dist/commonjs/AutoSizer';
 import { scaleLinear, scaleOrdinal } from 'd3-scale';
 import ColorBoxLegend from '../../../components/charts/ColorBoxLegend';
 import ColorGradientLegend from '../../../components/charts/ColorGradientLegend';
@@ -28,7 +28,7 @@ import QualifierIcon from '../../../components/icons-components/QualifierIcon';
 import TreeMap from '../../../components/charts/TreeMap';
 import { translate, translateWithParameters, getLocalizedMetricName } from '../../../helpers/l10n';
 import { formatMeasure, isDiffMetric } from '../../../helpers/measures';
-import { getComponentUrl } from '../../../helpers/urls';
+import { getProjectUrl } from '../../../helpers/urls';
 /*:: import type { Metric } from '../../../store/metrics/actions'; */
 /*:: import type { ComponentEnhanced } from '../types'; */
 /*:: import type { TreeMapItem } from '../../../components/charts/TreeMap'; */
@@ -94,7 +94,7 @@ export default class TreeMapView extends React.PureComponent {
             sizeValue
           ),
           label: component.name,
-          link: getComponentUrl(component.refKey || component.key, branch)
+          link: getProjectUrl(component.refKey || component.key, branch)
         };
       })
       .filter(Boolean);

@@ -6,14 +6,13 @@
   <parent>
     <groupId>org.sonarsource.sonarqube</groupId>
     <artifactId>sonarqube</artifactId>
-    <version>6.6-SNAPSHOT</version>
+    <version>7.0-SNAPSHOT</version>
   </parent>
   <artifactId>server</artifactId>
   <packaging>pom</packaging>
   <name>SonarQube :: Server :: Parent</name>
 
   <modules>
-    <module>sonar-cluster</module>
     <module>sonar-process</module>
     <module>sonar-main</module>
     <module>sonar-db-core</module>

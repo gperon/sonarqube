@@ -243,6 +243,7 @@
       p.scope='PRJ'
     and (p.qualifier='TRK' or p.qualifier='VW' or p.qualifier='APP')
       and p.organization_uuid = #{organizationUuid,jdbcType=VARCHAR}
+      and p.main_branch_project_uuid IS NULL
   </select>
 
   <select id="selectComponentsByQualifiers" resultType="Component">
@@ -391,12 +392,14 @@
   </select>
 
   <select id="selectProjectsFromView" resultType="String">
-    SELECT p.uuid FROM projects technical_projects
-    INNER JOIN projects p on p.uuid=technical_projects.copy_component_uuid AND p.enabled=${_true}
+    select p.copy_component_uuid
+    from projects p
     where
-      technical_projects.enabled=${_true}
-      AND technical_projects.project_uuid = #{projectViewUuid,jdbcType=VARCHAR}
-      AND technical_projects.module_uuid_path LIKE #{viewUuidLikeQuery,jdbcType=VARCHAR}
+      p.enabled = ${_true}
+      and p.project_uuid = #{projectViewUuid,jdbcType=VARCHAR}
+      and p.module_uuid_path like #{viewUuidLikeQuery,jdbcType=VARCHAR}
+      and p.qualifier = 'TRK'
+      and p.copy_component_uuid is not null
   </select>
 
   <select id="selectComponentsFromProjectKeyAndScope" parameterType="map" resultType="Component">
@@ -412,6 +415,15 @@
         AND p.scope=#{scope,jdbcType=VARCHAR}
       </if>
     </where>
+  </select>
+  
+  <select id="selectUuidsByKeyFromProjectKey" parameterType="string" resultType="KeyWithUuid">
+    SELECT
+     p.kee, p.uuid
+    FROM 
+      projects p
+    INNER JOIN 
+      projects root ON root.uuid=p.project_uuid AND root.kee=#{projectKey,jdbcType=VARCHAR}
   </select>
 
   <select id="selectGhostProjects" parameterType="map" resultType="Component">
@@ -644,5 +656,16 @@
   <delete id="delete" parameterType="long">
     DELETE FROM projects WHERE id=#{id,jdbcType=BIGINT}
   </delete>
+
+  <select id="selectComponentKeysHavingIssuesToMerge" resultType="KeyWithUuid">
+    SELECT DISTINCT p.kee as kee, p.uuid as uuid FROM projects p
+    JOIN issues i
+      ON p.uuid = i.component_uuid
+    JOIN project_branches b
+      ON i.project_uuid = b.uuid
+      AND b.branch_type = 'SHORT'
+      AND b.merge_branch_uuid = #{mergeBranchUuid,jdbcType=VARCHAR}
+      AND i.status != 'CLOSED'
+  </select>
 
 </mapper>

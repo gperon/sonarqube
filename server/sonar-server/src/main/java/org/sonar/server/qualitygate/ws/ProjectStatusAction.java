@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import org.sonar.api.measures.CoreMetrics;
+import org.sonar.api.server.ws.Change;
 import org.sonar.api.server.ws.Request;
 import org.sonar.api.server.ws.Response;
 import org.sonar.api.server.ws.WebService;
@@ -59,8 +60,7 @@ public class ProjectStatusAction implements QualityGatesWsAction {
   private static final String QG_STATUSES_ONE_LINE = Arrays.stream(ProjectStatusWsResponse.Status.values())
     .map(Enum::toString)
     .collect(Collectors.joining(", "));
-  private static final String MSG_ONE_PARAMETER_ONLY = String.format("One (and only one) of the following parameters must be provided '%s', '%s', '%s'",
-    PARAM_ANALYSIS_ID, PARAM_PROJECT_ID, PARAM_PROJECT_KEY);
+  private static final String MSG_ONE_PARAMETER_ONLY = String.format("Either '%s', '%s' or '%s' must be provided", PARAM_ANALYSIS_ID, PARAM_PROJECT_ID, PARAM_PROJECT_KEY);
 
   private final DbClient dbClient;
   private final ComponentFinder componentFinder;
@@ -87,7 +87,10 @@ public class ProjectStatusAction implements QualityGatesWsAction {
         "</ul>", QG_STATUSES_ONE_LINE, ProjectStatusWsResponse.Status.NONE))
       .setResponseExample(getClass().getResource("project_status-example.json"))
       .setSince("5.3")
-      .setHandler(this);
+      .setHandler(this)
+      .setChangelog(
+        new Change("6.4", "The field 'ignoredConditions' is added to the response")
+      );
 
     action.createParam(PARAM_ANALYSIS_ID)
       .setDescription("Analysis id")

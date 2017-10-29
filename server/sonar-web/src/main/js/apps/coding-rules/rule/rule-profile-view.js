@@ -76,6 +76,8 @@ export default Marionette.ItemView.extend({
         'coding_rules.revert_to_parent_definition.confirm',
         this.getParent().name
       ),
+      yesLabel: translate('yes'),
+      noLabel: translate('cancel'),
       yesHandler() {
         return $.ajax({
           type: 'POST',
@@ -98,6 +100,8 @@ export default Marionette.ItemView.extend({
     confirmDialog({
       title: translate('coding_rules.deactivate'),
       html: translateWithParameters('coding_rules.deactivate.confirm'),
+      yesLabel: translate('yes'),
+      noLabel: translate('cancel'),
       yesHandler() {
         return $.ajax({
           type: 'POST',
@@ -164,12 +168,13 @@ export default Marionette.ItemView.extend({
     return {
       ...Marionette.ItemView.prototype.serializeData.apply(this, arguments),
       parent,
+      actions: this.model.get('actions') || {},
       canWrite: this.options.app.canWrite,
       parameters: this.enhanceParameters(parent),
       templateKey: this.options.rule.get('templateKey'),
       isTemplate: this.options.rule.get('isTemplate'),
-      profilePath: this.getProfilePath(this.model.get('lang'), this.model.get('name')),
-      parentProfilePath: parent && this.getProfilePath(parent.lang, parent.name)
+      profilePath: this.getProfilePath(this.model.get('language'), this.model.get('name')),
+      parentProfilePath: parent && this.getProfilePath(parent.language, parent.name)
     };
   }
 });

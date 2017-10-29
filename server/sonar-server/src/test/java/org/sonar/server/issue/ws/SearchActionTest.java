@@ -19,6 +19,7 @@
  */
 package org.sonar.server.issue.ws;
 
+import java.time.Clock;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -49,7 +50,6 @@ import org.sonar.db.user.UserDto;
 import org.sonar.server.es.EsTester;
 import org.sonar.server.es.SearchOptions;
 import org.sonar.server.es.StartupIndexer;
-import org.sonar.server.issue.ActionFinder;
 import org.sonar.server.issue.IssueFieldsSetter;
 import org.sonar.server.issue.IssueQuery;
 import org.sonar.server.issue.IssueQueryFactory;
@@ -75,6 +75,7 @@ import static org.sonarqube.ws.client.issue.IssuesWsParameters.DEPRECATED_FACET_
 import static org.sonarqube.ws.client.issue.IssuesWsParameters.FACET_MODE_EFFORT;
 import static org.sonarqube.ws.client.issue.IssuesWsParameters.PARAM_ADDITIONAL_FIELDS;
 import static org.sonarqube.ws.client.issue.IssuesWsParameters.PARAM_COMPONENTS;
+import static org.sonarqube.ws.client.issue.IssuesWsParameters.PARAM_COMPONENT_KEYS;
 import static org.sonarqube.ws.client.issue.IssuesWsParameters.PARAM_CREATED_AFTER;
 import static org.sonarqube.ws.client.issue.IssuesWsParameters.PARAM_HIDE_COMMENTS;
 import static org.sonarqube.ws.client.issue.IssuesWsParameters.PARAM_PAGE_INDEX;
@@ -95,13 +96,13 @@ public class SearchActionTest {
   private DbSession session = db.getSession();
   private IssueIndex issueIndex = new IssueIndex(es.client(), System2.INSTANCE, userSessionRule, new AuthorizationTypeSupport(userSessionRule));
   private IssueIndexer issueIndexer = new IssueIndexer(es.client(), dbClient, new IssueIteratorFactory(dbClient));
-  private IssueQueryFactory issueQueryFactory = new IssueQueryFactory(dbClient, System2.INSTANCE, userSessionRule);
+  private IssueQueryFactory issueQueryFactory = new IssueQueryFactory(dbClient, Clock.systemUTC(), userSessionRule);
   private IssueFieldsSetter issueFieldsSetter = new IssueFieldsSetter();
   private IssueWorkflow issueWorkflow = new IssueWorkflow(new FunctionExecutor(issueFieldsSetter), issueFieldsSetter);
-  private SearchResponseLoader searchResponseLoader = new SearchResponseLoader(userSessionRule, dbClient, new ActionFinder(userSessionRule), new TransitionService(userSessionRule, issueWorkflow));
+  private SearchResponseLoader searchResponseLoader = new SearchResponseLoader(userSessionRule, dbClient, new TransitionService(userSessionRule, issueWorkflow));
   private Languages languages = new Languages();
   private SearchResponseFormat searchResponseFormat = new SearchResponseFormat(new Durations(), new WsResponseCommonFormat(languages), languages, new AvatarResolverImpl());
-  private WsActionTester ws = new WsActionTester(new SearchAction(userSessionRule, issueIndex, issueQueryFactory, searchResponseLoader, searchResponseFormat));
+  private WsActionTester ws = new WsActionTester(new SearchAction(userSessionRule, issueIndex, issueQueryFactory, searchResponseLoader, searchResponseFormat, System2.INSTANCE));
   private OrganizationDto defaultOrganization;
   private OrganizationDto otherOrganization1;
   private OrganizationDto otherOrganization2;
@@ -143,6 +144,11 @@ public class SearchActionTest {
     assertThat(branch.isInternal()).isTrue();
     assertThat(branch.isRequired()).isFalse();
     assertThat(branch.since()).isEqualTo("6.6");
+
+    WebService.Param projectUuids = def.param("projectUuids");
+    assertThat(projectUuids.description()).isEqualTo("To retrieve issues associated to a specific list of projects (comma-separated list of project IDs). " +
+      "This parameter is mostly used by the Issues page, please prefer usage of the componentKeys parameter. " +
+      "Portfolios are not supported. If this parameter is set, 'projects' must not be set.");
   }
 
   @Test
@@ -165,6 +171,8 @@ public class SearchActionTest {
     IssueDto issue = IssueTesting.newDto(newRule(), file, project)
       .setKee("82fd47d4-b650-4037-80bc-7b112bd4eac2")
       .setEffort(10L)
+      .setLine(42)
+      .setChecksum("a227e508d6646b55a086ee11d63b21e9")
       .setMessage("the message")
       .setStatus(Issue.STATUS_RESOLVED)
       .setResolution(Issue.RESOLUTION_FIXED)
@@ -178,8 +186,7 @@ public class SearchActionTest {
     session.commit();
     issueIndexer.indexOnStartup(issueIndexer.getIndexTypes());
 
-    ws.newRequest().execute()
-      .assertJson(this.getClass(), "response_contains_all_fields_except_additional_fields.json");
+    ws.newRequest().execute().assertJson(this.getClass(), "response_contains_all_fields_except_additional_fields.json");
   }
 
   @Test
@@ -200,14 +207,14 @@ public class SearchActionTest {
         .setChangeData("*My comment*")
         .setChangeType(IssueChangeDto.TYPE_COMMENT)
         .setUserLogin("john")
-        .setCreatedAt(DateUtils.parseDateTime("2014-09-09T12:00:00+0000").getTime()));
+        .setIssueChangeCreationDate(DateUtils.parseDateTime("2014-09-09T12:00:00+0000").getTime()));
     dbClient.issueChangeDao().insert(session,
       new IssueChangeDto().setIssueKey(issue.getKey())
         .setKey("COMMENT-ABCE")
         .setChangeData("Another comment")
         .setChangeType(IssueChangeDto.TYPE_COMMENT)
         .setUserLogin("fabrice")
-        .setCreatedAt(DateUtils.parseDateTime("2014-09-10T12:00:00+0000").getTime()));
+        .setIssueChangeCreationDate(DateUtils.parseDateTime("2014-09-10T12:00:00+0000").getTime()));
     session.commit();
     indexIssues();
 
@@ -375,6 +382,7 @@ public class SearchActionTest {
     userSessionRule.logIn("john");
     ws.newRequest()
       .setParam("resolved", "false")
+      .setParam(PARAM_COMPONENT_KEYS, project.getKey())
       .setParam(WebService.Param.FACETS, "statuses,severities,resolutions,projectUuids,rules,fileUuids,assignees,languages,actionPlans,types")
       .execute()
       .assertJson(this.getClass(), "display_facets.json");
@@ -399,6 +407,7 @@ public class SearchActionTest {
     userSessionRule.logIn("john");
     ws.newRequest()
       .setParam("resolved", "false")
+      .setParam(PARAM_COMPONENT_KEYS, project.getKey())
       .setParam(WebService.Param.FACETS, "statuses,severities,resolutions,projectUuids,rules,fileUuids,assignees,languages,actionPlans")
       .setParam("facetMode", FACET_MODE_EFFORT)
       .execute()
@@ -423,6 +432,7 @@ public class SearchActionTest {
 
     userSessionRule.logIn("john");
     ws.newRequest()
+      .setParam(PARAM_COMPONENT_KEYS, project.getKey())
       .setParam("resolved", "false")
       .setParam("severities", "MAJOR,MINOR")
       .setParam("languages", "xoo,polop,palap")

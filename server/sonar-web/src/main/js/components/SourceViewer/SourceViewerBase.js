@@ -39,10 +39,12 @@ import {
 /*:: import type { LinearIssueLocation } from './helpers/indexing'; */
 import {
   getComponentForSourceViewer,
+  getComponentData,
   getSources,
   getDuplications,
   getTests
 } from '../../api/components';
+import { parseDate } from '../../helpers/dates';
 import { translate } from '../../helpers/l10n';
 import { scrollToElement } from '../../helpers/scrolling';
 /*:: import type { SourceLine } from './types'; */
@@ -57,7 +59,9 @@ type Props = {
   branch?: string,
   component: string,
   displayAllIssues: boolean,
-  filterLine?: (line: SourceLine) => boolean,
+  displayIssueLocationsCount?: boolean;
+  displayIssueLocationsLink?: boolean;
+  displayLocationMarkers?: boolean;
   highlightedLine?: number,
   highlightedLocations?: Array<FlowLocation>,
   highlightedLocationMessage?: { index: number, text: string },
@@ -114,7 +118,13 @@ type State = {
 const LINES = 500;
 
 function loadComponent(key /*: string */, branch /*: string | void */) /*: Promise<*> */ {
-  return getComponentForSourceViewer(key, branch);
+  return Promise.all([
+    getComponentForSourceViewer(key, branch),
+    getComponentData(key, branch)
+  ]).then(([component, data]) => ({
+    ...component,
+    leakPeriodDate: data.leakPeriodDate && parseDate(data.leakPeriodDate)
+  }));
 }
 
 function loadSources(
@@ -134,6 +144,9 @@ export default class SourceViewerBase extends React.PureComponent {
 
   static defaultProps = {
     displayAllIssues: false,
+    displayIssueLocationsCount: true,
+    displayIssueLocationsLink: true,
+    displayLocationMarkers: true,
     loadComponent,
     loadIssues,
     loadSources
@@ -239,6 +252,8 @@ export default class SourceViewerBase extends React.PureComponent {
               issuesByLine: issuesByLine(issues),
               issueLocationsByLine: locationsByLine(issues),
               loading: false,
+              notAccessible: false,
+              notExist: false,
               hasSourcesAfter: sources.length > LINES,
               sources: this.computeCoverageStatus(finalSources),
               sourceRemoved: false,
@@ -256,8 +271,12 @@ export default class SourceViewerBase extends React.PureComponent {
 
     const onFailLoadComponent = ({ response }) => {
       // TODO handle other statuses
-      if (this.mounted && response.status === 404) {
-        this.setState({ loading: false, notExist: true });
+      if (this.mounted) {
+        if (response.status === 403) {
+          this.setState({ loading: false, notAccessible: true });
+        } else if (response.status === 404) {
+          this.setState({ loading: false, notExist: true });
+        }
       }
     };
 
@@ -274,7 +293,9 @@ export default class SourceViewerBase extends React.PureComponent {
 
     const onResolve = component => {
       this.props.onReceiveComponent(component);
-      this.loadSources().then(
+      const sourcesRequest =
+        component.q === 'FIL' || component.q === 'UTS' ? this.loadSources() : Promise.resolve([]);
+      sourcesRequest.then(
         sources => loadIssues(component, sources),
         response => onFailLoadSources(response, component)
       );
@@ -312,7 +333,11 @@ export default class SourceViewerBase extends React.PureComponent {
     const firstSourceLine = this.state.sources[0];
     const lastSourceLine = this.state.sources[this.state.sources.length - 1];
     this.props
-      .loadIssues(this.props.component, firstSourceLine.line, lastSourceLine.line)
+      .loadIssues(
+        this.props.component,
+        firstSourceLine && firstSourceLine.line,
+        lastSourceLine && lastSourceLine.line
+      )
       .then(issues => {
         if (this.mounted) {
           this.setState({
@@ -576,17 +601,29 @@ export default class SourceViewerBase extends React.PureComponent {
     }
   };
 
+  handleFilterLine = (line /*: SourceLine */) => {
+    const { component } = this.state;
+    const leakPeriodDate = component && component.leakPeriodDate;
+    return leakPeriodDate
+      ? line.scmDate != null && parseDate(line.scmDate) >= leakPeriodDate
+      : false;
+  };
+
   renderCode(sources /*: Array<SourceLine> */) {
     const hasSourcesBefore = sources.length > 0 && sources[0].line > 1;
     return (
       <SourceViewerCode
+        branch={this.props.branch}
         displayAllIssues={this.props.displayAllIssues}
+        displayIssueLocationsCount={this.props.displayIssueLocationsCount}
+        displayIssueLocationsLink={this.props.displayIssueLocationsLink}
+        displayLocationMarkers={this.props.displayLocationMarkers}
         duplications={this.state.duplications}
         duplicationsByLine={this.state.duplicationsByLine}
         duplicatedFiles={this.state.duplicatedFiles}
         hasSourcesBefore={hasSourcesBefore}
         hasSourcesAfter={this.state.hasSourcesAfter}
-        filterLine={this.props.filterLine}
+        filterLine={this.handleFilterLine}
         highlightedLine={this.state.highlightedLine}
         highlightedLocations={this.props.highlightedLocations}
         highlightedLocationMessage={this.props.highlightedLocationMessage}
@@ -636,6 +673,14 @@ export default class SourceViewerBase extends React.PureComponent {
       );
     }
 
+    if (notAccessible) {
+      return (
+        <div className="alert alert-warning spacer-top">
+          {translate('code_viewer.no_source_code_displayed_due_to_security')}
+        </div>
+      );
+    }
+
     if (component == null) {
       return null;
     }
@@ -644,8 +689,6 @@ export default class SourceViewerBase extends React.PureComponent {
       'source-duplications-expanded': this.state.displayDuplications
     });
 
-    const displaySources = !notAccessible && !sourceRemoved;
-
     return (
       <div className={className} ref={node => (this.node = node)}>
         <SourceViewerHeader
@@ -653,17 +696,12 @@ export default class SourceViewerBase extends React.PureComponent {
           component={this.state.component}
           showMeasures={this.showMeasures}
         />
-        {notAccessible && (
-          <div className="alert alert-warning spacer-top">
-            {translate('code_viewer.no_source_code_displayed_due_to_security')}
-          </div>
-        )}
         {sourceRemoved && (
           <div className="alert alert-warning spacer-top">
             {translate('code_viewer.no_source_code_displayed_due_to_source_removed')}
           </div>
         )}
-        {displaySources && sources != null && this.renderCode(sources)}
+        {!sourceRemoved && sources != null && this.renderCode(sources)}
       </div>
     );
   }

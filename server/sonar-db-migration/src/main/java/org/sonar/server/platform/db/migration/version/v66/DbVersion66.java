@@ -27,7 +27,6 @@ public class DbVersion66 implements DbVersion {
   @Override
   public void addSteps(MigrationStepRegistry registry) {
     registry
-      .add(1800, "Add incremental column to snapshots table", AddIncrementalColumnToSnapshotsTable.class)
       .add(1801, "Create table CE task characteristics", CreateTableCeTaskCharacteristics.class)
       .add(1802, "Delete leak settings on views", DeleteLeakSettingsOnViews.class)
       .add(1803, "Fix empty USERS.EXTERNAL_IDENTITY and USERS.EXTERNAL_IDENTITY_PROVIDER", FixEmptyIdentityProviderInUsers.class)
@@ -37,6 +36,10 @@ public class DbVersion66 implements DbVersion {
       .add(1807, "Add on project_branches key", AddIndexOnProjectBranchesKey.class)
       .add(1808, "Add branch column to projects table", AddBranchColumnToProjectsTable.class)
       .add(1809, "Populate project_branches with existing main branches", PopulateMainProjectBranches.class)
+      .add(1810, "Add ce_activity.error_type", AddErrorTypeColumnToCeActivityTable.class)
+      .add(1811, "Create table qprofile_edit_users", CreateTableQProfileEditUsers.class)
+      .add(1812, "Create table qprofile_edit_groups", CreateTableQProfileEditGroups.class)
+      .add(1814, "Purge table properties", PurgeTableProperties.class)
     ;
   }
 }

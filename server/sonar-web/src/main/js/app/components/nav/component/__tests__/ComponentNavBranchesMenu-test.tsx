@@ -29,16 +29,16 @@ import {
 } from '../../../../types';
 import { elementKeydown } from '../../../../../helpers/testUtils';
 
-const project = { key: 'component' } as Component;
+const component = { key: 'component' } as Component;
 
 it('renders list', () => {
   expect(
     shallow(
       <ComponentNavBranchesMenu
         branches={[mainBranch(), shortBranch('foo'), longBranch('bar'), shortBranch('baz', true)]}
+        component={component}
         currentBranch={mainBranch()}
         onClose={jest.fn()}
-        project={project}
       />
     )
   ).toMatchSnapshot();
@@ -48,9 +48,9 @@ it('searches', () => {
   const wrapper = shallow(
     <ComponentNavBranchesMenu
       branches={[mainBranch(), shortBranch('foo'), shortBranch('foobar'), longBranch('bar')]}
+      component={component}
       currentBranch={mainBranch()}
       onClose={jest.fn()}
-      project={project}
     />
   );
   wrapper.setState({ query: 'bar' });
@@ -61,9 +61,9 @@ it('selects next & previous', () => {
   const wrapper = shallow(
     <ComponentNavBranchesMenu
       branches={[mainBranch(), shortBranch('foo'), shortBranch('foobar'), longBranch('bar')]}
+      component={component}
       currentBranch={mainBranch()}
       onClose={jest.fn()}
-      project={project}
     />
   );
   elementKeydown(wrapper.find('input'), 40);

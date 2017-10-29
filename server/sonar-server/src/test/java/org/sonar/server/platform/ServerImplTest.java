@@ -46,16 +46,20 @@ public class ServerImplTest {
   public TemporaryFolder temp = new TemporaryFolder();
 
   @Test
+  public void isDev_always_returns_false() {
+    assertThat(underTest.isDev()).isFalse();
+  }
+
+  @Test
   public void test_url_information() {
     when(urlSettings.getContextPath()).thenReturn("/foo");
     when(urlSettings.getBaseUrl()).thenReturn("http://localhost:9000/foo");
-    when(urlSettings.isDev()).thenReturn(true);
     when(urlSettings.isSecured()).thenReturn(false);
 
     assertThat(underTest.getContextPath()).isEqualTo("/foo");
     assertThat(underTest.getURL()).isEqualTo("http://localhost:9000/foo");
     assertThat(underTest.getPublicRootUrl()).isEqualTo("http://localhost:9000/foo");
-    assertThat(underTest.isDev()).isTrue();
+    assertThat(underTest.isDev()).isFalse();
     assertThat(underTest.isSecured()).isFalse();
   }
 
@@ -63,10 +67,7 @@ public class ServerImplTest {
   public void test_file_system_information() throws IOException {
     File home = temp.newFolder();
     when(fs.getHomeDir()).thenReturn(home);
-    File deploy = temp.newFolder();
-    when(fs.getDeployDir()).thenReturn(deploy);
 
-    assertThat(underTest.getDeployDir()).isEqualTo(deploy);
     assertThat(underTest.getRootDir()).isEqualTo(home);
   }
 
@@ -80,18 +81,17 @@ public class ServerImplTest {
 
   @Test
   public void test_id() throws IOException {
-    settings.setProperty(CoreProperties.SERVER_ID, "an_id");
+    settings.setProperty(CoreProperties.SERVER_ID, "foo");
 
-    assertThat(underTest.getId()).isEqualTo("an_id");
+    assertThat(underTest.getId()).isEqualTo("foo");
+    assertThat(underTest.getPermanentServerId()).isEqualTo("foo");
   }
 
   @Test
-  public void test_runtime() throws IOException {
-    settings.setProperty(CoreProperties.PERMANENT_SERVER_ID, "an_id");
+  public void test_getVersion() throws IOException {
     Version version = Version.create(6, 1);
     when(runtime.getApiVersion()).thenReturn(version);
 
     assertThat(underTest.getVersion()).isEqualTo(version.toString());
-    assertThat(underTest.getPermanentServerId()).isEqualTo("an_id");
   }
 }

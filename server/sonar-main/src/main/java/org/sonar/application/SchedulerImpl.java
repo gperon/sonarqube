@@ -28,14 +28,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.sonar.NetworkUtils;
-import org.sonar.api.utils.System2;
-import org.sonar.application.cluster.ClusterAppState;
+import org.sonar.application.command.AbstractCommand;
+import org.sonar.application.command.CommandFactory;
 import org.sonar.application.config.AppSettings;
 import org.sonar.application.config.ClusterSettings;
-import org.sonar.application.health.HealthStateSharing;
-import org.sonar.application.health.HealthStateSharingImpl;
-import org.sonar.application.health.SearchNodeHealthProvider;
 import org.sonar.application.process.Lifecycle;
 import org.sonar.application.process.ProcessEventListener;
 import org.sonar.application.process.ProcessLauncher;
@@ -43,9 +39,6 @@ import org.sonar.application.process.ProcessLifecycleListener;
 import org.sonar.application.process.ProcessMonitor;
 import org.sonar.application.process.SQProcess;
 import org.sonar.process.ProcessId;
-import org.sonar.process.command.CommandFactory;
-import org.sonar.process.command.EsCommand;
-import org.sonar.process.command.JavaCommand;
 
 public class SchedulerImpl implements Scheduler, ProcessEventListener, ProcessLifecycleListener, AppStateListener {
 
@@ -59,6 +52,7 @@ public class SchedulerImpl implements Scheduler, ProcessEventListener, ProcessLi
   private final NodeLifecycle nodeLifecycle = new NodeLifecycle();
 
   private final CountDownLatch keepAlive = new CountDownLatch(1);
+  private final AtomicBoolean firstWaitingEsLog = new AtomicBoolean(true);
   private final AtomicBoolean restartRequested = new AtomicBoolean(false);
   private final AtomicBoolean restartDisabled = new AtomicBoolean(false);
   private final EnumMap<ProcessId, SQProcess> processesById = new EnumMap<>(ProcessId.class);
@@ -66,7 +60,6 @@ public class SchedulerImpl implements Scheduler, ProcessEventListener, ProcessLi
   private final AtomicInteger stopCountDown = new AtomicInteger(0);
   private StopperThread stopperThread;
   private RestarterThread restarterThread;
-  private HealthStateSharing healthStateSharing;
   private long processWatcherDelayMs = SQProcess.DEFAULT_WATCHER_DELAY_MS;
 
   public SchedulerImpl(AppSettings settings, AppReloader appReloader, CommandFactory commandFactory,
@@ -106,7 +99,6 @@ public class SchedulerImpl implements Scheduler, ProcessEventListener, ProcessLi
   }
 
   private void tryToStartAll() {
-    tryToStartHealthStateSharing();
     tryToStartEs();
     tryToStartWeb();
     tryToStartCe();
@@ -115,23 +107,29 @@ public class SchedulerImpl implements Scheduler, ProcessEventListener, ProcessLi
   private void tryToStartEs() {
     SQProcess process = processesById.get(ProcessId.ELASTICSEARCH);
     if (process != null) {
-      tryToStartEsProcess(process, commandFactory::createEsCommand);
+      tryToStartProcess(process, commandFactory::createEsCommand);
     }
   }
 
   private void tryToStartWeb() {
     SQProcess process = processesById.get(ProcessId.WEB_SERVER);
-    if (process == null || !isEsClientStartable()) {
+    if (process == null) {
+      return;
+    }
+    if (!isEsClientStartable()) {
+      if (firstWaitingEsLog.getAndSet(false)) {
+        LOG.info("Waiting for Elasticsearch to be up and running");
+      }
       return;
     }
     if (appState.isOperational(ProcessId.WEB_SERVER, false)) {
-      tryToStartJavaProcess(process, () -> commandFactory.createWebCommand(false));
+      tryToStartProcess(process, () -> commandFactory.createWebCommand(false));
     } else if (appState.tryToLockWebLeader()) {
-      tryToStartJavaProcess(process, () -> commandFactory.createWebCommand(true));
+      tryToStartProcess(process, () -> commandFactory.createWebCommand(true));
     } else {
       Optional<String> leader = appState.getLeaderHostName();
       if (leader.isPresent()) {
-        LOG.info("Waiting for initialization from " + leader.get());
+        LOG.info("Waiting for initialization from {}", leader.get());
       } else {
         LOG.error("Initialization failed. All nodes must be restarted");
       }
@@ -140,20 +138,8 @@ public class SchedulerImpl implements Scheduler, ProcessEventListener, ProcessLi
 
   private void tryToStartCe() {
     SQProcess process = processesById.get(ProcessId.COMPUTE_ENGINE);
-    if (process != null && appState.isOperational(ProcessId.WEB_SERVER, false) && isEsClientStartable()) {
-      tryToStartJavaProcess(process, commandFactory::createCeCommand);
-    }
-  }
-
-  private void tryToStartHealthStateSharing() {
-    if (healthStateSharing == null
-      && appState instanceof ClusterAppState
-      && ClusterSettings.isLocalElasticsearchEnabled(settings)) {
-      ClusterAppState clusterAppState = (ClusterAppState) appState;
-      this.healthStateSharing = new HealthStateSharingImpl(
-        clusterAppState.getHazelcastClient(),
-        new SearchNodeHealthProvider(settings.getProps(), System2.INSTANCE, clusterAppState, NetworkUtils.INSTANCE));
-      this.healthStateSharing.start();
+    if (process != null && appState.isOperational(ProcessId.WEB_SERVER, true) && isEsClientStartable()) {
+      tryToStartProcess(process, commandFactory::createCeCommand);
     }
   }
 
@@ -162,16 +148,9 @@ public class SchedulerImpl implements Scheduler, ProcessEventListener, ProcessLi
     return appState.isOperational(ProcessId.ELASTICSEARCH, requireLocalEs);
   }
 
-  private void tryToStartJavaProcess(SQProcess process, Supplier<JavaCommand> commandSupplier) {
+  private void tryToStartProcess(SQProcess process, Supplier<AbstractCommand> commandSupplier) {
     tryToStart(process, () -> {
-      JavaCommand command = commandSupplier.get();
-      return processLauncher.launch(command);
-    });
-  }
-
-  private void tryToStartEsProcess(SQProcess process, Supplier<EsCommand> commandSupplier) {
-    tryToStart(process, () -> {
-      EsCommand command = commandSupplier.get();
+      AbstractCommand command = commandSupplier.get();
       return processLauncher.launch(command);
     });
   }
@@ -191,7 +170,6 @@ public class SchedulerImpl implements Scheduler, ProcessEventListener, ProcessLi
     stopProcess(ProcessId.COMPUTE_ENGINE);
     stopProcess(ProcessId.WEB_SERVER);
     stopProcess(ProcessId.ELASTICSEARCH);
-    stopHealthStateSharing();
   }
 
   /**
@@ -202,12 +180,6 @@ public class SchedulerImpl implements Scheduler, ProcessEventListener, ProcessLi
     SQProcess process = processesById.get(processId);
     if (process != null) {
       process.stop(1, TimeUnit.MINUTES);
-    }
-  }
-
-  private void stopHealthStateSharing() {
-    if (healthStateSharing != null) {
-      healthStateSharing.stop();
     }
   }
 

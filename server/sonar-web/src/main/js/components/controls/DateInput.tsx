@@ -28,6 +28,9 @@ interface Props {
   className?: string;
   format?: string;
   inputClassName?: string;
+  // see http://api.jqueryui.com/datepicker/#option-maxDate for details
+  maxDate?: Date | string | number;
+  minDate?: Date | string | number;
   name: string;
   onChange: (value?: string) => void;
   placeholder: string;
@@ -38,11 +41,23 @@ export default class DateInput extends React.PureComponent<Props> {
   input: HTMLInputElement;
 
   static defaultProps = {
-    format: 'yy-mm-dd'
+    format: 'yy-mm-dd',
+    maxDate: '+0'
   };
 
   componentDidMount() {
     this.attachDatePicker();
+  }
+
+  componentDidUpdate(prevProps: Props) {
+    if ($.fn && ($.fn as any).datepicker && this.input) {
+      if (prevProps.maxDate !== this.props.maxDate) {
+        ($(this.input) as any).datepicker('option', { maxDate: this.props.maxDate });
+      }
+      if (prevProps.minDate !== this.props.minDate) {
+        ($(this.input) as any).datepicker('option', { minDate: this.props.minDate });
+      }
+    }
   }
 
   handleChange = () => {
@@ -61,6 +76,8 @@ export default class DateInput extends React.PureComponent<Props> {
       dateFormat: this.props.format,
       changeMonth: true,
       changeYear: true,
+      maxDate: this.props.maxDate,
+      minDate: this.props.minDate,
       onSelect: this.handleChange
     };
 

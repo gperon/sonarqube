@@ -20,17 +20,34 @@
 // @flow
 import React from 'react';
 import PropTypes from 'prop-types';
-import { groupBy, sortBy } from 'lodash';
+import { groupBy, isEqual, sortBy } from 'lodash';
 import DefinitionsList from './DefinitionsList';
 import EmailForm from './EmailForm';
 import { getSubCategoryName, getSubCategoryDescription } from '../utils';
 
 export default class SubCategoryDefinitionsList extends React.PureComponent {
   static propTypes = {
-    branch: PropTypes.string,
     component: PropTypes.object,
+    fetchValues: PropTypes.func,
     settings: PropTypes.array.isRequired
   };
+
+  componentDidMount() {
+    this.fetchValues();
+  }
+
+  componentDidUpdate(prevProps /*: Object */) {
+    const prevKeys = prevProps.settings.map(setting => setting.definition.key);
+    const keys = this.props.settings.map(setting => setting.definition.key);
+    if (prevProps.component !== this.props.component || !isEqual(prevKeys, keys)) {
+      this.fetchValues();
+    }
+  }
+
+  fetchValues() {
+    const keys = this.props.settings.map(setting => setting.definition.key).join();
+    this.props.fetchValues(keys, this.props.component && this.props.component.key);
+  }
 
   renderEmailForm(subCategoryKey /*: string */) {
     const isEmailSettings = this.props.category === 'general' && subCategoryKey === 'email';
@@ -63,7 +80,6 @@ export default class SubCategoryDefinitionsList extends React.PureComponent {
               />
             )}
             <DefinitionsList
-              branch={this.props.branch}
               component={this.props.component}
               settings={bySubCategory[subCategory.key]}
             />

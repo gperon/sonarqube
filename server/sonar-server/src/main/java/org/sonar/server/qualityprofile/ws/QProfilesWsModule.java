@@ -25,15 +25,15 @@ public class QProfilesWsModule extends Module {
   @Override
   protected void configureModule() {
     add(
-      QProfileWsSupport.class,
       AddProjectAction.class,
+      AddGroupAction.class,
+      AddUserAction.class,
       BackupAction.class,
       ActivateRulesAction.class,
       DeactivateRulesAction.class,
       CompareAction.class,
       CopyAction.class,
       ChangelogAction.class,
-      ChangelogLoader.class,
       ChangeParentAction.class,
       CreateAction.class,
       DeleteAction.class,
@@ -42,16 +42,21 @@ public class QProfilesWsModule extends Module {
       ImportersAction.class,
       InheritanceAction.class,
       QProfilesWs.class,
+      QProfileWsSupport.class,
       ProjectsAction.class,
       RenameAction.class,
       RemoveProjectAction.class,
+      RemoveGroupAction.class,
+      RemoveUserAction.class,
       RestoreAction.class,
       RestoreBuiltInAction.class,
       ActivateRuleAction.class,
       DeactivateRuleAction.class,
       SearchAction.class,
+      SearchGroupsAction.class,
+      SearchUsersAction.class,
       SetDefaultAction.class,
       ShowAction.class
-      );
+    );
   }
 }

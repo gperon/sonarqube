@@ -20,22 +20,22 @@
 package org.sonar.server.issue.ws;
 
 import org.sonar.core.platform.Module;
-import org.sonar.server.issue.ActionFinder;
 import org.sonar.server.issue.IssueFieldsSetter;
 import org.sonar.server.issue.IssueFinder;
 import org.sonar.server.issue.IssueQueryFactory;
 import org.sonar.server.issue.IssueUpdater;
 import org.sonar.server.issue.ServerIssueStorage;
 import org.sonar.server.issue.TransitionService;
+import org.sonar.server.issue.webhook.IssueChangeWebhookImpl;
 import org.sonar.server.issue.workflow.FunctionExecutor;
 import org.sonar.server.issue.workflow.IssueWorkflow;
+import org.sonar.server.settings.ProjectConfigurationLoaderImpl;
 import org.sonar.server.ws.WsResponseCommonFormat;
 
 public class IssueWsModule extends Module {
   @Override
   protected void configureModule() {
     add(
-      ActionFinder.class,
       IssueUpdater.class,
       IssueFinder.class,
       TransitionService.class,
@@ -63,6 +63,8 @@ public class IssueWsModule extends Module {
       ComponentTagsAction.class,
       AuthorsAction.class,
       ChangelogAction.class,
-      BulkChangeAction.class);
+      BulkChangeAction.class,
+      ProjectConfigurationLoaderImpl.class,
+      IssueChangeWebhookImpl.class);
   }
 }

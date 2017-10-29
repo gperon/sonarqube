@@ -34,6 +34,7 @@ import org.sonar.api.resources.Languages;
 import org.sonar.api.resources.ResourceTypes;
 import org.sonar.api.rules.AnnotationRuleParser;
 import org.sonar.api.rules.XMLRuleParser;
+import org.sonar.api.server.profile.BuiltInQualityProfileAnnotationLoader;
 import org.sonar.api.server.rule.RulesDefinitionXmlLoader;
 import org.sonar.api.utils.Durations;
 import org.sonar.api.utils.System2;
@@ -48,6 +49,7 @@ import org.sonar.ce.StandaloneCeDistributedInformation;
 import org.sonar.ce.cleaning.CeCleaningModule;
 import org.sonar.ce.db.ReadOnlyPropertiesDao;
 import org.sonar.ce.log.CeProcessLogging;
+import org.sonar.ce.notification.ReportAnalysisFailureNotificationModule;
 import org.sonar.ce.platform.ComputeEngineExtensionInstaller;
 import org.sonar.ce.queue.CeQueueCleaner;
 import org.sonar.ce.queue.PurgeCeActivities;
@@ -55,8 +57,6 @@ import org.sonar.ce.settings.ProjectConfigurationFactory;
 import org.sonar.ce.taskprocessor.CeProcessingScheduler;
 import org.sonar.ce.taskprocessor.CeTaskProcessorModule;
 import org.sonar.ce.user.CeUserSession;
-import org.sonar.cluster.ClusterProperties;
-import org.sonar.cluster.localclient.HazelcastLocalClient;
 import org.sonar.core.component.DefaultResourceTypes;
 import org.sonar.core.config.ConfigurationProvider;
 import org.sonar.core.config.CorePropertyDefinitions;
@@ -74,6 +74,8 @@ import org.sonar.db.DatabaseChecker;
 import org.sonar.db.DbClient;
 import org.sonar.db.DefaultDatabase;
 import org.sonar.db.purge.PurgeProfiler;
+import org.sonar.process.NetworkUtilsImpl;
+import org.sonar.process.ProcessProperties;
 import org.sonar.process.Props;
 import org.sonar.process.logging.LogbackHelper;
 import org.sonar.server.component.ComponentFinder;
@@ -96,6 +98,7 @@ import org.sonar.server.issue.notification.NewIssuesNotificationDispatcher;
 import org.sonar.server.issue.notification.NewIssuesNotificationFactory;
 import org.sonar.server.issue.workflow.FunctionExecutor;
 import org.sonar.server.issue.workflow.IssueWorkflow;
+import org.sonar.server.measure.index.ProjectMeasuresIndex;
 import org.sonar.server.measure.index.ProjectMeasuresIndexer;
 import org.sonar.server.metric.CoreCustomMetrics;
 import org.sonar.server.metric.DefaultMetricFinder;
@@ -124,6 +127,8 @@ import org.sonar.server.platform.UrlSettings;
 import org.sonar.server.platform.WebServerImpl;
 import org.sonar.server.platform.db.migration.MigrationConfigurationModule;
 import org.sonar.server.platform.db.migration.version.DatabaseVersion;
+import org.sonar.server.platform.monitoring.DbSection;
+import org.sonar.server.platform.monitoring.cluster.ProcessInfoProvider;
 import org.sonar.server.plugins.InstalledPluginReferentialFactory;
 import org.sonar.server.plugins.ServerExtensionInstaller;
 import org.sonar.server.plugins.privileged.PrivilegedPluginsBootstraper;
@@ -139,7 +144,6 @@ import org.sonar.server.search.EsSearchModule;
 import org.sonar.server.setting.DatabaseSettingLoader;
 import org.sonar.server.setting.DatabaseSettingsEnabler;
 import org.sonar.server.setting.ThreadLocalSettings;
-import org.sonar.server.startup.LogServerId;
 import org.sonar.server.test.index.TestIndexer;
 import org.sonar.server.user.DefaultUserFinder;
 import org.sonar.server.user.DeprecatedUserFinder;
@@ -233,6 +237,7 @@ public class ComputeEngineContainerImpl implements ComputeEngineContainer {
       SonarRuntimeImpl.forSonarQube(ApiVersion.load(System2.INSTANCE), SonarQubeSide.COMPUTE_ENGINE),
       CeProcessLogging.class,
       UuidFactoryImpl.INSTANCE,
+      NetworkUtilsImpl.INSTANCE,
       WebServerImpl.class,
       LogbackHelper.class,
       DefaultDatabase.class,
@@ -318,6 +323,7 @@ public class ComputeEngineContainerImpl implements ComputeEngineContainer {
       XMLProfileParser.class,
       XMLProfileSerializer.class,
       AnnotationProfileParser.class,
+      BuiltInQualityProfileAnnotationLoader.class,
       Rules.QProfiles.class,
 
       // rule
@@ -335,6 +341,7 @@ public class ComputeEngineContainerImpl implements ComputeEngineContainer {
       // measure
       CoreCustomMetrics.class,
       DefaultMetricFinder.class,
+      ProjectMeasuresIndex.class,
 
       // users
       DeprecatedUserFinder.class,
@@ -390,6 +397,7 @@ public class ComputeEngineContainerImpl implements ComputeEngineContainer {
       NotificationService.class,
       DefaultNotificationManager.class,
       EmailNotificationChannel.class,
+      ReportAnalysisFailureNotificationModule.class,
 
       // Tests
       TestIndexer.class,
@@ -415,10 +423,14 @@ public class ComputeEngineContainerImpl implements ComputeEngineContainer {
       // cleaning
       CeCleaningModule.class);
 
-    if (props.valueAsBoolean(ClusterProperties.CLUSTER_ENABLED)) {
+    if (props.valueAsBoolean(ProcessProperties.CLUSTER_ENABLED)) {
       container.add(
-        HazelcastLocalClient.class,
-        CeDistributedInformationImpl.class);
+        // system health
+        CeDistributedInformationImpl.class,
+
+        // system info
+        DbSection.class,
+        ProcessInfoProvider.class);
     } else {
       container.add(StandaloneCeDistributedInformation.class);
     }
@@ -426,7 +438,6 @@ public class ComputeEngineContainerImpl implements ComputeEngineContainer {
 
   private static Object[] startupComponents() {
     return new Object[] {
-      LogServerId.class,
       ServerLifecycleNotifier.class,
       PurgeCeActivities.class,
       CeQueueCleaner.class

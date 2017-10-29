@@ -17,8 +17,11 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
+
+import { Extension } from '../../app/types';
+
 interface AppState {
-  adminPages?: any[];
+  adminPages?: Extension[];
   authenticationError: boolean;
   authorizationError: boolean;
   organizationsEnabled: boolean;
@@ -32,7 +35,7 @@ interface SetAppStateAction {
 
 interface SetAdminPagesAction {
   type: 'SET_ADMIN_PAGES';
-  adminPages: any[];
+  adminPages: Extension[];
 }
 
 interface RequireAuthorizationAction {
@@ -48,7 +51,7 @@ export function setAppState(appState: AppState): SetAppStateAction {
   };
 }
 
-export function setAdminPages(adminPages: any[]): SetAdminPagesAction {
+export function setAdminPages(adminPages: Extension[]): SetAdminPagesAction {
   return { type: 'SET_ADMIN_PAGES', adminPages };
 }
 

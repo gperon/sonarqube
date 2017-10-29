@@ -21,9 +21,7 @@ package org.sonar.server.computation.task.projectanalysis.container;
 
 import java.util.Arrays;
 import java.util.List;
-
 import javax.annotation.Nullable;
-
 import org.sonar.ce.organization.DefaultOrganizationLoader;
 import org.sonar.ce.queue.CeTask;
 import org.sonar.ce.settings.SettingsLoader;
@@ -36,11 +34,12 @@ import org.sonar.server.computation.task.projectanalysis.api.posttask.PostProjec
 import org.sonar.server.computation.task.projectanalysis.batch.BatchReportDirectoryHolderImpl;
 import org.sonar.server.computation.task.projectanalysis.batch.BatchReportReaderImpl;
 import org.sonar.server.computation.task.projectanalysis.component.BranchLoader;
-import org.sonar.server.computation.task.projectanalysis.component.BranchPersister;
+import org.sonar.server.computation.task.projectanalysis.component.BranchPersisterImpl;
 import org.sonar.server.computation.task.projectanalysis.component.ConfigurationRepositoryImpl;
 import org.sonar.server.computation.task.projectanalysis.component.DbIdsRepositoryImpl;
 import org.sonar.server.computation.task.projectanalysis.component.DisabledComponentsHolderImpl;
 import org.sonar.server.computation.task.projectanalysis.component.MergeBranchComponentUuids;
+import org.sonar.server.computation.task.projectanalysis.component.ShortBranchComponentsWithIssues;
 import org.sonar.server.computation.task.projectanalysis.component.TreeRootHolderImpl;
 import org.sonar.server.computation.task.projectanalysis.duplication.CrossProjectDuplicationStatusHolderImpl;
 import org.sonar.server.computation.task.projectanalysis.duplication.DuplicationMeasures;
@@ -72,13 +71,14 @@ import org.sonar.server.computation.task.projectanalysis.issue.LoadComponentUuid
 import org.sonar.server.computation.task.projectanalysis.issue.MergeBranchTrackerExecution;
 import org.sonar.server.computation.task.projectanalysis.issue.MovedIssueVisitor;
 import org.sonar.server.computation.task.projectanalysis.issue.NewEffortAggregator;
-import org.sonar.server.computation.task.projectanalysis.issue.NewEffortCalculator;
 import org.sonar.server.computation.task.projectanalysis.issue.RemoveProcessedComponentsVisitor;
 import org.sonar.server.computation.task.projectanalysis.issue.RuleRepositoryImpl;
 import org.sonar.server.computation.task.projectanalysis.issue.RuleTagsCopier;
 import org.sonar.server.computation.task.projectanalysis.issue.RuleTypeCopier;
 import org.sonar.server.computation.task.projectanalysis.issue.ScmAccountToUser;
 import org.sonar.server.computation.task.projectanalysis.issue.ScmAccountToUserLoader;
+import org.sonar.server.computation.task.projectanalysis.issue.ShortBranchIssueMerger;
+import org.sonar.server.computation.task.projectanalysis.issue.ShortBranchIssuesLoader;
 import org.sonar.server.computation.task.projectanalysis.issue.ShortBranchTrackerExecution;
 import org.sonar.server.computation.task.projectanalysis.issue.TrackerBaseInputFactory;
 import org.sonar.server.computation.task.projectanalysis.issue.TrackerExecution;
@@ -116,11 +116,13 @@ import org.sonar.server.computation.task.projectanalysis.source.LastCommitVisito
 import org.sonar.server.computation.task.projectanalysis.source.SourceHashRepositoryImpl;
 import org.sonar.server.computation.task.projectanalysis.source.SourceLinesRepositoryImpl;
 import org.sonar.server.computation.task.projectanalysis.step.ReportComputationSteps;
-import org.sonar.server.computation.task.projectanalysis.webhook.WebhookModule;
+import org.sonar.server.computation.task.projectanalysis.step.SmallChangesetQualityGateSpecialCase;
+import org.sonar.server.computation.task.projectanalysis.webhook.WebhookPostTask;
 import org.sonar.server.computation.task.step.ComputationStepExecutor;
 import org.sonar.server.computation.task.step.ComputationSteps;
 import org.sonar.server.computation.taskprocessor.MutableTaskResultHolderImpl;
 import org.sonar.server.view.index.ViewIndex;
+import org.sonar.server.webhook.WebhookModule;
 
 public final class ProjectAnalysisTaskContainerPopulator implements ContainerPopulator<TaskContainer> {
   private static final ReportAnalysisComponentProvider[] NO_REPORT_ANALYSIS_COMPONENT_PROVIDERS = new ReportAnalysisComponentProvider[0];
@@ -175,6 +177,7 @@ public final class ProjectAnalysisTaskContainerPopulator implements ContainerPop
       MutableTaskResultHolderImpl.class,
       BatchReportReaderImpl.class,
       MergeBranchComponentUuids.class,
+      ShortBranchComponentsWithIssues.class,
 
       // repositories
       LanguageRepositoryImpl.class,
@@ -219,7 +222,6 @@ public final class ProjectAnalysisTaskContainerPopulator implements ContainerPop
       IssueCreationDateCalculator.class,
       DebtCalculator.class,
       EffortAggregator.class,
-      NewEffortCalculator.class,
       NewEffortAggregator.class,
       IssueAssigner.class,
       IssueCounter.class,
@@ -249,7 +251,9 @@ public final class ProjectAnalysisTaskContainerPopulator implements ContainerPop
       ComponentIssuesLoader.class,
       BaseIssuesLoader.class,
       IssueTrackingDelegator.class,
-      BranchPersister.class,
+      BranchPersisterImpl.class,
+      ShortBranchIssuesLoader.class,
+      ShortBranchIssueMerger.class,
 
       // filemove
       SourceSimilarityImpl.class,
@@ -265,9 +269,11 @@ public final class ProjectAnalysisTaskContainerPopulator implements ContainerPop
 
       BranchLoader.class,
       MeasureToMeasureDto.class,
+      SmallChangesetQualityGateSpecialCase.class,
 
       // webhooks
-      WebhookModule.class);
+      WebhookModule.class,
+      WebhookPostTask.class);
   }
 
 }

@@ -31,12 +31,13 @@ public interface BranchMapper {
 
   int updateMainBranchName(@Param("projectUuid") String projectUuid, @Param("newBranchName") String newBranchName, @Param("now") long now);
 
-  BranchDto selectByKey(@Param("projectUuid") String projectUuid,
-    @Param("keyType") BranchKeyType keyType, @Param("key") String key);
+  BranchDto selectByKey(@Param("projectUuid") String projectUuid, @Param("key") String key);
 
   BranchDto selectByUuid(@Param("uuid") String uuid);
 
   Collection<BranchDto> selectByProjectUuid(@Param("projectUuid") String projectUuid);
 
   List<BranchDto> selectByUuids(@Param("uuids") Collection<String> uuids);
+
+  long countNonMainBranches();
 }

@@ -23,9 +23,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.Properties;
-import org.sonar.NetworkUtils;
-
-import static org.sonar.cluster.ClusterProperties.putClusterDefaults;
+import java.util.UUID;
 
 /**
  * Constants shared by search, web server and app processes.
@@ -57,11 +55,11 @@ public class ProcessProperties {
   public static final String SEARCH_REPLICAS = "sonar.search.replicas";
   public static final String SEARCH_MINIMUM_MASTER_NODES = "sonar.search.minimumMasterNodes";
   public static final String SEARCH_INITIAL_STATE_TIMEOUT = "sonar.search.initialStateTimeout";
-  public static final String SEARCH_MARVEL_HOSTS = "sonar.search.marvelHosts";
 
   public static final String WEB_JAVA_OPTS = "sonar.web.javaOpts";
   public static final String WEB_JAVA_ADDITIONAL_OPTS = "sonar.web.javaAdditionalOpts";
   public static final String WEB_PORT = "sonar.web.port";
+  public static final String AUTH_JWT_SECRET = "sonar.auth.jwtBase64Hs256Secret";
 
   public static final String CE_JAVA_OPTS = "sonar.ce.javaOpts";
   public static final String CE_JAVA_ADDITIONAL_OPTS = "sonar.ce.javaAdditionalOpts";
@@ -78,6 +76,17 @@ public class ProcessProperties {
   public static final String HTTP_PROXY_USER = "http.proxyUser";
   public static final String HTTP_PROXY_PASSWORD = "http.proxyPassword";
 
+  public static final String CLUSTER_ENABLED = "sonar.cluster.enabled";
+  public static final String CLUSTER_NODE_TYPE = "sonar.cluster.node.type";
+  public static final String CLUSTER_SEARCH_HOSTS = "sonar.cluster.search.hosts";
+  public static final String CLUSTER_HOSTS = "sonar.cluster.hosts";
+  public static final String CLUSTER_NODE_PORT = "sonar.cluster.node.port";
+  public static final int CLUSTER_NODE_PORT_DEFAULT_VALUE = 9003;
+  public static final String CLUSTER_NODE_HOST = "sonar.cluster.node.host";
+  public static final String CLUSTER_NODE_NAME = "sonar.cluster.node.name";
+  public static final String CLUSTER_NAME = "sonar.cluster.name";
+  public static final String CLUSTER_WEB_STARTUP_LEADER = "sonar.cluster.web.startupLeader";
+
   private ProcessProperties() {
     // only static stuff
   }
@@ -89,18 +98,6 @@ public class ProcessProperties {
     }
 
     fixPortIfZero(props, SEARCH_HOST, SEARCH_PORT);
-  }
-
-  private static void fixPortIfZero(Props props, String addressPropertyKey, String portPropertyKey) {
-    String port = props.value(portPropertyKey);
-    if ("0".equals(port)) {
-      String address = props.nonNullValue(addressPropertyKey);
-      try {
-        props.set(portPropertyKey, String.valueOf(NetworkUtils.INSTANCE.getNextAvailablePort(InetAddress.getByName(address))));
-      } catch (UnknownHostException e) {
-        throw new IllegalStateException("Cannot resolve address [" + address + "] set by property [" + addressPropertyKey + "]", e);
-      }
-    }
   }
 
   public static Properties defaults() {
@@ -126,8 +123,23 @@ public class ProcessProperties {
     defaults.put(JDBC_MIN_EVICTABLE_IDLE_TIME_MILLIS, "600000");
     defaults.put(JDBC_TIME_BETWEEN_EVICTION_RUNS_MILLIS, "30000");
 
-    putClusterDefaults(defaults);
+    defaults.put(CLUSTER_ENABLED, "false");
+    defaults.put(CLUSTER_NAME, "sonarqube");
+    defaults.put(CLUSTER_NODE_PORT, Integer.toString(CLUSTER_NODE_PORT_DEFAULT_VALUE));
+    defaults.put(CLUSTER_NODE_NAME, "sonarqube-" + UUID.randomUUID().toString());
 
     return defaults;
+  }
+
+  private static void fixPortIfZero(Props props, String addressPropertyKey, String portPropertyKey) {
+    String port = props.value(portPropertyKey);
+    if ("0".equals(port)) {
+      String address = props.nonNullValue(addressPropertyKey);
+      try {
+        props.set(portPropertyKey, String.valueOf(NetworkUtilsImpl.INSTANCE.getNextAvailablePort(InetAddress.getByName(address))));
+      } catch (UnknownHostException e) {
+        throw new IllegalStateException("Cannot resolve address [" + address + "] set by property [" + addressPropertyKey + "]", e);
+      }
+    }
   }
 }

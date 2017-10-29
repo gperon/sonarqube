@@ -28,6 +28,7 @@ import org.sonar.db.ce.CeQueueDao;
 import org.sonar.db.ce.CeScannerContextDao;
 import org.sonar.db.ce.CeTaskCharacteristicDao;
 import org.sonar.db.ce.CeTaskInputDao;
+import org.sonar.db.component.AnalysisPropertiesDao;
 import org.sonar.db.component.BranchDao;
 import org.sonar.db.component.ComponentDao;
 import org.sonar.db.component.ComponentKeyUpdaterDao;
@@ -60,6 +61,8 @@ import org.sonar.db.qualitygate.QualityGateDao;
 import org.sonar.db.qualityprofile.ActiveRuleDao;
 import org.sonar.db.qualityprofile.DefaultQProfileDao;
 import org.sonar.db.qualityprofile.QProfileChangeDao;
+import org.sonar.db.qualityprofile.QProfileEditGroupsDao;
+import org.sonar.db.qualityprofile.QProfileEditUsersDao;
 import org.sonar.db.qualityprofile.QualityProfileDao;
 import org.sonar.db.rule.RuleDao;
 import org.sonar.db.rule.RuleRepositoryDao;
@@ -79,6 +82,7 @@ public class DaoModule extends Module {
     // for readability and easier merge, keep list ordered alphabetically
     // =====================================================================
     ActiveRuleDao.class,
+    AnalysisPropertiesDao.class,
     AuthorizationDao.class,
     BranchDao.class,
     CeActivityDao.class,
@@ -114,6 +118,8 @@ public class DaoModule extends Module {
     PropertiesDao.class,
     PurgeDao.class,
     QProfileChangeDao.class,
+    QProfileEditGroupsDao.class,
+    QProfileEditUsersDao.class,
     QualityGateConditionDao.class,
     QualityGateDao.class,
     QualityProfileDao.class,

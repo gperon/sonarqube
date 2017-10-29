@@ -28,6 +28,7 @@ import org.sonar.api.utils.log.Logger;
 import org.sonar.api.utils.log.Loggers;
 import org.sonar.core.issue.DefaultIssue;
 import org.sonar.core.issue.IssueChangeContext;
+import org.sonar.db.issue.IssueDto;
 import org.sonar.server.computation.task.projectanalysis.analysis.AnalysisMetadataHolder;
 import org.sonar.server.computation.task.projectanalysis.component.Component;
 import org.sonar.server.computation.task.projectanalysis.scm.ScmInfo;
@@ -70,18 +71,24 @@ public class IssueAssigner extends IssueVisitor {
 
   @Override
   public void onIssue(Component component, DefaultIssue issue) {
-    boolean authorWasSet = false;
     if (issue.authorLogin() == null) {
       loadScmChangesets(component);
       String scmAuthor = guessScmAuthor(issue);
+
       if (!Strings.isNullOrEmpty(scmAuthor)) {
-        issueUpdater.setNewAuthor(issue, scmAuthor, changeContext);
-        authorWasSet = true;
+        if (scmAuthor.length() <= IssueDto.AUTHOR_MAX_SIZE) {
+          issueUpdater.setNewAuthor(issue, scmAuthor, changeContext);
+        } else {
+          LOGGER.debug("SCM account '{}' is too long to be stored as issue author", scmAuthor);
+        }
       }
-    }
-    if (authorWasSet && issue.assignee() == null) {
-      String assigneeLogin = StringUtils.defaultIfEmpty(scmAccountToUser.getNullable(issue.authorLogin()), defaultAssignee.loadDefaultAssigneeLogin());
-      issueUpdater.setNewAssignee(issue, assigneeLogin, changeContext);
+
+      if (issue.assignee() == null) {
+        String author = Strings.isNullOrEmpty(scmAuthor) ? null : scmAccountToUser.getNullable(scmAuthor);
+        String assigneeLogin = StringUtils.defaultIfEmpty(author, defaultAssignee.loadDefaultAssigneeLogin());
+
+        issueUpdater.setNewAssignee(issue, assigneeLogin, changeContext);
+      }
     }
   }
 

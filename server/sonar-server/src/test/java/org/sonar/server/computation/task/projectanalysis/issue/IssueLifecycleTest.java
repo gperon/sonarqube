@@ -21,17 +21,24 @@ package org.sonar.server.computation.task.projectanalysis.issue;
 
 import com.google.common.collect.ImmutableMap;
 import java.util.Date;
+import org.junit.Rule;
 import org.junit.Test;
+import org.sonar.api.issue.IssueComment;
 import org.sonar.api.utils.Duration;
 import org.sonar.core.issue.DefaultIssue;
+import org.sonar.core.issue.DefaultIssueComment;
+import org.sonar.core.issue.FieldDiffs;
 import org.sonar.core.issue.IssueChangeContext;
 import org.sonar.db.protobuf.DbCommons;
 import org.sonar.db.protobuf.DbIssues;
+import org.sonar.server.computation.task.projectanalysis.analysis.AnalysisMetadataHolderRule;
+import org.sonar.server.computation.task.projectanalysis.analysis.Branch;
 import org.sonar.server.issue.IssueFieldsSetter;
 import org.sonar.server.issue.workflow.IssueWorkflow;
 
 import static com.google.common.collect.Lists.newArrayList;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.groups.Tuple.tuple;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -57,7 +64,10 @@ public class IssueLifecycleTest {
 
   DebtCalculator debtCalculator = mock(DebtCalculator.class);
 
-  IssueLifecycle underTest = new IssueLifecycle(issueChangeContext, workflow, updater, debtCalculator);
+  @Rule
+  public AnalysisMetadataHolderRule analysisMetadataHolder = new AnalysisMetadataHolderRule();
+
+  IssueLifecycle underTest = new IssueLifecycle(analysisMetadataHolder, issueChangeContext, workflow, updater, debtCalculator);
 
   @Test
   public void initNewOpenIssue() throws Exception {
@@ -73,6 +83,58 @@ public class IssueLifecycleTest {
     assertThat(issue.debt()).isEqualTo(DEFAULT_DURATION);
     assertThat(issue.isNew()).isTrue();
     assertThat(issue.isCopied()).isFalse();
+  }
+
+  @Test
+  public void mergeIssueFromShortLivingBranch() {
+    DefaultIssue raw = new DefaultIssue()
+      .setKey("raw");
+    DefaultIssue fromShort = new DefaultIssue()
+      .setKey("short");
+    fromShort.setResolution("resolution");
+    fromShort.setStatus("status");
+
+    Date commentDate = new Date();
+    fromShort.addComment(new DefaultIssueComment()
+      .setIssueKey("short")
+      .setCreatedAt(commentDate)
+      .setUserLogin("user")
+      .setMarkdownText("A comment"));
+
+    Date diffDate = new Date();
+    // file diff alone
+    fromShort.addChange(new FieldDiffs()
+      .setCreationDate(diffDate)
+      .setIssueKey("short")
+      .setUserLogin("user")
+      .setDiff("file", "uuidA1", "uuidB1"));
+    // file diff with another field
+    fromShort.addChange(new FieldDiffs()
+      .setCreationDate(diffDate)
+      .setIssueKey("short")
+      .setUserLogin("user")
+      .setDiff("severity", "MINOR", "MAJOR")
+      .setDiff("file", "uuidA2", "uuidB2"));
+
+    Branch branch = mock(Branch.class);
+    when(branch.getName()).thenReturn("master");
+    analysisMetadataHolder.setBranch(branch);
+
+    underTest.mergeConfirmedOrResolvedFromShortLivingBranch(raw, fromShort, "feature/foo");
+
+    assertThat(raw.resolution()).isEqualTo("resolution");
+    assertThat(raw.status()).isEqualTo("status");
+    assertThat(raw.comments()).extracting(IssueComment::issueKey, IssueComment::createdAt, IssueComment::userLogin, IssueComment::markdownText)
+      .containsOnly(tuple("raw", commentDate, "user", "A comment"));
+    assertThat(raw.changes()).hasSize(2);
+    assertThat(raw.changes().get(0).creationDate()).isEqualTo(diffDate);
+    assertThat(raw.changes().get(0).userLogin()).isEqualTo("user");
+    assertThat(raw.changes().get(0).issueKey()).isEqualTo("raw");
+    assertThat(raw.changes().get(0).diffs()).containsOnlyKeys("severity");
+    assertThat(raw.changes().get(1).userLogin()).isEqualTo("julien");
+    assertThat(raw.changes().get(1).diffs()).containsOnlyKeys(IssueFieldsSetter.FROM_SHORT_BRANCH);
+    assertThat(raw.changes().get(1).get(IssueFieldsSetter.FROM_SHORT_BRANCH).oldValue()).isEqualTo("feature/foo");
+    assertThat(raw.changes().get(1).get(IssueFieldsSetter.FROM_SHORT_BRANCH).newValue()).isEqualTo("master");
   }
 
   @Test
@@ -112,7 +174,11 @@ public class IssueLifecycleTest {
 
     when(debtCalculator.calculate(raw)).thenReturn(DEFAULT_DURATION);
 
-    underTest.copyExistingOpenIssue(raw, base);
+    Branch branch = mock(Branch.class);
+    when(branch.getName()).thenReturn("release-2.x");
+    analysisMetadataHolder.setBranch(branch);
+
+    underTest.copyExistingOpenIssueFromLongLivingBranch(raw, base, "master");
 
     assertThat(raw.isNew()).isFalse();
     assertThat(raw.isCopied()).isTrue();
@@ -129,6 +195,8 @@ public class IssueLifecycleTest {
     assertThat(raw.debt()).isEqualTo(DEFAULT_DURATION);
     assertThat(raw.isOnDisabledRule()).isTrue();
     assertThat(raw.selectedAt()).isEqualTo(1000L);
+    assertThat(raw.changes().get(0).get(IssueFieldsSetter.FROM_LONG_BRANCH).oldValue()).isEqualTo("master");
+    assertThat(raw.changes().get(0).get(IssueFieldsSetter.FROM_LONG_BRANCH).newValue()).isEqualTo("release-2.x");
 
     verifyZeroInteractions(updater);
   }

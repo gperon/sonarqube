@@ -104,6 +104,7 @@ public class ComponentsPublisherTest {
     moduleHierarchy = mock(InputModuleHierarchy.class);
     when(moduleHierarchy.root()).thenReturn(root);
     when(moduleHierarchy.children(root)).thenReturn(Collections.singleton(module1));
+    when(moduleHierarchy.parent(module1)).thenReturn(root);
     tree.index(module1, root);
 
     DefaultInputDir dir = new DefaultInputDir("module1", "src", 3);
@@ -151,6 +152,30 @@ public class ComponentsPublisherTest {
     assertThat(reader.readComponent(4).getStatus()).isEqualTo(FileStatus.SAME);
     assertThat(reader.readComponent(6).getStatus()).isEqualTo(FileStatus.CHANGED);
     assertThat(reader.readComponent(7).getStatus()).isEqualTo(FileStatus.ADDED);
+  }
+
+  @Test
+  public void should_set_modified_name_with_branch() throws IOException {
+    ProjectAnalysisInfo projectAnalysisInfo = mock(ProjectAnalysisInfo.class);
+    when(projectAnalysisInfo.analysisDate()).thenReturn(DateUtils.parseDate("2012-12-12"));
+
+    ProjectDefinition rootDef = ProjectDefinition.create()
+      .setKey("foo")
+      .setDescription("Root description")
+      .setBaseDir(temp.newFolder())
+      .setWorkDir(temp.newFolder())
+      .setProperty(CoreProperties.PROJECT_BRANCH_PROPERTY, "my_branch");
+
+    DefaultInputModule root = new DefaultInputModule(rootDef, 1);
+
+    moduleHierarchy = mock(InputModuleHierarchy.class);
+    when(moduleHierarchy.root()).thenReturn(root);
+
+    ComponentsPublisher publisher = new ComponentsPublisher(moduleHierarchy, tree, branchConfiguration);
+    publisher.publish(writer);
+    Component rootProtobuf = reader.readComponent(1);
+    assertThat(rootProtobuf.getKey()).isEqualTo("foo");
+    assertThat(rootProtobuf.getName()).isEqualTo("foo my_branch");
   }
 
   @Test
@@ -261,54 +286,6 @@ public class ComponentsPublisherTest {
     assertThat(writer.hasComponentData(FileStructure.Domain.COMPONENT, 1)).isTrue();
     assertThat(writer.hasComponentData(FileStructure.Domain.COMPONENT, 2)).isFalse();
     assertThat(writer.hasComponentData(FileStructure.Domain.COMPONENT, 3)).isFalse();
-  }
-
-  @Test
-  public void should_set_directory_status() throws IOException {
-    ProjectAnalysisInfo projectAnalysisInfo = mock(ProjectAnalysisInfo.class);
-    when(projectAnalysisInfo.analysisDate()).thenReturn(DateUtils.parseDate("2012-12-12"));
-
-    ProjectDefinition rootDef = ProjectDefinition.create()
-      .setKey("foo")
-      .setProperty(CoreProperties.PROJECT_VERSION_PROPERTY, "1.0")
-      .setName("Root project")
-      .setDescription("Root description")
-      .setBaseDir(temp.newFolder())
-      .setWorkDir(temp.newFolder());
-    DefaultInputModule root = new DefaultInputModule(rootDef, 1);
-
-    moduleHierarchy = mock(InputModuleHierarchy.class);
-    when(moduleHierarchy.root()).thenReturn(root);
-    when(moduleHierarchy.children(root)).thenReturn(Collections.emptyList());
-
-    // dir with unchanged files
-    DefaultInputDir dir = new DefaultInputDir("module1", "src", 2);
-    tree.index(dir, root);
-
-    // dir with changed files
-    DefaultInputDir dir2 = new DefaultInputDir("module1", "src2", 3);
-    tree.index(dir2, root);
-
-    DefaultInputFile file = new TestInputFileBuilder("module1", "src/Foo.java", 4).setLines(2).setStatus(InputFile.Status.SAME).build();
-    tree.index(file, dir);
-
-    DefaultInputFile file2 = new TestInputFileBuilder("module1", "src/Foo.java", 5).setLines(2).setStatus(InputFile.Status.ADDED).build();
-    tree.index(file2, dir2);
-
-    ComponentsPublisher publisher = new ComponentsPublisher(moduleHierarchy, tree, branchConfiguration);
-    publisher.publish(writer);
-
-    assertThat(writer.hasComponentData(FileStructure.Domain.COMPONENT, 1)).isTrue();
-    assertThat(writer.hasComponentData(FileStructure.Domain.COMPONENT, 2)).isTrue();
-    assertThat(writer.hasComponentData(FileStructure.Domain.COMPONENT, 3)).isTrue();
-    assertThat(writer.hasComponentData(FileStructure.Domain.COMPONENT, 4)).isTrue();
-    assertThat(writer.hasComponentData(FileStructure.Domain.COMPONENT, 5)).isTrue();
-
-    // directory is unchanged because its files are unchanged
-    assertThat(reader.readComponent(2).getStatus()).isEqualTo(FileStatus.SAME);
-    // status not set
-    assertThat(reader.readComponent(3).getStatus()).isEqualTo(FileStatus.UNAVAILABLE);
-
   }
 
   @Test
@@ -471,6 +448,7 @@ public class ComponentsPublisherTest {
     moduleHierarchy = mock(InputModuleHierarchy.class);
     when(moduleHierarchy.root()).thenReturn(root);
     when(moduleHierarchy.children(root)).thenReturn(Collections.singleton(module1));
+    when(moduleHierarchy.parent(module1)).thenReturn(root);
     tree.index(module1, root);
 
     DefaultInputDir dir = new DefaultInputDir("module1", "src", 3);

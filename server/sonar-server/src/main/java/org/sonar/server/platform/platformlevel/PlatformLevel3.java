@@ -23,15 +23,12 @@ import org.sonar.api.utils.UriReader;
 import org.sonar.core.util.DefaultHttpDownloader;
 import org.sonar.server.organization.DefaultOrganizationProviderImpl;
 import org.sonar.server.organization.OrganizationFlagsImpl;
-import org.sonar.server.platform.ServerIdGenerator;
-import org.sonar.server.platform.ServerIdLoader;
 import org.sonar.server.platform.ServerIdManager;
 import org.sonar.server.platform.ServerImpl;
 import org.sonar.server.platform.StartupMetadataPersister;
 import org.sonar.server.platform.db.migration.NoopDatabaseMigrationImpl;
 import org.sonar.server.setting.DatabaseSettingLoader;
 import org.sonar.server.setting.DatabaseSettingsEnabler;
-import org.sonar.server.startup.LogServerId;
 
 public class PlatformLevel3 extends PlatformLevel {
   public PlatformLevel3(PlatformLevel parent) {
@@ -48,9 +45,6 @@ public class PlatformLevel3 extends PlatformLevel {
       DatabaseSettingLoader.class,
       DatabaseSettingsEnabler.class,
       UriReader.class,
-      ServerIdLoader.class,
-      ServerIdGenerator.class,
-      LogServerId.class,
       DefaultHttpDownloader.class,
       DefaultOrganizationProviderImpl.class,
       OrganizationFlagsImpl.class);

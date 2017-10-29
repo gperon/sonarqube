@@ -213,6 +213,27 @@
     </foreach>
   </select>
 
+  <select id="selectOpenByComponentUuids" parameterType="map" resultType="ShortBranchIssue">
+    select
+      i.kee as kee,
+      i.message as message,
+      i.line as line,
+      i.status as status,
+      i.checksum as checksum,
+      i.issue_creation_date as issueCreationDate,
+      r.plugin_rule_key as ruleKey,
+      r.plugin_name as ruleRepo,
+      b.kee as branchName
+    from issues i
+    inner join rules r on r.id = i.rule_id
+    inner join project_branches b on i.project_uuid = b.uuid
+    where i.component_uuid in
+      <foreach collection="list" open="(" close=")" item="key" separator=",">
+        #{key,jdbcType=VARCHAR}
+      </foreach>
+      and i.status &lt;&gt; 'CLOSED'
+  </select>
+
   <select id="scrollNonClosedByModuleOrProject" parameterType="map" resultType="Issue" fetchSize="${_scrollFetchSize}" resultSetType="FORWARD_ONLY">
     select
     <include refid="issueColumns"/>

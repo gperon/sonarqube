@@ -21,6 +21,7 @@ import * as ReactRedux from 'react-redux';
 import * as ReactRouter from 'react-router';
 import Select from 'react-select';
 import Modal from 'react-modal';
+import throwGlobalError from './throwGlobalError';
 import * as measures from '../../helpers/measures';
 import * as request from '../../helpers/request';
 import * as icons from '../../components/icons-components/icons';
@@ -28,6 +29,7 @@ import DateFromNow from '../../components/intl/DateFromNow';
 import DateFormatter from '../../components/intl/DateFormatter';
 import DateTimeFormatter from '../../components/intl/DateTimeFormatter';
 import FavoriteContainer from '../../components/controls/FavoriteContainer';
+import LicenseEditionSet from '../../apps/marketplace/components/LicenseEditionSet';
 import ListFooter from '../../components/controls/ListFooter';
 import Tooltip from '../../components/controls/Tooltip';
 import ModalForm from '../../components/common/modal-form';
@@ -41,12 +43,13 @@ const exposeLibraries = () => {
   window.ReactRouter = ReactRouter;
   window.SonarIcons = icons;
   window.SonarMeasures = measures;
-  window.SonarRequest = request;
+  window.SonarRequest = { ...request, throwGlobalError };
   window.SonarComponents = {
     DateFromNow,
     DateFormatter,
     DateTimeFormatter,
     FavoriteContainer,
+    LicenseEditionSet,
     ListFooter,
     Modal,
     Tooltip,

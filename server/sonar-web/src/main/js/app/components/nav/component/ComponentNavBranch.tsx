@@ -33,9 +33,9 @@ import Tooltip from '../../../../components/controls/Tooltip';
 
 interface Props {
   branches: Branch[];
+  component: Component;
   currentBranch: Branch;
   location?: any;
-  project: Component;
 }
 
 interface State {
@@ -63,8 +63,8 @@ export default class ComponentNavBranch extends React.PureComponent<Props, State
 
   componentWillReceiveProps(nextProps: Props) {
     if (
-      nextProps.project !== this.props.project ||
-      nextProps.currentBranch !== this.props.currentBranch ||
+      nextProps.component !== this.props.component ||
+      this.differentBranches(nextProps.currentBranch, this.props.currentBranch) ||
       nextProps.location !== this.props.location
     ) {
       this.setState({ dropdownOpen: false, singleBranchPopupOpen: false });
@@ -75,11 +75,16 @@ export default class ComponentNavBranch extends React.PureComponent<Props, State
     this.mounted = false;
   }
 
+  differentBranches(a: Branch, b: Branch) {
+    // if main branch changes name, we should not close the dropdown
+    return a.isMain && b.isMain ? false : a.name !== b.name;
+  }
+
   handleClick = (event: React.SyntheticEvent<HTMLElement>) => {
     event.preventDefault();
     event.stopPropagation();
     event.currentTarget.blur();
-    this.setState({ dropdownOpen: true });
+    this.setState(state => ({ dropdownOpen: !state.dropdownOpen }));
   };
 
   closeDropdown = () => {
@@ -117,12 +122,14 @@ export default class ComponentNavBranch extends React.PureComponent<Props, State
   };
 
   renderDropdown = () => {
+    const { configuration } = this.props.component;
     return this.state.dropdownOpen ? (
       <ComponentNavBranchesMenu
         branches={this.props.branches}
+        canAdmin={configuration && configuration.showSettings}
+        component={this.props.component}
         currentBranch={this.props.currentBranch}
         onClose={this.closeDropdown}
-        project={this.props.project}
       />
     ) : null;
   };
@@ -208,7 +215,9 @@ export default class ComponentNavBranch extends React.PureComponent<Props, State
         })}>
         <a className="link-base-color link-no-underline" href="#" onClick={this.handleClick}>
           <BranchIcon branch={currentBranch} className="little-spacer-right" />
-          {currentBranch.name}
+          <Tooltip overlay={currentBranch.name} mouseEnterDelay={1}>
+            <span className="text-limited text-top">{currentBranch.name}</span>
+          </Tooltip>
           <i className="icon-dropdown little-spacer-left" />
         </a>
         {this.renderDropdown()}

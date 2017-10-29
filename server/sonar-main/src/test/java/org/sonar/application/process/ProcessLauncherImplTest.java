@@ -30,9 +30,14 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
+import org.sonar.application.command.EsJvmOptions;
+import org.sonar.application.command.EsScriptCommand;
+import org.sonar.application.command.JavaCommand;
+import org.sonar.application.command.JvmOptions;
+import org.sonar.application.es.EsInstallation;
+import org.sonar.application.es.EsYmlSettings;
 import org.sonar.process.ProcessId;
-import org.sonar.process.command.JavaCommand;
-import org.sonar.process.jmvoptions.JvmOptions;
+import org.sonar.process.Props;
 import org.sonar.process.sharedmemoryfile.AllProcessesCommands;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -88,7 +93,8 @@ public class ProcessLauncherImplTest {
     File tempDir = temp.newFolder();
     TestProcessBuilder processBuilder = new TestProcessBuilder();
     ProcessLauncher underTest = new ProcessLauncherImpl(tempDir, commands, () -> processBuilder);
-    JavaCommand<JvmOptions> command = new JavaCommand<>(ProcessId.ELASTICSEARCH, temp.newFolder());
+    JavaCommand<JvmOptions> command = new JavaCommand<>(ProcessId.WEB_SERVER, temp.newFolder());
+    command.setReadsArgumentsFromFile(true);
     command.setArgument("foo", "bar");
     command.setArgument("baz", "woo");
     command.setJvmOptions(new JvmOptions<>());
@@ -105,10 +111,63 @@ public class ProcessLauncherImplTest {
         entry("foo", "bar"),
         entry("baz", "woo"),
         entry("process.terminationTimeout", "60000"),
-        entry("process.key", ProcessId.ELASTICSEARCH.getKey()),
-        entry("process.index", String.valueOf(ProcessId.ELASTICSEARCH.getIpcIndex())),
+        entry("process.key", ProcessId.WEB_SERVER.getKey()),
+        entry("process.index", String.valueOf(ProcessId.WEB_SERVER.getIpcIndex())),
         entry("process.sharedDir", tempDir.getAbsolutePath()));
     }
+  }
+
+  @Test
+  public void temporary_properties_file_can_be_avoided() throws Exception {
+    File tempDir = temp.newFolder();
+    TestProcessBuilder processBuilder = new TestProcessBuilder();
+    ProcessLauncher underTest = new ProcessLauncherImpl(tempDir, commands, () -> processBuilder);
+    JavaCommand<JvmOptions> command = new JavaCommand<>(ProcessId.WEB_SERVER, temp.newFolder());
+    command.setReadsArgumentsFromFile(false);
+    command.setArgument("foo", "bar");
+    command.setArgument("baz", "woo");
+    command.setJvmOptions(new JvmOptions<>());
+
+    underTest.launch(command);
+
+    String propsFilePath = processBuilder.commands.get(processBuilder.commands.size() - 1);
+    File file = new File(propsFilePath);
+    assertThat(file).doesNotExist();
+  }
+
+  @Test
+  public void clean_up_old_es_data() throws Exception {
+    File tempDir = temp.newFolder();
+    File homeDir = temp.newFolder();
+    File dataDir = temp.newFolder();
+    File logDir = temp.newFolder();
+    ProcessLauncher underTest = new ProcessLauncherImpl(tempDir, commands, () -> new TestProcessBuilder());
+    EsScriptCommand command = createEsScriptCommand(tempDir, homeDir, dataDir, logDir);
+
+    File outdatedEsDir = new File(dataDir, "es");
+    assertThat(outdatedEsDir.mkdir()).isTrue();
+    assertThat(outdatedEsDir.exists()).isTrue();
+
+    underTest.launch(command);
+
+    assertThat(outdatedEsDir.exists()).isFalse();
+  }
+
+  @Test
+  public void do_not_fail_if_outdated_es_directory_does_not_exist() throws Exception {
+    File tempDir = temp.newFolder();
+    File homeDir = temp.newFolder();
+    File dataDir = temp.newFolder();
+    File logDir = temp.newFolder();
+    ProcessLauncher underTest = new ProcessLauncherImpl(tempDir, commands, () -> new TestProcessBuilder());
+    EsScriptCommand command = createEsScriptCommand(tempDir, homeDir, dataDir, logDir);
+
+    File outdatedEsDir = new File(dataDir, "es");
+    assertThat(outdatedEsDir.exists()).isFalse();
+
+    underTest.launch(command);
+
+    assertThat(outdatedEsDir.exists()).isFalse();
   }
 
   @Test
@@ -122,6 +181,20 @@ public class ProcessLauncherImplTest {
     expectedException.expectMessage("Fail to launch process [es]");
 
     underTest.launch(new JavaCommand(ProcessId.ELASTICSEARCH, temp.newFolder()));
+  }
+
+  private EsScriptCommand createEsScriptCommand(File tempDir, File homeDir, File dataDir, File logDir) throws IOException {
+    EsScriptCommand command = new EsScriptCommand(ProcessId.ELASTICSEARCH, temp.newFolder());
+    Props props = new Props(new Properties());
+    props.set("sonar.path.temp", tempDir.getAbsolutePath());
+    props.set("sonar.path.home", homeDir.getAbsolutePath());
+    props.set("sonar.path.data", dataDir.getAbsolutePath());
+    props.set("sonar.path.logs", logDir.getAbsolutePath());
+    command.setEsInstallation(new EsInstallation(props)
+      .setEsYmlSettings(mock(EsYmlSettings.class))
+      .setEsJvmOptions(mock(EsJvmOptions.class))
+      .setLog4j2Properties(new Properties()));
+    return command;
   }
 
   private static class TestProcessBuilder implements ProcessLauncherImpl.ProcessBuilder {

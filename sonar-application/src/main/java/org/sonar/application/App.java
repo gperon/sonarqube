@@ -27,12 +27,13 @@ import org.sonar.application.process.ProcessLauncher;
 import org.sonar.application.process.ProcessLauncherImpl;
 import org.sonar.application.process.StopRequestWatcher;
 import org.sonar.application.process.StopRequestWatcherImpl;
+import org.sonar.process.System2;
 import org.sonar.process.SystemExit;
-import org.sonar.process.command.CommandFactory;
-import org.sonar.process.command.CommandFactoryImpl;
+import org.sonar.application.command.CommandFactory;
+import org.sonar.application.command.CommandFactoryImpl;
 
 import static org.sonar.application.config.SonarQubeVersionHelper.getSonarqubeVersion;
-import static org.sonar.cluster.ClusterProperties.CLUSTER_NAME;
+import static org.sonar.process.ProcessProperties.CLUSTER_NAME;
 
 public class App {
 
@@ -49,10 +50,10 @@ public class App {
 
     try (AppState appState = new AppStateFactory(settings).create()) {
       appState.registerSonarQubeVersion(getSonarqubeVersion());
-      appState.registerClusterName(settings.getProps().value(CLUSTER_NAME, "sonarqube"));
+      appState.registerClusterName(settings.getProps().nonNullValue(CLUSTER_NAME));
       AppReloader appReloader = new AppReloaderImpl(settingsLoader, fileSystem, appState, logging);
       fileSystem.reset();
-      CommandFactory commandFactory = new CommandFactoryImpl(settings.getProps(), fileSystem.getTempDir());
+      CommandFactory commandFactory = new CommandFactoryImpl(settings.getProps(), fileSystem.getTempDir(), System2.INSTANCE);
 
       try (ProcessLauncher processLauncher = new ProcessLauncherImpl(fileSystem.getTempDir())) {
         Scheduler scheduler = new SchedulerImpl(settings, appReloader, commandFactory, processLauncher, appState);

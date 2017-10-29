@@ -20,25 +20,31 @@
 package org.sonar.server.notification;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Lists;
+import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.SetMultimap;
 import java.io.IOException;
 import java.io.InvalidClassException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import org.sonar.api.notifications.Notification;
 import org.sonar.api.notifications.NotificationChannel;
 import org.sonar.api.utils.SonarException;
 import org.sonar.api.utils.log.Logger;
 import org.sonar.api.utils.log.Loggers;
-import org.sonar.db.notification.NotificationQueueDao;
+import org.sonar.db.DbClient;
+import org.sonar.db.DbSession;
 import org.sonar.db.notification.NotificationQueueDto;
-import org.sonar.db.property.PropertiesDao;
+import org.sonar.db.property.Subscriber;
 
 import static java.util.Collections.singletonList;
+import static java.util.Objects.requireNonNull;
 
 public class DefaultNotificationManager implements NotificationManager {
 
@@ -47,25 +53,17 @@ public class DefaultNotificationManager implements NotificationManager {
   private static final String UNABLE_TO_READ_NOTIFICATION = "Unable to read notification";
 
   private NotificationChannel[] notificationChannels;
-  private NotificationQueueDao notificationQueueDao;
-  private PropertiesDao propertiesDao;
+  private final DbClient dbClient;
 
   private boolean alreadyLoggedDeserializationIssue = false;
 
   /**
    * Default constructor used by Pico
    */
-  public DefaultNotificationManager(NotificationChannel[] channels, NotificationQueueDao notificationQueueDao, PropertiesDao propertiesDao) {
+  public DefaultNotificationManager(NotificationChannel[] channels,
+    DbClient dbClient) {
     this.notificationChannels = channels;
-    this.notificationQueueDao = notificationQueueDao;
-    this.propertiesDao = propertiesDao;
-  }
-
-  /**
-   * Constructor if no notification channel
-   */
-  public DefaultNotificationManager(NotificationQueueDao notificationQueueDao, PropertiesDao propertiesDao) {
-    this(new NotificationChannel[0], notificationQueueDao, propertiesDao);
+    this.dbClient = dbClient;
   }
 
   /**
@@ -74,18 +72,19 @@ public class DefaultNotificationManager implements NotificationManager {
   @Override
   public void scheduleForSending(Notification notification) {
     NotificationQueueDto dto = NotificationQueueDto.toNotificationQueueDto(notification);
-    notificationQueueDao.insert(singletonList(dto));
+    dbClient.notificationQueueDao().insert(singletonList(dto));
   }
+
   /**
    * Give the notification queue so that it can be processed
    */
   public Notification getFromQueue() {
     int batchSize = 1;
-    List<NotificationQueueDto> notificationDtos = notificationQueueDao.selectOldest(batchSize);
+    List<NotificationQueueDto> notificationDtos = dbClient.notificationQueueDao().selectOldest(batchSize);
     if (notificationDtos.isEmpty()) {
       return null;
     }
-    notificationQueueDao.delete(notificationDtos);
+    dbClient.notificationQueueDao().delete(notificationDtos);
 
     return convertToNotification(notificationDtos);
   }
@@ -112,7 +111,7 @@ public class DefaultNotificationManager implements NotificationManager {
   }
 
   public long count() {
-    return notificationQueueDao.count();
+    return dbClient.notificationQueueDao().count();
   }
 
   /**
@@ -120,46 +119,99 @@ public class DefaultNotificationManager implements NotificationManager {
    */
   @Override
   public Multimap<String, NotificationChannel> findSubscribedRecipientsForDispatcher(NotificationDispatcher dispatcher,
-    @Nullable String projectUuid) {
+    String projectKey, SubscriberPermissionsOnProject subscriberPermissionsOnProject) {
+    requireNonNull(projectKey, "projectKey is mandatory");
     String dispatcherKey = dispatcher.getKey();
 
-    SetMultimap<String, NotificationChannel> recipients = HashMultimap.create();
-    for (NotificationChannel channel : notificationChannels) {
-      String channelKey = channel.getKey();
+    Set<SubscriberAndChannel> subscriberAndChannels = Arrays.stream(notificationChannels)
+      .flatMap(notificationChannel -> toSubscriberAndChannels(dispatcherKey, projectKey, notificationChannel))
+      .collect(Collectors.toSet());
 
-      // Find users subscribed globally to the dispatcher (i.e. not on a specific project)
-      addUsersToRecipientListForChannel(propertiesDao.selectUsersForNotification(dispatcherKey, channelKey, null), recipients, channel);
-
-      if (projectUuid != null) {
-        // Find users subscribed to the dispatcher specifically for the project
-        addUsersToRecipientListForChannel(propertiesDao.selectUsersForNotification(dispatcherKey, channelKey, projectUuid), recipients, channel);
-      }
+    if (subscriberAndChannels.isEmpty()) {
+      return ImmutableMultimap.of();
     }
 
-    return recipients;
+    ImmutableSetMultimap.Builder<String, NotificationChannel> builder = ImmutableSetMultimap.builder();
+    try (DbSession dbSession = dbClient.openSession(false)) {
+      Set<String> authorizedLogins = keepAuthorizedLogins(dbSession, projectKey, subscriberAndChannels, subscriberPermissionsOnProject);
+      subscriberAndChannels.stream()
+        .filter(subscriberAndChannel -> authorizedLogins.contains(subscriberAndChannel.getSubscriber().getLogin()))
+        .forEach(subscriberAndChannel -> builder.put(subscriberAndChannel.getSubscriber().getLogin(), subscriberAndChannel.getChannel()));
+    }
+    return builder.build();
   }
 
-  @Override
-  public Multimap<String, NotificationChannel> findNotificationSubscribers(NotificationDispatcher dispatcher, @Nullable String componentKey) {
-    String dispatcherKey = dispatcher.getKey();
+  private Stream<SubscriberAndChannel> toSubscriberAndChannels(String dispatcherKey, String projectKey, NotificationChannel notificationChannel) {
+    Set<Subscriber> usersForNotification = dbClient.propertiesDao().findUsersForNotification(dispatcherKey, notificationChannel.getKey(), projectKey);
+    return usersForNotification
+      .stream()
+      .map(login -> new SubscriberAndChannel(login, notificationChannel));
+  }
 
-    SetMultimap<String, NotificationChannel> recipients = HashMultimap.create();
-    for (NotificationChannel channel : notificationChannels) {
-      addUsersToRecipientListForChannel(propertiesDao.selectNotificationSubscribers(dispatcherKey, channel.getKey(), componentKey), recipients, channel);
+  private Set<String> keepAuthorizedLogins(DbSession dbSession, String projectKey, Set<SubscriberAndChannel> subscriberAndChannels,
+    SubscriberPermissionsOnProject requiredPermissions) {
+    if (requiredPermissions.getGlobalSubscribers().equals(requiredPermissions.getProjectSubscribers())) {
+      return keepAuthorizedLogins(dbSession, projectKey, subscriberAndChannels, null, requiredPermissions.getGlobalSubscribers());
+    } else {
+      return Stream
+        .concat(
+          keepAuthorizedLogins(dbSession, projectKey, subscriberAndChannels, true, requiredPermissions.getGlobalSubscribers()).stream(),
+          keepAuthorizedLogins(dbSession, projectKey, subscriberAndChannels, false, requiredPermissions.getProjectSubscribers()).stream())
+        .collect(Collectors.toSet());
+    }
+  }
+
+  private Set<String> keepAuthorizedLogins(DbSession dbSession, String projectKey, Set<SubscriberAndChannel> subscriberAndChannels,
+    @Nullable Boolean global, String permission) {
+    Set<String> logins = subscriberAndChannels.stream()
+      .filter(s -> global == null || s.getSubscriber().isGlobal() == global)
+      .map(s -> s.getSubscriber().getLogin())
+      .collect(Collectors.toSet());
+    if (logins.isEmpty()) {
+      return Collections.emptySet();
+    }
+    return dbClient.authorizationDao().keepAuthorizedLoginsOnProject(dbSession, logins, projectKey, permission);
+  }
+
+  private static final class SubscriberAndChannel {
+    private final Subscriber subscriber;
+    private final NotificationChannel channel;
+
+    private SubscriberAndChannel(Subscriber subscriber, NotificationChannel channel) {
+      this.subscriber = subscriber;
+      this.channel = channel;
     }
 
-    return recipients;
+    Subscriber getSubscriber() {
+      return subscriber;
+    }
+
+    NotificationChannel getChannel() {
+      return channel;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      SubscriberAndChannel that = (SubscriberAndChannel) o;
+      return Objects.equals(subscriber, that.subscriber) &&
+        Objects.equals(channel, that.channel);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(subscriber, channel);
+    }
   }
 
   @VisibleForTesting
   protected List<NotificationChannel> getChannels() {
     return Arrays.asList(notificationChannels);
-  }
-
-  private static void addUsersToRecipientListForChannel(List<String> users, SetMultimap<String, NotificationChannel> recipients, NotificationChannel channel) {
-    for (String username : users) {
-      recipients.put(username, channel);
-    }
   }
 
 }

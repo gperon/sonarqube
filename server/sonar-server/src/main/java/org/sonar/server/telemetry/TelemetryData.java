@@ -33,10 +33,12 @@ public class TelemetryData {
   private final long ncloc;
   private final long userCount;
   private final long projectCount;
+  private final boolean usingBranches;
+  private final Database database;
   private final Map<String, Long> projectCountByLanguage;
   private final Map<String, Long> nclocByLanguage;
 
-  public TelemetryData(Builder builder) {
+  private TelemetryData(Builder builder) {
     serverId = builder.serverId;
     version = builder.version;
     plugins = builder.plugins;
@@ -44,6 +46,8 @@ public class TelemetryData {
     ncloc = builder.projectMeasuresStatistics.getNcloc();
     userCount = builder.userCount;
     projectCount = builder.projectMeasuresStatistics.getProjectCount();
+    usingBranches = builder.usingBranches;
+    database = builder.database;
     projectCountByLanguage = builder.projectMeasuresStatistics.getProjectCountByLanguage();
     nclocByLanguage = builder.projectMeasuresStatistics.getNclocByLanguage();
   }
@@ -76,6 +80,14 @@ public class TelemetryData {
     return projectCount;
   }
 
+  public boolean isUsingBranches() {
+    return usingBranches;
+  }
+
+  public Database getDatabase() {
+    return database;
+  }
+
   public Map<String, Long> getProjectCountByLanguage() {
     return projectCountByLanguage;
   }
@@ -84,7 +96,7 @@ public class TelemetryData {
     return nclocByLanguage;
   }
 
-  public static Builder builder() {
+  static Builder builder() {
     return new Builder();
   }
 
@@ -93,7 +105,9 @@ public class TelemetryData {
     private String version;
     private long userCount;
     private Map<String, String> plugins;
+    private Database database;
     private ProjectMeasuresStatistics projectMeasuresStatistics;
+    private Boolean usingBranches;
 
     private Builder() {
       // enforce static factory method
@@ -121,13 +135,43 @@ public class TelemetryData {
       this.projectMeasuresStatistics = projectMeasuresStatistics;
     }
 
+    Builder setDatabase(Database database) {
+      this.database = database;
+      return this;
+    }
+
+    Builder setUsingBranches(boolean usingBranches) {
+      this.usingBranches = usingBranches;
+      return this;
+    }
+
     TelemetryData build() {
       requireNonNull(serverId);
       requireNonNull(version);
       requireNonNull(plugins);
       requireNonNull(projectMeasuresStatistics);
+      requireNonNull(database);
+      requireNonNull(usingBranches);
 
       return new TelemetryData(this);
+    }
+  }
+
+  static class Database {
+    private final String name;
+    private final String version;
+
+    Database(String name, String version) {
+      this.name = name;
+      this.version = version;
+    }
+
+    public String getName() {
+      return name;
+    }
+
+    public String getVersion() {
+      return version;
     }
   }
 }

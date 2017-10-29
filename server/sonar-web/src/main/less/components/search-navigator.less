@@ -193,10 +193,10 @@
     float: left;
     height: 16px;
     line-height: 16px;
+    margin-top: -1px;
     padding: 0 5px;
-    border-radius: 3px;
+    border-radius: 2px;
     font-size: 11px;
-    font-weight: 300;
     text-transform: lowercase;
 
     &:hover {
@@ -360,9 +360,12 @@
 
 .search-navigator-facet-header {
   display: block;
+  flex-shrink: 0;
   padding: 8px 0;
   color: @baseFontColor;
   font-weight: 600;
+  overflow: hidden;
+  white-space: nowrap;
 
   & > a {
     border-bottom: none;
@@ -378,9 +381,24 @@
   }
 }
 
+.search-navigator-facet-header-value {
+  display: block;
+  padding: 8px 0;
+  overflow: hidden;
+}
+
+.search-navigator-facet-header-value > .badge {
+  display: block;
+}
+
 .search-navigator-facet-header-button {
-  float: right;
-  margin-top: 6px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.search-navigator-facet-header-wrapper {
+  display: flex;
+  align-items: center;
 }
 
 .search-navigator-facet-list {
@@ -514,6 +532,10 @@
   position: relative;
   padding: 0 10px;
   font-size: @smallFontSize;
+}
+
+.search-navigator-date-facet-selection-input {
+  width: 115px !important;
 }
 
 .search-navigator-date-facet-selection-dropdown-left {
@@ -667,8 +689,6 @@
 .search-navigator-header-pagination {
   display: inline-block;
   vertical-align: top;
-  margin-right: 20px;
-  font-size: @smallFontSize;
 }
 
 .search-navigator-header-buttons {

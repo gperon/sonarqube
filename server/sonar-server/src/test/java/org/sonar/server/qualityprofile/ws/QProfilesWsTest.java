@@ -28,6 +28,7 @@ import org.sonar.api.profiles.RulesProfile;
 import org.sonar.api.resources.Language;
 import org.sonar.api.resources.Languages;
 import org.sonar.api.server.ws.WebService;
+import org.sonar.api.server.ws.WebService.Param;
 import org.sonar.api.utils.ValidationMessages;
 import org.sonar.db.DbClient;
 import org.sonar.server.language.LanguageTesting;
@@ -41,13 +42,13 @@ import static org.mockito.Mockito.mock;
 
 public class QProfilesWsTest {
   @Rule
-  public UserSessionRule userSessionRule = UserSessionRule.standalone();
+  public UserSessionRule userSession = UserSessionRule.standalone();
 
   private WebService.Controller controller;
   private String xoo1Key = "xoo1";
   private String xoo2Key = "xoo2";
   private DefaultOrganizationProvider defaultOrganizationProvider = TestDefaultOrganizationProvider.fromUuid("ORG1");
-  private QProfileWsSupport wsSupport = new QProfileWsSupport(mock(DbClient.class), userSessionRule, defaultOrganizationProvider);
+  private QProfileWsSupport wsSupport = new QProfileWsSupport(mock(DbClient.class), userSession, defaultOrganizationProvider);
 
   @Before
   public void setUp() {
@@ -58,18 +59,18 @@ public class QProfilesWsTest {
     ProfileImporter[] importers = createImporters(languages);
 
     controller = new WsTester(new QProfilesWs(
-      new CreateAction(null, null, null, languages, wsSupport, userSessionRule, null, importers),
+      new CreateAction(null, null, null, languages, wsSupport, userSession, null, importers),
       new ImportersAction(importers),
-      new SearchAction(languages, dbClient, wsSupport, null),
+      new SearchAction(userSession, languages, dbClient, wsSupport, null),
       new SetDefaultAction(languages, null, null, wsSupport),
-      new ProjectsAction(null, userSessionRule, wsSupport),
-      new ChangelogAction(null, wsSupport, languages, dbClient),
-      new ChangeParentAction(dbClient, null, languages, wsSupport, userSessionRule),
+      new ProjectsAction(null, userSession, wsSupport),
+      new ChangelogAction(wsSupport, languages, dbClient),
+      new ChangeParentAction(dbClient, null, languages, wsSupport, userSession),
       new CompareAction(null, null, languages),
-      new DeleteAction(languages, null, null, userSessionRule, wsSupport),
+      new DeleteAction(languages, null, null, userSession, wsSupport),
       new ExportersAction(),
       new InheritanceAction(null, null, languages),
-      new RenameAction(dbClient, userSessionRule, wsSupport))).controller(QProfilesWs.API_ENDPOINT);
+      new RenameAction(dbClient, userSession, wsSupport))).controller(QProfilesWs.API_ENDPOINT);
   }
 
   private ProfileImporter[] createImporters(Languages languages) {
@@ -106,8 +107,8 @@ public class QProfilesWsTest {
     assertThat(create.param("organization")).isNotNull();
     assertThat(create.param("organization").isRequired()).isFalse();
     assertThat(create.param("organization").isInternal()).isTrue();
-    assertThat(create.param("profileName")).isNotNull();
-    assertThat(create.param("profileName").isRequired()).isTrue();
+    assertThat(create.param("name")).isNotNull();
+    assertThat(create.param("name").isRequired()).isTrue();
     assertThat(create.param("language").possibleValues()).containsOnly(xoo1Key, xoo2Key);
     assertThat(create.param("language").isRequired()).isTrue();
     assertThat(create.param("backup_" + xoo1Key)).isNotNull();
@@ -152,8 +153,8 @@ public class QProfilesWsTest {
     WebService.Action delete = controller.action("delete");
     assertThat(delete).isNotNull();
     assertThat(delete.isPost()).isTrue();
-    assertThat(delete.params()).hasSize(4).extracting("key").containsOnly(
-      "organization", "profile", "language", "profileName");
+    assertThat(delete.params()).hasSize(4).extracting(Param::key).containsOnly(
+      "organization", "key", "language", "qualityProfile");
   }
 
   @Test
@@ -170,8 +171,8 @@ public class QProfilesWsTest {
     WebService.Action inheritance = controller.action("inheritance");
     assertThat(inheritance).isNotNull();
     assertThat(inheritance.isPost()).isFalse();
-    assertThat(inheritance.params()).hasSize(4).extracting("key").containsExactlyInAnyOrder(
-      "organization", "profile", "language", "profileName");
+    assertThat(inheritance.params()).hasSize(4).extracting(Param::key).containsExactlyInAnyOrder(
+      "organization", "key", "language", "qualityProfile");
     assertThat(inheritance.responseExampleAsString()).isNotEmpty();
   }
 }

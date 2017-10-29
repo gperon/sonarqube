@@ -121,6 +121,7 @@ exports[`render qualifiers filter 1`] = `
           <DateInput
             format="yy-mm-dd"
             inputClassName="input-medium"
+            maxDate="+0"
             name="analyzed-before"
             onChange={[Function]}
             placeholder="last_analysis_before"
@@ -168,7 +169,7 @@ exports[`render qualifiers filter 1`] = `
             <input
               className="search-box-input input-medium"
               onChange={[Function]}
-              placeholder="Search"
+              placeholder="search_verb"
               type="search"
               value=""
             />
@@ -178,14 +179,14 @@ exports[`render qualifiers filter 1`] = `
           className="thin nowrap text-middle"
         >
           <button
-            className="spacer-right js-bulk-apply-permission-template"
+            className="js-bulk-apply-permission-template"
             disabled={false}
             onClick={[Function]}
           >
             permission_templates.bulk_apply_permission_template
           </button>
           <button
-            className="js-delete button-red"
+            className="js-delete spacer-left button-red"
             disabled={false}
             onClick={[Function]}
           >
@@ -223,6 +224,7 @@ exports[`renders 1`] = `
           <DateInput
             format="yy-mm-dd"
             inputClassName="input-medium"
+            maxDate="+0"
             name="analyzed-before"
             onChange={[Function]}
             placeholder="last_analysis_before"
@@ -270,7 +272,7 @@ exports[`renders 1`] = `
             <input
               className="search-box-input input-medium"
               onChange={[Function]}
-              placeholder="Search"
+              placeholder="search_verb"
               type="search"
               value=""
             />
@@ -280,14 +282,14 @@ exports[`renders 1`] = `
           className="thin nowrap text-middle"
         >
           <button
-            className="spacer-right js-bulk-apply-permission-template"
+            className="js-bulk-apply-permission-template"
             disabled={false}
             onClick={[Function]}
           >
             permission_templates.bulk_apply_permission_template
           </button>
           <button
-            className="js-delete button-red"
+            className="js-delete spacer-left button-red"
             disabled={false}
             onClick={[Function]}
           >

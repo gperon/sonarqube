@@ -19,35 +19,22 @@
  */
 package org.sonar.server.platform.ws;
 
-import java.util.Map;
-import java.util.Optional;
 import org.sonar.api.server.ws.Request;
 import org.sonar.api.server.ws.Response;
 import org.sonar.api.server.ws.WebService;
 import org.sonar.api.utils.text.JsonWriter;
-import org.sonar.ce.http.CeHttpClient;
-import org.sonar.process.systeminfo.protobuf.ProtobufSystemInfo;
-import org.sonar.server.platform.monitoring.Monitor;
-import org.sonar.server.telemetry.TelemetryDataLoader;
 import org.sonar.server.user.UserSession;
-
-import static org.sonar.server.telemetry.TelemetryDataJsonWriter.writeTelemetryData;
 
 /**
  * Implementation of the {@code info} action for the System WebService.
  */
 public class InfoAction implements SystemWsAction {
-
+  private final SystemInfoWriter systemInfoWriter;
   private final UserSession userSession;
-  private final CeHttpClient ceHttpClient;
-  private final Monitor[] monitors;
-  private final TelemetryDataLoader statistics;
 
-  public InfoAction(UserSession userSession, CeHttpClient ceHttpClient, TelemetryDataLoader statistics, Monitor... monitors) {
+  public InfoAction(UserSession userSession, SystemInfoWriter systemInfoWriter) {
     this.userSession = userSession;
-    this.ceHttpClient = ceHttpClient;
-    this.statistics = statistics;
-    this.monitors = monitors;
+    this.systemInfoWriter = systemInfoWriter;
   }
 
   @Override
@@ -60,66 +47,17 @@ public class InfoAction implements SystemWsAction {
       .setInternal(true)
       .setResponseExample(getClass().getResource("/org/sonar/server/platform/ws/info-example.json"))
       .setHandler(this);
+
   }
 
   @Override
-  public void handle(Request request, Response response) {
+  public void handle(Request request, Response response) throws Exception {
     userSession.checkIsSystemAdministrator();
-
-    JsonWriter json = response.newJsonWriter();
-    writeJson(json);
-    json.close();
-  }
-
-  private void writeJson(JsonWriter json) {
-    json.beginObject();
-    for (Monitor monitor : monitors) {
-      Map<String, Object> attributes = monitor.attributes();
-      json.name(monitor.name());
+    try (JsonWriter json = response.newJsonWriter()) {
       json.beginObject();
-      for (Map.Entry<String, Object> attribute : attributes.entrySet()) {
-        json.name(attribute.getKey()).valueObject(attribute.getValue());
-      }
+      systemInfoWriter.write(json);
       json.endObject();
     }
-    Optional<ProtobufSystemInfo.SystemInfo> ceSysInfo = ceHttpClient.retrieveSystemInfo();
-    if (ceSysInfo.isPresent()) {
-      for (ProtobufSystemInfo.Section section : ceSysInfo.get().getSectionsList()) {
-        json.name(section.getName());
-        json.beginObject();
-        for (ProtobufSystemInfo.Attribute attribute : section.getAttributesList()) {
-          writeAttribute(json, attribute);
-        }
-        json.endObject();
-      }
-    }
-    writeStatistics(json);
-    json.endObject();
   }
 
-  private void writeStatistics(JsonWriter json) {
-    json.name("Statistics");
-    writeTelemetryData(json, statistics.load());
-  }
-
-  private static void writeAttribute(JsonWriter json, ProtobufSystemInfo.Attribute attribute) {
-    switch (attribute.getValueCase()) {
-      case BOOLEAN_VALUE:
-        json.name(attribute.getKey()).valueObject(attribute.getBooleanValue());
-        break;
-      case LONG_VALUE:
-        json.name(attribute.getKey()).valueObject(attribute.getLongValue());
-        break;
-      case DOUBLE_VALUE:
-        json.name(attribute.getKey()).valueObject(attribute.getDoubleValue());
-        break;
-      case STRING_VALUE:
-        json.name(attribute.getKey()).valueObject(attribute.getStringValue());
-        break;
-      case VALUE_NOT_SET:
-        break;
-      default:
-        throw new IllegalArgumentException("Unsupported type: " + attribute.getValueCase());
-    }
-  }
 }

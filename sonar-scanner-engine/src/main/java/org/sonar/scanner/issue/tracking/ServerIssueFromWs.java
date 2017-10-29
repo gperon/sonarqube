@@ -19,8 +19,10 @@
  */
 package org.sonar.scanner.issue.tracking;
 
+import java.util.Date;
 import javax.annotation.CheckForNull;
 import org.sonar.api.rule.RuleKey;
+import org.sonar.api.utils.DateUtils;
 import org.sonar.core.issue.tracking.Trackable;
 
 import static org.apache.commons.lang.StringUtils.trim;
@@ -61,6 +63,16 @@ public class ServerIssueFromWs implements Trackable {
   @Override
   public String getMessage() {
     return dto.hasMsg() ? trim(dto.getMsg()) : "";
+  }
+
+  @Override
+  public String getStatus() {
+    return dto.getStatus();
+  }
+
+  @Override
+  public Date getCreationDate() {
+    return DateUtils.longToDate(dto.getCreationDate());
   }
 
 }

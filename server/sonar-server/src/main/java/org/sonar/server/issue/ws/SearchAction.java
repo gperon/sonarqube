@@ -19,6 +19,7 @@
  */
 package org.sonar.server.issue.ws;
 
+import com.google.common.base.Joiner;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import java.util.Arrays;
@@ -41,6 +42,7 @@ import org.sonar.api.server.ws.Response;
 import org.sonar.api.server.ws.WebService;
 import org.sonar.api.server.ws.WebService.Param;
 import org.sonar.api.utils.Paging;
+import org.sonar.api.utils.System2;
 import org.sonar.core.util.stream.MoreCollectors;
 import org.sonar.server.es.Facets;
 import org.sonar.server.es.SearchOptions;
@@ -51,6 +53,7 @@ import org.sonar.server.user.UserSession;
 import org.sonarqube.ws.Issues.SearchWsResponse;
 import org.sonarqube.ws.client.issue.SearchWsRequest;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.Iterables.concat;
 import static com.google.common.collect.Sets.newHashSet;
 import static java.lang.String.format;
@@ -107,20 +110,24 @@ public class SearchAction implements IssuesWsAction {
 
   private static final String INTERNAL_PARAMETER_DISCLAIMER = "This parameter is mostly used by the Issues page, please prefer usage of the componentKeys parameter. ";
   private static final Set<String> IGNORED_FACETS = newHashSet(PARAM_PLANNED, DEPRECATED_PARAM_ACTION_PLANS, PARAM_REPORTERS);
+  private static final Set<String> FACETS_REQUIRING_PROJECT_OR_ORGANIZATION = newHashSet(PARAM_FILE_UUIDS, PARAM_DIRECTORIES, PARAM_MODULE_UUIDS);
+  private static final Joiner COMA_JOINER = Joiner.on(",");
 
   private final UserSession userSession;
   private final IssueIndex issueIndex;
   private final IssueQueryFactory issueQueryFactory;
   private final SearchResponseLoader searchResponseLoader;
   private final SearchResponseFormat searchResponseFormat;
+  private final System2 system2;
 
   public SearchAction(UserSession userSession, IssueIndex issueIndex, IssueQueryFactory issueQueryFactory,
-    SearchResponseLoader searchResponseLoader, SearchResponseFormat searchResponseFormat) {
+    SearchResponseLoader searchResponseLoader, SearchResponseFormat searchResponseFormat, System2 system2) {
     this.userSession = userSession;
     this.issueIndex = issueIndex;
     this.issueQueryFactory = issueQueryFactory;
     this.searchResponseLoader = searchResponseLoader;
     this.searchResponseFormat = searchResponseFormat;
+    this.system2 = system2;
   }
 
   @Override
@@ -201,14 +208,17 @@ public class SearchAction implements IssuesWsAction {
       .setDescription("Comma-separated list of languages. Available since 4.4")
       .setExampleValue("java,js");
     action.createParam(PARAM_CREATED_AT)
-      .setDescription("To retrieve issues created in a specific analysis, identified by an ISO-formatted datetime stamp.")
-      .setExampleValue("2013-05-01T13:00:00+0100");
+      .setDescription("Datetime to retrieve issues created during a specific analysis")
+      .setExampleValue("2017-10-19T13:00:00+0200");
     action.createParam(PARAM_CREATED_AFTER)
-      .setDescription("To retrieve issues created after the given date (inclusive). Format: date or datetime ISO formats. If this parameter is set, createdSince must not be set")
-      .setExampleValue("2013-05-01 (or 2013-05-01T13:00:00+0100)");
+      .setDescription("To retrieve issues created after the given date (inclusive). <br>" +
+        "Either a date (server timezone) or datetime can be provided. <br>" +
+        "If this parameter is set, createdSince must not be set")
+      .setExampleValue("2017-10-19 or 2017-10-19T13:00:00+0200");
     action.createParam(PARAM_CREATED_BEFORE)
-      .setDescription("To retrieve issues created before the given date (exclusive). Format: date or datetime ISO formats")
-      .setExampleValue("2013-05-01 (or 2013-05-01T13:00:00+0100)");
+      .setDescription("To retrieve issues created before the given date (inclusive). <br>" +
+        "Either a date (server timezone) or datetime can be provided.")
+      .setExampleValue("2017-10-19 or 2017-10-19T13:00:00+0200");
     action.createParam(PARAM_CREATED_IN_LAST)
       .setDescription("To retrieve issues created during a time span before the current time (exclusive). " +
         "Accepted units are 'y' for year, 'm' for month, 'w' for week and 'd' for day. " +
@@ -231,8 +241,8 @@ public class SearchAction implements IssuesWsAction {
       .setDefaultValue("false");
 
     action.createParam(PARAM_COMPONENT_KEYS)
-      .setDescription("To retrieve issues associated to a specific list of components sub-components (comma-separated list of component keys). " +
-        "A component can be a view, project, module, directory or file.")
+      .setDescription("Comma-separated list of component keys. Retrieve issues associated to a specific list of components (and all its descendants). " +
+        "A component can be a portfolio, project, module, directory or file.")
       .setExampleValue(KEY_PROJECT_EXAMPLE_001);
 
     action.createParam(PARAM_COMPONENTS)
@@ -265,14 +275,13 @@ public class SearchAction implements IssuesWsAction {
     action.createParam(PARAM_PROJECT_UUIDS)
       .setDescription("To retrieve issues associated to a specific list of projects (comma-separated list of project IDs). " +
         INTERNAL_PARAMETER_DISCLAIMER +
-        "Views are not supported. If this parameter is set, projectKeys must not be set.")
+        "Portfolios are not supported. If this parameter is set, '%s' must not be set.", PARAM_PROJECTS)
       .setInternal(true)
       .setExampleValue("7d8749e8-3070-4903-9188-bdd82933bb92");
 
     action.createParam(PARAM_MODULE_UUIDS)
       .setDescription("To retrieve issues associated to a specific list of modules (comma-separated list of module IDs). " +
-        INTERNAL_PARAMETER_DISCLAIMER +
-        "Views are not supported. If this parameter is set, moduleKeys must not be set.")
+        INTERNAL_PARAMETER_DISCLAIMER)
       .setInternal(true)
       .setExampleValue("7d8749e8-3070-4903-9188-bdd82933bb92");
 
@@ -328,12 +337,19 @@ public class SearchAction implements IssuesWsAction {
     collectRequestParams(collector, request);
     Facets facets = null;
     if (!options.getFacets().isEmpty()) {
-      facets = new Facets(result);
+      facets = new Facets(result, system2.getDefaultTimeZone());
       // add missing values to facets. For example if assignee "john" and facet on "assignees" are requested, then
       // "john" should always be listed in the facet. If it is not present, then it is added with value zero.
       // This is a constraint from webapp UX.
       completeFacets(facets, request, wsRequest);
       collectFacets(collector, facets);
+
+      Set<String> facetsRequiringProjectOrOrganizationParameter = facets.getNames().stream()
+        .filter(FACETS_REQUIRING_PROJECT_OR_ORGANIZATION::contains)
+        .collect(MoreCollectors.toSet());
+      checkArgument(facetsRequiringProjectOrOrganizationParameter.isEmpty() ||
+        (!query.projectUuids().isEmpty()) || query.organizationUuid() != null, "Facet(s) '%s' require to also filter by project or organization",
+        COMA_JOINER.join(facetsRequiringProjectOrOrganizationParameter));
     }
     SearchResponseData data = searchResponseLoader.load(collector, facets);
 
@@ -345,7 +361,7 @@ public class SearchAction implements IssuesWsAction {
     facets = reorderFacets(facets, options.getFacets());
 
     // FIXME allow long in Paging
-    Paging paging = forPageIndex(options.getPage()).withPageSize(options.getLimit()).andTotal((int) result.getHits().totalHits());
+    Paging paging = forPageIndex(options.getPage()).withPageSize(options.getLimit()).andTotal((int) result.getHits().getTotalHits());
 
     return searchResponseFormat.formatSearch(additionalFields, data, paging, facets);
   }
@@ -358,7 +374,7 @@ public class SearchAction implements IssuesWsAction {
     return options;
   }
 
-  private static Facets reorderFacets(@Nullable Facets facets, Collection<String> orderedNames) {
+  private Facets reorderFacets(@Nullable Facets facets, Collection<String> orderedNames) {
     if (facets == null) {
       return null;
     }
@@ -369,7 +385,7 @@ public class SearchAction implements IssuesWsAction {
         orderedFacets.put(facetName, facet);
       }
     }
-    return new Facets(orderedFacets);
+    return new Facets(orderedFacets, system2.getDefaultTimeZone());
   }
 
   private void completeFacets(Facets facets, SearchWsRequest request, Request wsRequest) {
@@ -429,7 +445,7 @@ public class SearchAction implements IssuesWsAction {
     }
   }
 
-  private void collectFacets(SearchResponseLoader.Collector collector, Facets facets) {
+  private static void collectFacets(SearchResponseLoader.Collector collector, Facets facets) {
     Set<String> facetRules = facets.getBucketKeys(PARAM_RULES);
     if (facetRules != null) {
       collector.addAll(SearchAdditionalField.RULES, Collections2.transform(facetRules, RuleKey::parse));
@@ -441,7 +457,7 @@ public class SearchAction implements IssuesWsAction {
     collector.addAll(SearchAdditionalField.USERS, facets.getBucketKeys(PARAM_ASSIGNEES));
   }
 
-  private void collectRequestParams(SearchResponseLoader.Collector collector, SearchWsRequest request) {
+  private static void collectRequestParams(SearchResponseLoader.Collector collector, SearchWsRequest request) {
     collector.addProjectUuids(request.getProjectUuids());
     collector.addComponentUuids(request.getFileUuids());
     collector.addComponentUuids(request.getModuleUuids());

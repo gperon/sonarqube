@@ -20,6 +20,7 @@
 package org.sonar.api.utils;
 
 import java.net.URL;
+import java.time.Clock;
 import java.util.Date;
 import java.util.Map;
 import java.util.Properties;
@@ -60,6 +61,8 @@ import org.sonar.api.server.ServerSide;
  * Note that the name System2 was chosen to not conflict with {@link java.lang.System}.
  * <br>
  * An instance is available in IoC container since 4.3.
+ * 
+ * Since 6.4 you can also inject {@link Clock} instead of {@link System2} if you are only interested by date/time operations
  *
  * @since 4.2
  */
@@ -72,6 +75,7 @@ public class System2 {
 
   /**
    * Shortcut for {@link System#currentTimeMillis()}
+   * Since 6.4 you can also inject {@link Clock} instead of {@link System2}
    */
   public long now() {
     return System.currentTimeMillis();

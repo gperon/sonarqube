@@ -37,7 +37,11 @@ const ZERO_LINE = {
 
 export default class SourceViewerCode extends React.PureComponent {
   /*:: props: {|
+    branch?: string,
     displayAllIssues: boolean,
+    displayIssueLocationsCount?: boolean;
+    displayIssueLocationsLink?: boolean;
+    displayLocationMarkers?: boolean;
     duplications?: Array<Duplication>,
     duplicationsByLine: { [number]: Array<number> },
     duplicatedFiles?: Array<{ key: string }>,
@@ -109,7 +113,6 @@ export default class SourceViewerCode extends React.PureComponent {
     index /*: number */,
     displayCoverage /*: boolean */,
     displayDuplications /*: boolean */,
-    displayFiltered /*: boolean */,
     displayIssues /*: boolean */
   ) => {
     const { filterLine, highlightedLocationMessage, selectedIssue, sources } = this.props;
@@ -147,11 +150,14 @@ export default class SourceViewerCode extends React.PureComponent {
 
     return (
       <Line
+        branch={this.props.branch}
         displayAllIssues={this.props.displayAllIssues}
         displayCoverage={displayCoverage}
         displayDuplications={displayDuplications}
-        displayFiltered={displayFiltered}
         displayIssues={displayIssues}
+        displayIssueLocationsCount={this.props.displayIssueLocationsCount}
+        displayIssueLocationsLink={this.props.displayIssueLocationsLink}
+        displayLocationMarkers={this.props.displayLocationMarkers}
         duplications={this.getDuplicationsForLine(line)}
         duplicationsCount={duplicationsCount}
         filtered={filtered}
@@ -191,7 +197,6 @@ export default class SourceViewerCode extends React.PureComponent {
 
     const hasCoverage = sources.some(s => s.coverageStatus != null);
     const hasDuplications = sources.some(s => s.duplicated);
-    const displayFiltered = this.props.filterLine != null;
     const hasIssues = this.props.issues.length > 0;
 
     const hasFileIssues = hasIssues && this.props.issues.some(issue => !issue.textRange);
@@ -220,16 +225,9 @@ export default class SourceViewerCode extends React.PureComponent {
         <table className="source-table">
           <tbody>
             {hasFileIssues &&
-              this.renderLine(
-                ZERO_LINE,
-                -1,
-                hasCoverage,
-                hasDuplications,
-                displayFiltered,
-                hasIssues
-              )}
+              this.renderLine(ZERO_LINE, -1, hasCoverage, hasDuplications, hasIssues)}
             {sources.map((line, index) =>
-              this.renderLine(line, index, hasCoverage, hasDuplications, displayFiltered, hasIssues)
+              this.renderLine(line, index, hasCoverage, hasDuplications, hasIssues)
             )}
           </tbody>
         </table>

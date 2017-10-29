@@ -39,5 +39,36 @@
       ],
       "visibility": "public"
     }
+  ],
+  "facets": [
+    {
+      "property": "coverage",
+      "values": [
+        {
+          "val": "NO_DATA",
+          "count": 0
+        },
+        {
+          "val": "*-30.0",
+          "count": 1
+        },
+        {
+          "val": "30.0-50.0",
+          "count": 0
+        },
+        {
+          "val": "50.0-70.0",
+          "count": 0
+        },
+        {
+          "val": "70.0-80.0",
+          "count": 0
+        },
+        {
+          "val": "80.0-*",
+          "count": 2
+        }
+      ]
+    }
   ]
 }

@@ -20,8 +20,9 @@
 package org.sonar.server.health;
 
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
-import org.sonar.cluster.health.NodeHealth;
+import org.sonar.process.cluster.health.NodeHealth;
 
 import static com.google.common.collect.ImmutableSet.copyOf;
 import static java.util.Objects.requireNonNull;
@@ -41,6 +42,12 @@ public class ClusterHealth {
 
   public Set<NodeHealth> getNodes() {
     return nodes;
+  }
+
+  public Optional<NodeHealth> getNodeHealth(String nodeName) {
+    return nodes.stream()
+      .filter(node -> nodeName.equals(node.getDetails().getName()))
+      .findFirst();
   }
 
   @Override

@@ -52,14 +52,10 @@ import org.sonar.updatecenter.common.Version;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
-import static com.google.common.collect.Iterables.transform;
-import static com.google.common.collect.Lists.newArrayList;
 import static java.lang.String.format;
-import static java.util.stream.Collectors.toList;
 import static org.apache.commons.io.FileUtils.copyFile;
 import static org.apache.commons.io.FileUtils.moveFile;
 import static org.apache.commons.io.FileUtils.moveFileToDirectory;
-import static org.sonar.core.platform.PluginInfo.jarToPluginInfo;
 import static org.sonar.core.util.FileUtils.deleteQuietly;
 
 /**
@@ -95,8 +91,7 @@ public class ServerPluginRepository implements PluginRepository, Startable {
   private final Map<String, Plugin> pluginInstancesByKeys = new HashMap<>();
   private final Map<ClassLoader, String> keysByClassLoader = new HashMap<>();
 
-  public ServerPluginRepository(SonarRuntime runtime, ServerUpgradeStatus upgradeStatus,
-    ServerFileSystem fs, PluginLoader loader) {
+  public ServerPluginRepository(SonarRuntime runtime, ServerUpgradeStatus upgradeStatus, ServerFileSystem fs, PluginLoader loader) {
     this.runtime = runtime;
     this.upgradeStatus = upgradeStatus;
     this.fs = fs;
@@ -113,6 +108,7 @@ public class ServerPluginRepository implements PluginRepository, Startable {
     loadPreInstalledPlugins();
     copyBundledPlugins();
     moveDownloadedPlugins();
+    moveDownloadedEditionPlugins();
     unloadIncompatiblePlugins();
     logInstalledPlugins();
     loadInstances();
@@ -154,6 +150,14 @@ public class ServerPluginRepository implements PluginRepository, Startable {
   private void moveDownloadedPlugins() {
     if (fs.getDownloadedPluginsDir().exists()) {
       for (File sourceFile : listJarFiles(fs.getDownloadedPluginsDir())) {
+        overrideAndRegisterPlugin(sourceFile, true);
+      }
+    }
+  }
+
+  private void moveDownloadedEditionPlugins() {
+    if (fs.getEditionDownloadedPluginsDir().exists()) {
+      for (File sourceFile : listJarFiles(fs.getEditionDownloadedPluginsDir())) {
         overrideAndRegisterPlugin(sourceFile, true);
       }
     }
@@ -305,28 +309,45 @@ public class ServerPluginRepository implements PluginRepository, Startable {
   /**
    * Uninstall a plugin and its dependents
    */
-  public void uninstall(String pluginKey) {
-    checkState(started.get(), NOT_STARTED_YET);
-
+  public void uninstall(String pluginKey, File uninstallDir) {
     Set<String> uninstallKeys = new HashSet<>();
     uninstallKeys.add(pluginKey);
     appendDependentPluginKeys(pluginKey, uninstallKeys);
 
     for (String uninstallKey : uninstallKeys) {
-      PluginInfo info = pluginInfosByKeys.get(uninstallKey);
+      PluginInfo info = getPluginInfo(uninstallKey);
+
       try {
+        if (!getPluginFile(info).exists()) {
+          LOG.info("Plugin already uninstalled: {} [{}]", info.getName(), info.getKey());
+          continue;
+        }
+
         LOG.info("Uninstalling plugin {} [{}]", info.getName(), info.getKey());
-        // we don't reuse info.getFile() just to be sure that file is located in from extensions/plugins
-        File masterFile = new File(fs.getInstalledPluginsDir(), info.getNonNullJarFile().getName());
-        moveFileToDirectory(masterFile, uninstalledPluginsDir(), true);
+
+        File masterFile = getPluginFile(info);
+        moveFileToDirectory(masterFile, uninstallDir, true);
       } catch (IOException e) {
         throw new IllegalStateException(format("Fail to uninstall plugin %s [%s]", info.getName(), info.getKey()), e);
       }
     }
   }
 
+  public void cancelUninstalls(File uninstallDir) {
+    for (File file : listJarFiles(uninstallDir)) {
+      try {
+        moveFileToDirectory(file, fs.getInstalledPluginsDir(), false);
+      } catch (IOException e) {
+        throw new IllegalStateException("Fail to cancel plugin uninstalls", e);
+      }
+    }
+  }
+
+  /**
+   * Appends dependent plugins, only the ones that still exist in the plugins folder.
+   */
   private void appendDependentPluginKeys(String pluginKey, Set<String> appendTo) {
-    for (PluginInfo otherPlugin : pluginInfosByKeys.values()) {
+    for (PluginInfo otherPlugin : getPluginInfos()) {
       if (!otherPlugin.getKey().equals(pluginKey)) {
         for (PluginInfo.RequiredPlugin requirement : otherPlugin.getRequiredPlugins()) {
           if (requirement.getKey().equals(pluginKey)) {
@@ -338,25 +359,9 @@ public class ServerPluginRepository implements PluginRepository, Startable {
     }
   }
 
-  public List<String> getUninstalledPluginFilenames() {
-    return listJarFiles(uninstalledPluginsDir()).stream().map(File::getName).collect(toList());
-  }
-
-  /**
-   * @return the list of plugins to be uninstalled as {@link PluginInfo} instances
-   */
-  public Collection<PluginInfo> getUninstalledPlugins() {
-    return newArrayList(transform(listJarFiles(uninstalledPluginsDir()), jarToPluginInfo()));
-  }
-
-  public void cancelUninstalls() {
-    for (File file : listJarFiles(uninstalledPluginsDir())) {
-      try {
-        moveFileToDirectory(file, fs.getInstalledPluginsDir(), false);
-      } catch (IOException e) {
-        throw new IllegalStateException("Fail to cancel plugin uninstalls", e);
-      }
-    }
+  private File getPluginFile(PluginInfo info) {
+    // we don't reuse info.getFile() just to be sure that file is located in from extensions/plugins
+    return new File(fs.getInstalledPluginsDir(), info.getNonNullJarFile().getName());
   }
 
   public Map<String, PluginInfo> getPluginInfosByKeys() {
@@ -391,19 +396,6 @@ public class ServerPluginRepository implements PluginRepository, Startable {
   public boolean hasPlugin(String key) {
     checkState(started.get(), NOT_STARTED_YET);
     return pluginInfosByKeys.containsKey(key);
-  }
-
-  /**
-   * @return existing trash dir
-   */
-  private File uninstalledPluginsDir() {
-    File dir = new File(fs.getTempDir(), "uninstalled-plugins");
-    try {
-      FileUtils.forceMkdir(dir);
-      return dir;
-    } catch (IOException e) {
-      throw new IllegalStateException("Fail to create temp directory: " + dir.getAbsolutePath(), e);
-    }
   }
 
   private static Collection<File> listJarFiles(File dir) {

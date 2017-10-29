@@ -2,6 +2,11 @@
 
 exports[`generates token 1`] = `
 <TokenStep
+  currentUser={
+    Object {
+      "login": "user",
+    }
+  }
   finished={false}
   onContinue={[Function]}
   onOpen={[Function]}
@@ -35,24 +40,57 @@ exports[`generates token 1`] = `
       <div
         className="boxed-group-inner"
       >
-        <form
-          onSubmit={[Function]}
-        >
-          <input
-            autoFocus={true}
-            className="input-large spacer-right text-middle"
-            onChange={[Function]}
-            placeholder="onboarding.token.placeholder"
-            required={true}
-            type="text"
-            value=""
-          />
-          <button
-            className="text-middle"
+        <div>
+          <div>
+            <a
+              className="js-new link-base-color link-no-underline"
+              href="#"
+              onClick={[Function]}
+            >
+              <i
+                className="icon-radio spacer-right is-checked"
+              />
+              onboading.token.generate_token
+            </a>
+            <div
+              className="big-spacer-top"
+            >
+              <form
+                onSubmit={[Function]}
+              >
+                <input
+                  autoFocus={true}
+                  className="input-large spacer-right text-middle"
+                  onChange={[Function]}
+                  placeholder="onboading.token.generate_token.placeholder"
+                  required={true}
+                  type="text"
+                  value=""
+                />
+                <button
+                  className="text-middle"
+                  disabled={true}
+                >
+                  onboarding.token.generate
+                </button>
+              </form>
+            </div>
+          </div>
+          <div
+            className="big-spacer-top"
           >
-            onboarding.token.generate
-          </button>
-        </form>
+            <a
+              className="js-new link-base-color link-no-underline"
+              href="#"
+              onClick={[Function]}
+            >
+              <i
+                className="icon-radio spacer-right"
+              />
+              onboarding.token.use_existing_token
+            </a>
+          </div>
+        </div>
         <div
           className="note big-spacer-top width-50"
         >
@@ -66,6 +104,11 @@ exports[`generates token 1`] = `
 
 exports[`generates token 2`] = `
 <TokenStep
+  currentUser={
+    Object {
+      "login": "user",
+    }
+  }
   finished={false}
   onContinue={[Function]}
   onOpen={[Function]}
@@ -99,22 +142,54 @@ exports[`generates token 2`] = `
       <div
         className="boxed-group-inner"
       >
-        <form
-          onSubmit={[Function]}
-        >
-          <input
-            autoFocus={true}
-            className="input-large spacer-right text-middle"
-            onChange={[Function]}
-            placeholder="onboarding.token.placeholder"
-            required={true}
-            type="text"
-            value="my token"
-          />
-          <i
-            className="spinner text-middle"
-          />
-        </form>
+        <div>
+          <div>
+            <a
+              className="js-new link-base-color link-no-underline"
+              href="#"
+              onClick={[Function]}
+            >
+              <i
+                className="icon-radio spacer-right is-checked"
+              />
+              onboading.token.generate_token
+            </a>
+            <div
+              className="big-spacer-top"
+            >
+              <form
+                onSubmit={[Function]}
+              >
+                <input
+                  autoFocus={true}
+                  className="input-large spacer-right text-middle"
+                  onChange={[Function]}
+                  placeholder="onboading.token.generate_token.placeholder"
+                  required={true}
+                  type="text"
+                  value="my token"
+                />
+                <i
+                  className="spinner text-middle"
+                />
+              </form>
+            </div>
+          </div>
+          <div
+            className="big-spacer-top"
+          >
+            <a
+              className="js-new link-base-color link-no-underline"
+              href="#"
+              onClick={[Function]}
+            >
+              <i
+                className="icon-radio spacer-right"
+              />
+              onboarding.token.use_existing_token
+            </a>
+          </div>
+        </div>
         <div
           className="note big-spacer-top width-50"
         >
@@ -128,6 +203,11 @@ exports[`generates token 2`] = `
 
 exports[`generates token 3`] = `
 <TokenStep
+  currentUser={
+    Object {
+      "login": "user",
+    }
+  }
   finished={false}
   onContinue={[Function]}
   onOpen={[Function]}
@@ -220,6 +300,11 @@ exports[`generates token 3`] = `
 
 exports[`revokes token 1`] = `
 <TokenStep
+  currentUser={
+    Object {
+      "login": "user",
+    }
+  }
   finished={false}
   onContinue={[Function]}
   onOpen={[Function]}
@@ -312,6 +397,11 @@ exports[`revokes token 1`] = `
 
 exports[`revokes token 2`] = `
 <TokenStep
+  currentUser={
+    Object {
+      "login": "user",
+    }
+  }
   finished={false}
   onContinue={[Function]}
   onOpen={[Function]}
@@ -386,6 +476,11 @@ exports[`revokes token 2`] = `
 
 exports[`revokes token 3`] = `
 <TokenStep
+  currentUser={
+    Object {
+      "login": "user",
+    }
+  }
   finished={false}
   onContinue={[Function]}
   onOpen={[Function]}
@@ -419,24 +514,57 @@ exports[`revokes token 3`] = `
       <div
         className="boxed-group-inner"
       >
-        <form
-          onSubmit={[Function]}
-        >
-          <input
-            autoFocus={true}
-            className="input-large spacer-right text-middle"
-            onChange={[Function]}
-            placeholder="onboarding.token.placeholder"
-            required={true}
-            type="text"
-            value=""
-          />
-          <button
-            className="text-middle"
+        <div>
+          <div>
+            <a
+              className="js-new link-base-color link-no-underline"
+              href="#"
+              onClick={[Function]}
+            >
+              <i
+                className="icon-radio spacer-right is-checked"
+              />
+              onboading.token.generate_token
+            </a>
+            <div
+              className="big-spacer-top"
+            >
+              <form
+                onSubmit={[Function]}
+              >
+                <input
+                  autoFocus={true}
+                  className="input-large spacer-right text-middle"
+                  onChange={[Function]}
+                  placeholder="onboading.token.generate_token.placeholder"
+                  required={true}
+                  type="text"
+                  value=""
+                />
+                <button
+                  className="text-middle"
+                  disabled={true}
+                >
+                  onboarding.token.generate
+                </button>
+              </form>
+            </div>
+          </div>
+          <div
+            className="big-spacer-top"
           >
-            onboarding.token.generate
-          </button>
-        </form>
+            <a
+              className="js-new link-base-color link-no-underline"
+              href="#"
+              onClick={[Function]}
+            >
+              <i
+                className="icon-radio spacer-right"
+              />
+              onboarding.token.use_existing_token
+            </a>
+          </div>
+        </div>
         <div
           className="note big-spacer-top width-50"
         >

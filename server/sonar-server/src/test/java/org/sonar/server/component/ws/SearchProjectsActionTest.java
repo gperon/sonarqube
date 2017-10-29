@@ -128,7 +128,7 @@ public class SearchProjectsActionTest {
   private DbSession dbSession = db.getSession();
 
   private PermissionIndexerTester authorizationIndexerTester = new PermissionIndexerTester(es, new ProjectMeasuresIndexer(dbClient, es.client()));
-  private ProjectMeasuresIndex index = new ProjectMeasuresIndex(es.client(), new AuthorizationTypeSupport(userSession));
+  private ProjectMeasuresIndex index = new ProjectMeasuresIndex(es.client(), new AuthorizationTypeSupport(userSession), System2.INSTANCE);
   private ProjectMeasuresIndexer projectMeasuresIndexer = new ProjectMeasuresIndexer(db.getDbClient(), es.client());
 
   private WsActionTester ws = new WsActionTester(
@@ -198,22 +198,29 @@ public class SearchProjectsActionTest {
     userSession.logIn();
     OrganizationDto organization1Dto = db.organizations().insertForKey("my-org-key-1");
     OrganizationDto organization2Dto = db.organizations().insertForKey("my-org-key-2");
+    MetricDto coverage = db.measures().insertMetric(c -> c.setKey(COVERAGE).setValueType(PERCENT.name()));
     ComponentDto project1 = insertProject(organization1Dto, c -> c
       .setDbKey(KeyExamples.KEY_PROJECT_EXAMPLE_001)
       .setName("My Project 1")
-      .setTagsString("finance, java"));
-    insertProject(organization1Dto, c -> c
+      .setTagsString("finance, java"),
+      new Measure(coverage, c -> c.setValue(80d)));
+    ComponentDto project2 = insertProject(organization1Dto, c -> c
       .setDbKey(KeyExamples.KEY_PROJECT_EXAMPLE_002)
-      .setName("My Project 2"));
-    insertProject(organization2Dto, c -> c
+      .setName("My Project 2"),
+      new Measure(coverage, c -> c.setValue(90d)));
+    ComponentDto project3 = insertProject(organization2Dto, c -> c
       .setDbKey(KeyExamples.KEY_PROJECT_EXAMPLE_003)
       .setName("My Project 3")
-      .setTagsString("sales, offshore, java"));
+      .setTagsString("sales, offshore, java"),
+      new Measure(coverage, c -> c.setValue(20d)));
     addFavourite(project1);
 
-    String result = ws.newRequest().execute().getInput();
+    String jsonResult = ws.newRequest().setParam(Param.FACETS, COVERAGE).execute().getInput();
+    SearchProjectsWsResponse protobufResult = ws.newRequest().setParam(Param.FACETS, COVERAGE).executeProtobuf(SearchProjectsWsResponse.class);
 
-    assertJson(result).withStrictArrayOrder().ignoreFields("id").isSimilarTo(ws.getDef().responseExampleAsString());
+    assertJson(jsonResult).withStrictArrayOrder().ignoreFields("id").isSimilarTo(ws.getDef().responseExampleAsString());
+    assertJson(ws.getDef().responseExampleAsString()).ignoreFields("id").withStrictArrayOrder().isSimilarTo(jsonResult);
+    assertThat(protobufResult.getComponentsList()).extracting(Component::getId).containsExactly(project1.uuid(), project2.uuid(), project3.uuid());
   }
 
   @Test

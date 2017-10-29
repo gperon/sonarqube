@@ -35,7 +35,7 @@ public class CeQueueModule extends Module {
       // queue monitoring
       CEQueueStatusImpl.class,
       CeTasksMBeanImpl.class,
-      
+
       // init queue state and queue processing
       CeQueueInitializer.class);
   }

@@ -35,6 +35,7 @@ import org.sonar.db.ce.CeScannerContextMapper;
 import org.sonar.db.ce.CeTaskCharacteristicDto;
 import org.sonar.db.ce.CeTaskCharacteristicMapper;
 import org.sonar.db.ce.CeTaskInputMapper;
+import org.sonar.db.component.AnalysisPropertiesMapper;
 import org.sonar.db.component.BranchMapper;
 import org.sonar.db.component.ComponentDto;
 import org.sonar.db.component.ComponentDtoWithSnapshotId;
@@ -43,7 +44,9 @@ import org.sonar.db.component.ComponentLinkDto;
 import org.sonar.db.component.ComponentLinkMapper;
 import org.sonar.db.component.ComponentMapper;
 import org.sonar.db.component.FilePathWithHashDto;
+import org.sonar.db.component.KeyWithUuidDto;
 import org.sonar.db.component.ResourceDto;
+import org.sonar.db.component.ScrapAnalysisPropertyDto;
 import org.sonar.db.component.SnapshotDto;
 import org.sonar.db.component.SnapshotMapper;
 import org.sonar.db.component.UuidWithProjectUuidDto;
@@ -58,6 +61,7 @@ import org.sonar.db.issue.IssueChangeDto;
 import org.sonar.db.issue.IssueChangeMapper;
 import org.sonar.db.issue.IssueDto;
 import org.sonar.db.issue.IssueMapper;
+import org.sonar.db.issue.ShortBranchIssueDto;
 import org.sonar.db.loadedtemplate.LoadedTemplateDto;
 import org.sonar.db.loadedtemplate.LoadedTemplateMapper;
 import org.sonar.db.measure.MeasureDto;
@@ -102,6 +106,8 @@ import org.sonar.db.qualityprofile.ActiveRuleMapper;
 import org.sonar.db.qualityprofile.ActiveRuleParamDto;
 import org.sonar.db.qualityprofile.DefaultQProfileMapper;
 import org.sonar.db.qualityprofile.QProfileChangeMapper;
+import org.sonar.db.qualityprofile.QProfileEditGroupsMapper;
+import org.sonar.db.qualityprofile.QProfileEditUsersMapper;
 import org.sonar.db.qualityprofile.QualityProfileMapper;
 import org.sonar.db.rule.RuleDto;
 import org.sonar.db.rule.RuleMapper;
@@ -150,6 +156,7 @@ public class MyBatis implements Startable {
     confBuilder.loadAlias("DuplicationUnit", DuplicationUnitDto.class);
     confBuilder.loadAlias("Event", EventDto.class);
     confBuilder.loadAlias("FilePathWithHash", FilePathWithHashDto.class);
+    confBuilder.loadAlias("KeyWithUuid", KeyWithUuidDto.class);
     confBuilder.loadAlias("Group", GroupDto.class);
     confBuilder.loadAlias("GroupMembership", GroupMembershipDto.class);
     confBuilder.loadAlias("GroupPermission", GroupPermissionDto.class);
@@ -158,6 +165,7 @@ public class MyBatis implements Startable {
     confBuilder.loadAlias("IssueChange", IssueChangeDto.class);
     confBuilder.loadAlias("KeyLongValue", KeyLongValue.class);
     confBuilder.loadAlias("Issue", IssueDto.class);
+    confBuilder.loadAlias("ShortBranchIssue", ShortBranchIssueDto.class);
     confBuilder.loadAlias("LoadedTemplate", LoadedTemplateDto.class);
     confBuilder.loadAlias("Measure", MeasureDto.class);
     confBuilder.loadAlias("NotificationQueue", NotificationQueueDto.class);
@@ -178,6 +186,7 @@ public class MyBatis implements Startable {
     confBuilder.loadAlias("Rule", RuleDto.class);
     confBuilder.loadAlias("SchemaMigration", SchemaMigrationDto.class);
     confBuilder.loadAlias("ScrapProperty", ScrapPropertyDto.class);
+    confBuilder.loadAlias("ScrapAnalysisProperty", ScrapAnalysisPropertyDto.class);
     confBuilder.loadAlias("Snapshot", SnapshotDto.class);
     confBuilder.loadAlias("UserGroup", UserGroupDto.class);
     confBuilder.loadAlias("UserPermission", UserPermissionDto.class);
@@ -190,6 +199,7 @@ public class MyBatis implements Startable {
     // keep them sorted alphabetically
     Class<?>[] mappers = {
       ActiveRuleMapper.class,
+      AnalysisPropertiesMapper.class,
       AuthorizationMapper.class,
       BranchMapper.class,
       CeActivityMapper.class,
@@ -226,6 +236,8 @@ public class MyBatis implements Startable {
       PropertiesMapper.class,
       PurgeMapper.class,
       QProfileChangeMapper.class,
+      QProfileEditGroupsMapper.class,
+      QProfileEditUsersMapper.class,
       QualityGateConditionMapper.class,
       QualityGateMapper.class,
       QualityProfileMapper.class,

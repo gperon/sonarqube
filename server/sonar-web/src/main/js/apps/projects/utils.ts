@@ -86,8 +86,11 @@ const PAGE_SIZE_VISUALIZATIONS = 99;
 
 const METRICS = [
   'alert_status',
+  'bugs',
   'reliability_rating',
+  'vulnerabilities',
   'security_rating',
+  'code_smells',
   'sqale_rating',
   'duplicated_lines_density',
   'coverage',
@@ -115,7 +118,7 @@ const METRICS_BY_VISUALIZATION: { [x: string]: string[] } = {
   security: ['ncloc', 'security_remediation_effort', 'vulnerabilities', 'security_rating'],
   maintainability: ['ncloc', 'sqale_index', 'code_smells', 'sqale_rating'],
   coverage: ['complexity', 'coverage', 'uncovered_lines'],
-  duplications: ['ncloc', 'duplicated_lines', 'duplicated_blocks']
+  duplications: ['ncloc', 'duplicated_lines_density', 'duplicated_blocks']
 };
 
 const FACETS = [
@@ -278,13 +281,20 @@ function mapFacetValues(values: Array<{ val: string; count: number }>) {
   return map;
 }
 
-function cumulativeMapFacetValues(values: Array<{ val: string; count: number }>) {
+export function cumulativeMapFacetValues(values: Array<{ val: string; count: number }>) {
+  const noDataVal = values.find(value => value.val === 'NO_DATA');
+  const filteredValues = noDataVal ? values.filter(value => value.val !== 'NO_DATA') : values;
+
+  let sum = sumBy(filteredValues, value => value.count);
   const map: { [value: string]: number } = {};
-  let sum = sumBy(values, value => value.count);
-  values.forEach((value, index) => {
+  filteredValues.forEach((value, index) => {
     map[value.val] = index > 0 && index < values.length - 1 ? sum : value.count;
     sum -= value.count;
   });
+
+  if (noDataVal) {
+    map[noDataVal.val] = noDataVal.count;
+  }
   return map;
 }
 

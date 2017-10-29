@@ -58,7 +58,7 @@ public class ServerImpl extends Server {
 
   @Override
   public String getPermanentServerId() {
-    return config.get(CoreProperties.PERMANENT_SERVER_ID).orElse(null);
+    return getId();
   }
 
   @Override
@@ -75,12 +75,7 @@ public class ServerImpl extends Server {
   public File getRootDir() {
     return fs.getHomeDir();
   }
-
-  @Override
-  public File getDeployDir() {
-    return fs.getDeployDir();
-  }
-
+  
   @Override
   public String getContextPath() {
     return urlSettings.getContextPath();
@@ -93,7 +88,7 @@ public class ServerImpl extends Server {
 
   @Override
   public boolean isDev() {
-    return urlSettings.isDev();
+    return false;
   }
 
   @Override

@@ -19,41 +19,32 @@
  */
 package org.sonar.server.platform.ws;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Optional;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.mockito.Mockito;
-import org.sonar.ce.http.CeHttpClient;
-import org.sonar.ce.http.CeHttpClientImpl;
+import org.sonar.api.utils.text.JsonWriter;
 import org.sonar.server.exceptions.ForbiddenException;
-import org.sonar.server.platform.monitoring.Monitor;
-import org.sonar.server.telemetry.TelemetryData;
-import org.sonar.server.telemetry.TelemetryDataLoader;
 import org.sonar.server.tester.UserSessionRule;
 import org.sonar.server.ws.TestResponse;
 import org.sonar.server.ws.WsActionTester;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 public class InfoActionTest {
   @Rule
-  public UserSessionRule userSessionRule = UserSessionRule.standalone().logIn("login")
+  public UserSessionRule userSessionRule = UserSessionRule.standalone()
+    .logIn("login")
     .setName("name");
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
-  private Monitor monitor1 = mock(Monitor.class);
-  private Monitor monitor2 = mock(Monitor.class);
-  private CeHttpClient ceHttpClient = mock(CeHttpClientImpl.class, Mockito.RETURNS_MOCKS);
-  private TelemetryDataLoader statistics = mock(TelemetryDataLoader.class);
-
-  private InfoAction underTest = new InfoAction(userSessionRule, ceHttpClient, statistics, monitor1, monitor2);
+  private SystemInfoWriter jsonWriter = new SystemInfoWriter(null) {
+    @Override
+    public void write(JsonWriter json) throws Exception {
+      json.prop("key", "value");
+    }
+  };
+  private InfoAction underTest = new InfoAction(userSessionRule, jsonWriter);
   private WsActionTester ws = new WsActionTester(underTest);
 
   @Test
@@ -84,23 +75,8 @@ public class InfoActionTest {
   public void write_json() {
     logInAsSystemAdministrator();
 
-    Map<String, Object> attributes1 = new LinkedHashMap<>();
-    attributes1.put("foo", "bar");
-    Map<String, Object> attributes2 = new LinkedHashMap<>();
-    attributes2.put("one", 1);
-    attributes2.put("two", 2);
-    when(monitor1.name()).thenReturn("Monitor One");
-    when(monitor1.attributes()).thenReturn(attributes1);
-    when(monitor2.name()).thenReturn("Monitor Two");
-    when(monitor2.attributes()).thenReturn(attributes2);
-    when(ceHttpClient.retrieveSystemInfo()).thenReturn(Optional.empty());
-    when(statistics.load()).thenReturn(mock(TelemetryData.class));
-
     TestResponse response = ws.newRequest().execute();
-    // response does not contain empty "Monitor Three"
-    verify(statistics).load();
-    assertThat(response.getInput()).isEqualTo("{\"Monitor One\":{\"foo\":\"bar\"},\"Monitor Two\":{\"one\":1,\"two\":2}," +
-      "\"Statistics\":{\"plugins\":{},\"userCount\":0,\"projectCount\":0,\"lines\":0,\"ncloc\":0,\"projectCountByLanguage\":{},\"nclocByLanguage\":{}}}");
+    assertThat(response.getInput()).isEqualTo("{\"key\":\"value\"}");
   }
 
   private void logInAsSystemAdministrator() {

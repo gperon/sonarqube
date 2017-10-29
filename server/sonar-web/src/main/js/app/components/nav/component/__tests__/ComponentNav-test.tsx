@@ -62,19 +62,12 @@ const component = {
 
 it('loads status', () => {
   getTasksForComponent.mockClear();
-  mount(<ComponentNav branches={[]} component={component} conf={{}} location={{}} />);
+  mount(<ComponentNav branches={[]} component={component} location={{}} />);
   expect(getTasksForComponent).toBeCalledWith('component');
 });
 
 it('renders', () => {
-  const wrapper = shallow(
-    <ComponentNav branches={[]} component={component} conf={{}} location={{}} />
-  );
-  wrapper.setState({
-    incremental: true,
-    isFailed: true,
-    isInProgress: true,
-    isPending: true
-  });
+  const wrapper = shallow(<ComponentNav branches={[]} component={component} location={{}} />);
+  wrapper.setState({ isInProgress: true, isPending: true });
   expect(wrapper).toMatchSnapshot();
 });

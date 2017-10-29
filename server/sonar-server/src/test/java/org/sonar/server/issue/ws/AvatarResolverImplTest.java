@@ -61,4 +61,12 @@ public class AvatarResolverImplTest {
 
     underTest.create(newUserDto("john", "John", null));
   }
+
+  @Test
+  public void fail_when_email_is_empty() throws Exception {
+    expectedException.expect(NullPointerException.class);
+    expectedException.expectMessage("Email cannot be null");
+
+    underTest.create(newUserDto("john", "John", ""));
+  }
 }

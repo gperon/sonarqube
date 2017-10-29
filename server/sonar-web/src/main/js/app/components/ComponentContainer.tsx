@@ -18,6 +18,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 import * as React from 'react';
+import { connect } from 'react-redux';
 import ComponentContainerNotFound from './ComponentContainerNotFound';
 import ComponentNav from './nav/component/ComponentNav';
 import { Branch, Component } from '../types';
@@ -25,12 +26,16 @@ import handleRequiredAuthorization from '../utils/handleRequiredAuthorization';
 import { getBranches } from '../../api/branches';
 import { getComponentData } from '../../api/components';
 import { getComponentNavigation } from '../../api/nav';
+import { fetchOrganizations } from '../../store/rootActions';
+import { areThereCustomOrganizations } from '../../store/rootReducer';
 
 interface Props {
   children: any;
+  fetchOrganizations: (organizations: string[]) => void;
   location: {
     query: { branch?: string; id: string };
   };
+  organizationsEnabled?: boolean;
 }
 
 interface State {
@@ -39,7 +44,7 @@ interface State {
   component: Component | null;
 }
 
-export default class ComponentContainer extends React.PureComponent<Props, State> {
+export class ComponentContainer extends React.PureComponent<Props, State> {
   mounted: boolean;
 
   constructor(props: Props) {
@@ -49,15 +54,15 @@ export default class ComponentContainer extends React.PureComponent<Props, State
 
   componentDidMount() {
     this.mounted = true;
-    this.fetchComponent();
+    this.fetchComponent(this.props);
   }
 
-  componentDidUpdate(prevProps: Props) {
+  componentWillReceiveProps(nextProps: Props) {
     if (
-      prevProps.location.query.id !== this.props.location.query.id ||
-      prevProps.location.query.branch !== this.props.location.query.branch
+      nextProps.location.query.id !== this.props.location.query.id ||
+      nextProps.location.query.branch !== this.props.location.query.branch
     ) {
-      this.fetchComponent();
+      this.fetchComponent(nextProps);
     }
   }
 
@@ -70,8 +75,8 @@ export default class ComponentContainer extends React.PureComponent<Props, State
     qualifier: component.breadcrumbs[component.breadcrumbs.length - 1].qualifier
   });
 
-  fetchComponent() {
-    const { branch, id } = this.props.location.query;
+  fetchComponent(props: Props) {
+    const { branch, id } = props.location.query;
     this.setState({ loading: true });
 
     const onError = (error: any) => {
@@ -84,8 +89,16 @@ export default class ComponentContainer extends React.PureComponent<Props, State
       }
     };
 
-    Promise.all([getComponentNavigation(id), getComponentData(id, branch)]).then(([nav, data]) => {
+    Promise.all([
+      getComponentNavigation(id, branch),
+      getComponentData(id, branch)
+    ]).then(([nav, data]) => {
       const component = this.addQualifier({ ...nav, ...data });
+
+      if (this.props.organizationsEnabled) {
+        this.props.fetchOrganizations([component.organization]);
+      }
+
       this.fetchBranches(component).then(branches => {
         if (this.mounted) {
           this.setState({ loading: false, branches, component });
@@ -122,37 +135,45 @@ export default class ComponentContainer extends React.PureComponent<Props, State
     const { query } = this.props.location;
     const { branches, component, loading } = this.state;
 
-    if (loading) {
-      return <i className="spinner" />;
-    }
-
-    if (!component) {
+    if (!loading && !component) {
       return <ComponentContainerNotFound />;
     }
 
     const branch = branches.find(b => (query.branch ? b.name === query.branch : b.isMain));
-    const isFile = ['FIL', 'UTS'].includes(component.qualifier);
-    const configuration = component.configuration || {};
 
     return (
       <div>
-        {!isFile && (
+        {component &&
+        !['FIL', 'UTS'].includes(component.qualifier) && (
           <ComponentNav
             branches={branches}
             currentBranch={branch}
             component={component}
-            conf={configuration}
             location={this.props.location}
           />
         )}
-        {React.cloneElement(this.props.children, {
-          branch,
-          branches,
-          component: component,
-          onBranchesChange: this.handleBranchesChange,
-          onComponentChange: this.handleComponentChange
-        })}
+        {loading ? (
+          <div className="page page-limited">
+            <i className="spinner" />
+          </div>
+        ) : (
+          React.cloneElement(this.props.children, {
+            branch,
+            branches,
+            component,
+            onBranchesChange: this.handleBranchesChange,
+            onComponentChange: this.handleComponentChange
+          })
+        )}
       </div>
     );
   }
 }
+
+const mapStateToProps = (state: any) => ({
+  organizationsEnabled: areThereCustomOrganizations(state)
+});
+
+const mapDispatchToProps = { fetchOrganizations };
+
+export default connect<any, any, any>(mapStateToProps, mapDispatchToProps)(ComponentContainer);

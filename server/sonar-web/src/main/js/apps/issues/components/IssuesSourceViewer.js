@@ -43,9 +43,14 @@ export default class IssuesSourceViewer extends React.PureComponent {
   /*:: props: Props; */
 
   componentDidUpdate(prevProps /*: Props */) {
+    const { openIssue, selectedLocationIndex } = this.props;
+
+    // Scroll back to the issue when the selected location is set to -1
+    const shouldScrollBackToIssue =
+      selectedLocationIndex === -1 && selectedLocationIndex !== prevProps.selectedLocationIndex;
     if (
-      prevProps.openIssue !== this.props.openIssue &&
-      prevProps.openIssue.component === this.props.openIssue.component
+      prevProps.openIssue.component === openIssue.component &&
+      (prevProps.openIssue !== openIssue || shouldScrollBackToIssue)
     ) {
       this.scrollToIssue();
     }
@@ -75,20 +80,39 @@ export default class IssuesSourceViewer extends React.PureComponent {
         ? openIssue.flows[selectedFlowIndex]
         : openIssue.flows.length > 0 ? openIssue.flows[0] : openIssue.secondaryLocations;
 
-    const locationMessage =
+    let locationMessage = undefined;
+    let locationLine = undefined;
+
+    // We don't want to display a location message when selected location is -1
+    if (
       locations != null &&
       selectedLocationIndex != null &&
+      selectedLocationIndex >= 0 &&
       locations.length >= selectedLocationIndex
-        ? { index: selectedLocationIndex, text: locations[selectedLocationIndex].msg }
-        : undefined;
+    ) {
+      locationMessage = {
+        index: selectedLocationIndex,
+        text: locations[selectedLocationIndex].msg
+      };
+      locationLine = locations[selectedLocationIndex].textRange.startLine;
+    }
+
+    // if location is selected, show (and load) code around it
+    // otherwise show code around the open issue
+    const aroundLine = locationLine || (openIssue.textRange && openIssue.textRange.endLine);
+
+    const allMessagesEmpty = locations != null && locations.every(location => !location.msg);
 
     return (
       <div ref={node => (this.node = node)}>
         <SourceViewer
-          aroundLine={openIssue.textRange ? openIssue.textRange.endLine : undefined}
+          aroundLine={aroundLine}
           branch={this.props.branch}
           component={openIssue.component}
           displayAllIssues={true}
+          displayIssueLocationsCount={false}
+          displayIssueLocationsLink={false}
+          displayLocationMarkers={!allMessagesEmpty}
           highlightedLocations={locations}
           highlightedLocationMessage={locationMessage}
           loadIssues={this.props.loadIssues}

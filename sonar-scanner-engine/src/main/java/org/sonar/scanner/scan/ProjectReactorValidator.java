@@ -21,6 +21,7 @@ package org.sonar.scanner.scan;
 
 import com.google.common.base.Joiner;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import javax.annotation.Nullable;
 import org.apache.commons.lang.StringUtils;
@@ -29,9 +30,9 @@ import org.sonar.api.batch.bootstrap.ProjectDefinition;
 import org.sonar.api.batch.bootstrap.ProjectReactor;
 import org.sonar.api.utils.MessageException;
 import org.sonar.core.component.ComponentKeys;
-import org.sonar.scanner.analysis.DefaultAnalysisMode;
+import org.sonar.core.config.ScannerProperties;
+import org.sonar.scanner.bootstrap.GlobalConfiguration;
 import org.sonar.scanner.scan.branch.BranchParamsValidator;
-import org.sonar.scanner.scan.branch.DefaultBranchParamsValidator;
 
 /**
  * This class aims at validating project reactor
@@ -39,17 +40,20 @@ import org.sonar.scanner.scan.branch.DefaultBranchParamsValidator;
  */
 public class ProjectReactorValidator {
   private final AnalysisMode mode;
-  private final BranchParamsValidator branchParamsValidator;
-  private final DefaultAnalysisMode analysisFlags;
+  private final GlobalConfiguration settings;
 
-  public ProjectReactorValidator(AnalysisMode mode, DefaultAnalysisMode analysisFlags, BranchParamsValidator branchParamsValidator) {
+  // null = branch plugin is not available
+  @Nullable
+  private final BranchParamsValidator branchParamsValidator;
+
+  public ProjectReactorValidator(AnalysisMode mode, GlobalConfiguration settings, @Nullable BranchParamsValidator branchParamsValidator) {
     this.mode = mode;
-    this.analysisFlags = analysisFlags;
+    this.settings = settings;
     this.branchParamsValidator = branchParamsValidator;
   }
 
-  public ProjectReactorValidator(AnalysisMode mode, DefaultAnalysisMode analysisFlags) {
-    this(mode, analysisFlags, new DefaultBranchParamsValidator());
+  public ProjectReactorValidator(AnalysisMode mode, GlobalConfiguration settings) {
+    this(mode, settings, null);
   }
 
   public void validate(ProjectReactor reactor) {
@@ -65,11 +69,26 @@ public class ProjectReactorValidator {
 
     String deprecatedBranchName = reactor.getRoot().getBranch();
 
-    branchParamsValidator.validate(validationMessages, deprecatedBranchName, analysisFlags.isIncremental());
+    if (branchParamsValidator != null) {
+      // branch plugin is present
+      branchParamsValidator.validate(validationMessages, deprecatedBranchName);
+    } else {
+      validateBranchParamsWhenPluginAbsent(validationMessages);
+    }
+
     validateBranch(validationMessages, deprecatedBranchName);
 
     if (!validationMessages.isEmpty()) {
       throw MessageException.of("Validation of project reactor failed:\n  o " + Joiner.on("\n  o ").join(validationMessages));
+    }
+  }
+
+  private void validateBranchParamsWhenPluginAbsent(List<String> validationMessages) {
+    for (String param : Arrays.asList(ScannerProperties.BRANCH_NAME, ScannerProperties.BRANCH_TARGET)) {
+      if (StringUtils.isNotEmpty(settings.get(param).orElse(null))) {
+        validationMessages.add(String.format("To use the property \"%s\", the branch plugin is required but not installed. "
+          + "See the documentation of branch support: %s.", param, ScannerProperties.BRANCHES_DOC_LINK));
+      }
     }
   }
 
@@ -84,6 +103,11 @@ public class ProjectReactorValidator {
     if (!ComponentKeys.isValidModuleKey(moduleDef.getKey())) {
       validationMessages.add(String.format("\"%s\" is not a valid project or module key. "
         + "Allowed characters are alphanumeric, '-', '_', '.' and ':', with at least one non-digit.", moduleDef.getKey()));
+    }
+    String originalVersion = moduleDef.getOriginalVersion();
+    if (originalVersion != null && originalVersion.length() > 100) {
+      validationMessages.add(String.format("\"%s\" is not a valid version name for module \"%s\". " +
+        "The maximum length for version numbers is 100 characters.", originalVersion, moduleDef.getKey()));
     }
   }
 

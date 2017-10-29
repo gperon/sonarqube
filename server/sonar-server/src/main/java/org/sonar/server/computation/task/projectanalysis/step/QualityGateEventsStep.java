@@ -26,6 +26,7 @@ import org.sonar.api.notifications.Notification;
 import org.sonar.api.utils.log.Logger;
 import org.sonar.api.utils.log.Loggers;
 import org.sonar.server.computation.task.projectanalysis.analysis.AnalysisMetadataHolder;
+import org.sonar.server.computation.task.projectanalysis.analysis.Branch;
 import org.sonar.server.computation.task.projectanalysis.component.Component;
 import org.sonar.server.computation.task.projectanalysis.component.ComponentVisitor;
 import org.sonar.server.computation.task.projectanalysis.component.CrawlerDepthLimit;
@@ -68,6 +69,10 @@ public class QualityGateEventsStep implements ComputationStep {
 
   @Override
   public void execute() {
+    // no notification on short living branch as there is no real Quality Gate on those
+    if (analysisMetadataHolder.isShortLivingBranch()) {
+      return;
+    }
     new DepthTraversalTypeAwareCrawler(
       new TypeAwareVisitorAdapter(CrawlerDepthLimit.PROJECT, ComponentVisitor.Order.PRE_ORDER) {
         @Override
@@ -127,13 +132,15 @@ public class QualityGateEventsStep implements ComputationStep {
       .setDefaultMessage(String.format("Alert on %s: %s", project.getName(), label))
       .setFieldValue("projectName", project.getName())
       .setFieldValue("projectKey", project.getPublicKey())
-      .setFieldValue("projectUuid", project.getUuid())
+      .setFieldValue("projectVersion", project.getReportAttributes().getVersion())
       .setFieldValue("alertName", label)
       .setFieldValue("alertText", rawStatus.getText())
       .setFieldValue("alertLevel", rawStatus.getStatus().toString())
       .setFieldValue("isNewAlert", Boolean.toString(isNewAlert));
-    analysisMetadataHolder.getBranch().filter(b -> !b.isMain())
-      .ifPresent(branch -> notification.setFieldValue("branch", branch.getName()));
+    Branch branch = analysisMetadataHolder.getBranch();
+    if (!branch.isMain()) {
+      notification.setFieldValue("branch", branch.getName());
+    }
     notificationService.deliver(notification);
   }
 

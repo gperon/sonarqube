@@ -20,8 +20,10 @@
 package org.sonarqube.ws.client;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
+import java.util.Base64;
 import java.util.List;
 import java.util.Random;
 import javax.net.ssl.SSLSocketFactory;
@@ -41,6 +43,7 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 import org.sonarqube.ws.MediaTypes;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static okhttp3.Credentials.basic;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.fail;
@@ -68,6 +71,31 @@ public class HttpConnectorTest {
   @After
   public void stop() throws Exception {
     server.close();
+  }
+
+  @Test
+  public void follow_redirects_post() throws IOException, InterruptedException {
+    MockWebServer server2 = new MockWebServer();
+    server2.start();
+    server2.url("").url().toString();
+
+    server.enqueue(new MockResponse()
+      .setResponseCode(302)
+      .setHeader("Location", server2.url("").url().toString()));
+
+    server2.enqueue(new MockResponse()
+      .setResponseCode(200));
+
+    underTest = HttpConnector.newBuilder().url(serverUrl).build();
+    PostRequest request = new PostRequest("api/ce/submit").setParam("projectKey", "project");
+    WsResponse response = underTest.call(request);
+
+    RecordedRequest recordedRequest = server2.takeRequest();
+
+    assertThat(recordedRequest.getMethod()).isEqualTo("POST");
+    assertThat(recordedRequest.getBody().readUtf8()).isEqualTo("projectKey=project");
+    assertThat(response.requestUrl()).isEqualTo(server2.url("").url().toString());
+    assertThat(response.code()).isEqualTo(200);
   }
 
   @Test
@@ -140,6 +168,26 @@ public class HttpConnectorTest {
 
     RecordedRequest recordedRequest = server.takeRequest();
     assertThat(recordedRequest.getHeader("Authorization")).isEqualTo(basic("theLogin", ""));
+  }
+
+  @Test
+  public void use_basic_authentication_with_utf8_login_and_password() throws Exception {
+    answerHelloWorld();
+    String login = "我能";
+    String password = "吞下";
+    underTest = HttpConnector.newBuilder()
+      .url(serverUrl)
+      .credentials(login, password)
+      .build();
+
+    GetRequest request = new GetRequest("api/issues/search");
+    underTest.call(request);
+
+    RecordedRequest recordedRequest = server.takeRequest();
+    // do not use OkHttp Credentials.basic() in order to not use the same code as the code under test
+
+    String expectedHeader = "Basic " + Base64.getEncoder().encodeToString((login + ":" + password).getBytes(UTF_8));
+    assertThat(recordedRequest.getHeader("Authorization")).isEqualTo(expectedHeader);
   }
 
   /**

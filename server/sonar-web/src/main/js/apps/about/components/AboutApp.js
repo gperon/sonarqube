@@ -36,7 +36,6 @@ import { getFacet } from '../../../api/issues';
 import { getAppState, getCurrentUser, getGlobalSettingValue } from '../../../store/rootReducer';
 import { translate } from '../../../helpers/l10n';
 import { fetchAboutPageSettings } from '../actions';
-import AboutAppForSonarQubeDotComLazyLoader from './AboutAppForSonarQubeDotComLazyLoader';
 import '../styles.css';
 
 /*::
@@ -62,7 +61,7 @@ class AboutApp extends React.PureComponent {
     currentUser: { isLoggedIn: boolean },
     customText?: string,
     fetchAboutPageSettings: () => Promise<*>,
-    sonarqubeDotCom?: { value: string }
+    onSonarCloud?: { value: string }
   };
 */
 
@@ -73,7 +72,11 @@ class AboutApp extends React.PureComponent {
 
   componentDidMount() {
     this.mounted = true;
-    this.loadData();
+    if (this.props.onSonarCloud && this.props.onSonarCloud.value === 'true') {
+      window.location = 'https://about.sonarcloud.io';
+    } else {
+      this.loadData();
+    }
   }
 
   componentWillUnmount() {
@@ -107,8 +110,12 @@ class AboutApp extends React.PureComponent {
   }
 
   render() {
-    const { customText, sonarqubeDotCom } = this.props;
+    const { customText, onSonarCloud } = this.props;
     const { loading, issueTypes, projectsCount } = this.state;
+
+    if (onSonarCloud && onSonarCloud.value === 'true') {
+      return null;
+    }
 
     let bugs;
     let vulnerabilities;
@@ -117,21 +124,6 @@ class AboutApp extends React.PureComponent {
       bugs = issueTypes['BUG'] && issueTypes['BUG'].count;
       vulnerabilities = issueTypes['VULNERABILITY'] && issueTypes['VULNERABILITY'].count;
       codeSmells = issueTypes['CODE_SMELL'] && issueTypes['CODE_SMELL'].count;
-    }
-
-    if (sonarqubeDotCom && sonarqubeDotCom.value === 'true') {
-      return (
-        <AboutAppForSonarQubeDotComLazyLoader
-          appState={this.props.appState}
-          bugs={bugs}
-          codeSmells={codeSmells}
-          currentUser={this.props.currentUser}
-          customText={customText}
-          loading={loading}
-          projectsCount={projectsCount}
-          vulnerabilities={vulnerabilities}
-        />
-      );
     }
 
     return (
@@ -203,7 +195,7 @@ const mapStateToProps = state => ({
   appState: getAppState(state),
   currentUser: getCurrentUser(state),
   customText: getGlobalSettingValue(state, 'sonar.lf.aboutText'),
-  sonarqubeDotCom: getGlobalSettingValue(state, 'sonar.lf.sonarqube.com.enabled')
+  onSonarCloud: getGlobalSettingValue(state, 'sonar.sonarcloud.enabled')
 });
 
 const mapDispatchToProps = { fetchAboutPageSettings };

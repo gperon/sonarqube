@@ -39,7 +39,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.lang.String.format;
 import static java.lang.String.valueOf;
 import static java.util.Objects.requireNonNull;
-import static org.sonar.cluster.ClusterProperties.CLUSTER_ENABLED;
+import static org.sonar.process.ProcessProperties.CLUSTER_ENABLED;
 import static org.sonar.server.es.DefaultIndexSettings.ANALYZER;
 import static org.sonar.server.es.DefaultIndexSettings.FIELDDATA_ENABLED;
 import static org.sonar.server.es.DefaultIndexSettings.FIELD_FIELDDATA;
@@ -49,6 +49,8 @@ import static org.sonar.server.es.DefaultIndexSettings.FIELD_TYPE_TEXT;
 import static org.sonar.server.es.DefaultIndexSettings.INDEX;
 import static org.sonar.server.es.DefaultIndexSettings.INDEX_NOT_SEARCHABLE;
 import static org.sonar.server.es.DefaultIndexSettings.INDEX_SEARCHABLE;
+import static org.sonar.server.es.DefaultIndexSettings.NORMS;
+import static org.sonar.server.es.DefaultIndexSettings.STORE;
 import static org.sonar.server.es.DefaultIndexSettings.TYPE;
 import static org.sonar.server.es.DefaultIndexSettingsElement.UUID_MODULE_ANALYZER;
 
@@ -358,8 +360,8 @@ public class NewIndex {
       Map<String, Object> hash = new TreeMap<>();
       hash.put("type", getFieldType());
       hash.put(INDEX, disableSearch ? INDEX_NOT_SEARCHABLE : INDEX_SEARCHABLE);
-      hash.put("norms", valueOf(!disableNorms));
-      hash.put("store", valueOf(store));
+      hash.put(NORMS, valueOf(!disableNorms));
+      hash.put(STORE, valueOf(store));
       if (FIELD_TYPE_KEYWORD.equals(getFieldType())) {
         hash.put("doc_values", valueOf(!disabledDocValues));
       }
@@ -372,57 +374,49 @@ public class NewIndex {
     private NewIndexType buildWithSubfields() {
       Map<String, Object> hash = new TreeMap<>();
       hash.put("type", getFieldType());
-
-      Map<String, Object> multiFields = new TreeMap<>(subFields);
-
-      if (termVectorWithPositionOffsets) {
-        multiFields.entrySet().forEach(entry -> {
-          Object subFieldMapping = entry.getValue();
-          if (subFieldMapping instanceof Map) {
-            entry.setValue(
-              addFieldToMapping(
-                (Map<String, String>) subFieldMapping,
-                FIELD_TERM_VECTOR, "with_positions_offsets"));
-          }
-        });
-        hash.put(FIELD_TERM_VECTOR, "with_positions_offsets");
+      hash.put(INDEX, disableSearch ? INDEX_NOT_SEARCHABLE : INDEX_SEARCHABLE);
+      hash.put(NORMS, "false");
+      hash.put(STORE, valueOf(store));
+      if (FIELD_TYPE_KEYWORD.equals(getFieldType())) {
+        hash.put("doc_values", valueOf(!disabledDocValues));
       }
       if (getFieldData()) {
-        multiFields.entrySet().forEach(entry -> {
-          Object subFieldMapping = entry.getValue();
-          if (subFieldMapping instanceof Map) {
-            entry.setValue(
-              addFieldToMapping(
-                (Map<String, String>) subFieldMapping,
-                FIELD_FIELDDATA, FIELDDATA_ENABLED));
-          }
-        });
         hash.put(FIELD_FIELDDATA, FIELDDATA_ENABLED);
       }
-
-      Map<String, String> subHash = new TreeMap<>();
-      subHash.put("type", getFieldType());
-      subHash.put(INDEX, INDEX_SEARCHABLE);
-      subHash.put("norms", "false");
-      subHash.put("store", valueOf(store));
-      if (FIELD_TYPE_KEYWORD.equals(getFieldType())) {
-        subHash.put("doc_values", valueOf(!disabledDocValues));
+      if (termVectorWithPositionOffsets) {
+        hash.put(FIELD_TERM_VECTOR, "with_positions_offsets");
       }
-      multiFields.put(fieldName, subHash);
-      hash.put("fields", multiFields);
-
+      hash.put("fields", configureSubFields());
       return indexType.setProperty(fieldName, hash);
+    }
+
+    private Map<String, Object> configureSubFields() {
+      Map<String, Object> multiFields = new TreeMap<>(subFields);
+
+      // apply this fields configuration to all subfields
+      multiFields.entrySet().forEach(entry -> {
+        Object subFieldMapping = entry.getValue();
+        if (subFieldMapping instanceof Map) {
+          entry.setValue(configureSubField((Map<String, String>) subFieldMapping));
+        }
+      });
+      return multiFields;
+    }
+
+    private Map<String, String> configureSubField(Map<String, String> subFieldMapping) {
+      Map<String, String> subHash = new TreeMap<>(subFieldMapping);
+      subHash.put(INDEX, INDEX_SEARCHABLE);
+      subHash.put(NORMS, "false");
+      subHash.put(STORE, valueOf(store));
+      if (termVectorWithPositionOffsets) {
+        subHash.put(FIELD_TERM_VECTOR, "with_positions_offsets");
+      }
+      return subHash;
     }
 
     protected abstract boolean getFieldData();
 
     protected abstract String getFieldType();
-
-    private static SortedMap<String, String> addFieldToMapping(Map<String, String> source, String key, String value) {
-      SortedMap<String, String> mutable = new TreeMap<>(source);
-      mutable.put(key, value);
-      return ImmutableSortedMap.copyOf(mutable);
-    }
   }
 
   public static class KeywordFieldBuilder extends StringFieldBuilder<KeywordFieldBuilder> {

@@ -24,6 +24,7 @@ import Events from './Events';
 import AddEventForm from './forms/AddEventForm';
 import RemoveAnalysisForm from './forms/RemoveAnalysisForm';
 import TimeTooltipFormatter from '../../../components/intl/TimeTooltipFormatter';
+import SettingsIcon from '../../../components/icons-components/SettingsIcon';
 import { translate } from '../../../helpers/l10n';
 /*:: import type { Analysis } from '../types'; */
 
@@ -33,6 +34,7 @@ type Props = {
   addVersion: (analysis: string, version: string) => Promise<*>,
   analysis: Analysis,
   canAdmin: boolean,
+  canDeleteAnalyses: boolean,
   canCreateVersion: boolean,
   changeEvent: (event: string, name: string) => Promise<*>,
   deleteAnalysis: (analysis: string) => Promise<*>,
@@ -55,6 +57,11 @@ export default class ProjectActivityAnalysis extends React.PureComponent {
     const { date, events } = analysis;
     const analysisTitle = translate('project_activity.analysis');
     const hasVersion = events.find(event => event.category === 'VERSION') != null;
+
+    const canAddVersion = canAdmin && !hasVersion && this.props.canCreateVersion;
+    const canAddEvent = canAdmin;
+    const canDeleteAnalyses = this.props.canDeleteAnalyses && !isFirst;
+
     return (
       <li
         className={classNames('project-activity-analysis clearfix', {
@@ -69,18 +76,17 @@ export default class ProjectActivityAnalysis extends React.PureComponent {
         </div>
         <div className="project-activity-analysis-icon big-spacer-right" title={analysisTitle} />
 
-        {canAdmin && (
+        {(canAddVersion || canAddEvent || canDeleteAnalyses) && (
           <div className="project-activity-analysis-actions spacer-left">
             <div className="dropdown display-inline-block">
               <button
                 className="js-analysis-actions button-small button-compact dropdown-toggle"
                 data-toggle="dropdown"
                 onClick={this.stopPropagation}>
-                <i className="icon-settings" /> <i className="icon-dropdown" />
+                <SettingsIcon size={12} style={{ marginTop: 3 }} /> <i className="icon-dropdown" />
               </button>
               <ul className="dropdown-menu dropdown-menu-right">
-                {!hasVersion &&
-                this.props.canCreateVersion && (
+                {canAddVersion && (
                   <li>
                     <AddEventForm
                       addEvent={this.props.addVersion}
@@ -89,15 +95,18 @@ export default class ProjectActivityAnalysis extends React.PureComponent {
                     />
                   </li>
                 )}
-                <li>
-                  <AddEventForm
-                    addEvent={this.props.addCustomEvent}
-                    analysis={analysis}
-                    addEventButtonText="project_activity.add_custom_event"
-                  />
-                </li>
-                {!isFirst && <li role="separator" className="divider" />}
-                {!isFirst && (
+                {canAddEvent && (
+                  <li>
+                    <AddEventForm
+                      addEvent={this.props.addCustomEvent}
+                      analysis={analysis}
+                      addEventButtonText="project_activity.add_custom_event"
+                    />
+                  </li>
+                )}
+                {(canAddVersion || canAddEvent) &&
+                canDeleteAnalyses && <li role="separator" className="divider" />}
+                {canDeleteAnalyses && (
                   <li>
                     <RemoveAnalysisForm
                       analysis={analysis}
@@ -114,6 +123,7 @@ export default class ProjectActivityAnalysis extends React.PureComponent {
           <Events
             analysis={analysis.key}
             canAdmin={canAdmin}
+            canDeleteAnalyses={this.props.canDeleteAnalyses}
             changeEvent={this.props.changeEvent}
             deleteEvent={this.props.deleteEvent}
             events={events}

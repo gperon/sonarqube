@@ -21,16 +21,19 @@ package org.sonar.db.issue;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import org.apache.ibatis.session.ResultContext;
 import org.apache.ibatis.session.ResultHandler;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.sonar.api.issue.Issue;
 import org.sonar.api.rule.RuleKey;
 import org.sonar.api.utils.System2;
 import org.sonar.db.DbTester;
 import org.sonar.db.RowNotFoundException;
+import org.sonar.db.component.BranchType;
 import org.sonar.db.component.ComponentDto;
 import org.sonar.db.component.ComponentTesting;
 import org.sonar.db.organization.OrganizationDto;
@@ -178,6 +181,57 @@ public class IssueDaoTest {
     ComponentDto notPersisted = ComponentTesting.newPrivateProjectDto(db.getDefaultOrganization());
     underTest.scrollNonClosedByModuleOrProject(db.getSession(), notPersisted, accumulator);
     assertThat(accumulator.list).isEmpty();
+  }
+
+  @Test
+  public void selectOpenByComponentUuid() {
+    RuleDefinitionDto rule = db.rules().insert();
+    ComponentDto project = db.components().insertMainBranch();
+    ComponentDto projectBranch = db.components().insertProjectBranch(project,
+      b -> b.setKey("feature/foo")
+        .setBranchType(BranchType.SHORT));
+
+    ComponentDto file = db.components().insertComponent(newFileDto(projectBranch));
+
+    IssueDto openIssue = db.issues().insert(rule, projectBranch, file, i -> i.setStatus(Issue.STATUS_OPEN).setResolution(null));
+    IssueDto closedIssue = db.issues().insert(rule, projectBranch, file, i -> i.setStatus(Issue.STATUS_CLOSED).setResolution(Issue.RESOLUTION_FIXED));
+    IssueDto reopenedIssue = db.issues().insert(rule, projectBranch, file, i -> i.setStatus(Issue.STATUS_REOPENED).setResolution(null));
+    IssueDto confirmedIssue = db.issues().insert(rule, projectBranch, file, i -> i.setStatus(Issue.STATUS_CONFIRMED).setResolution(null));
+    IssueDto wontfixIssue = db.issues().insert(rule, projectBranch, file, i -> i.setStatus(Issue.STATUS_RESOLVED).setResolution(Issue.RESOLUTION_WONT_FIX));
+    IssueDto fpIssue = db.issues().insert(rule, projectBranch, file, i -> i.setStatus(Issue.STATUS_RESOLVED).setResolution(Issue.RESOLUTION_FALSE_POSITIVE));
+
+    assertThat(underTest.selectOpenByComponentUuids(db.getSession(), Collections.singletonList(file.uuid())))
+      .extracting("kee")
+      .containsOnly(openIssue.getKey(), reopenedIssue.getKey(), confirmedIssue.getKey(), wontfixIssue.getKey(), fpIssue.getKey());
+  }
+
+  @Test
+  public void selectOpenByComponentUuid_should_correctly_map_required_fields() {
+    RuleDefinitionDto rule = db.rules().insert();
+    ComponentDto project = db.components().insertMainBranch();
+    ComponentDto projectBranch = db.components().insertProjectBranch(project,
+      b -> b.setKey("feature/foo")
+        .setBranchType(BranchType.SHORT));
+
+    ComponentDto file = db.components().insertComponent(newFileDto(projectBranch));
+    IssueDto fpIssue = db.issues().insert(rule, projectBranch, file, i -> i.setStatus("RESOLVED").setResolution("FALSE-POSITIVE"));
+
+    ShortBranchIssueDto fp = underTest.selectOpenByComponentUuids(db.getSession(), Collections.singletonList(file.uuid())).get(0);
+    assertThat(fp.getLine()).isEqualTo(fpIssue.getLine());
+    assertThat(fp.getMessage()).isEqualTo(fpIssue.getMessage());
+    assertThat(fp.getChecksum()).isEqualTo(fpIssue.getChecksum());
+    assertThat(fp.getRuleKey()).isEqualTo(fpIssue.getRuleKey());
+    assertThat(fp.getStatus()).isEqualTo(fpIssue.getStatus());
+
+    assertThat(fp.getLine()).isNotNull();
+    assertThat(fp.getLine()).isNotZero();
+    assertThat(fp.getMessage()).isNotNull();
+    assertThat(fp.getChecksum()).isNotNull();
+    assertThat(fp.getChecksum()).isNotEmpty();
+    assertThat(fp.getRuleKey()).isNotNull();
+    assertThat(fp.getStatus()).isNotNull();
+    assertThat(fp.getBranchName()).isEqualTo("feature/foo");
+    assertThat(fp.getIssueCreationDate()).isNotNull();
   }
 
   private static IssueDto newIssueDto(String key) {

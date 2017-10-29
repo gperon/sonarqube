@@ -19,11 +19,7 @@
  */
 package org.sonar.server.computation.task.projectanalysis.step;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 import java.util.Date;
-
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -38,15 +34,13 @@ import org.sonar.db.component.SnapshotTesting;
 import org.sonar.db.organization.OrganizationDto;
 import org.sonar.scanner.protocol.output.ScannerReport;
 import org.sonar.scanner.protocol.output.ScannerReport.Component.ComponentType;
-import org.sonar.server.computation.task.projectanalysis.analysis.Analysis;
 import org.sonar.server.computation.task.projectanalysis.analysis.AnalysisMetadataHolderRule;
 import org.sonar.server.computation.task.projectanalysis.analysis.Branch;
-import org.sonar.server.computation.task.projectanalysis.component.DefaultBranchImpl;
 import org.sonar.server.computation.task.projectanalysis.batch.BatchReportReaderRule;
 import org.sonar.server.computation.task.projectanalysis.component.Component;
+import org.sonar.server.computation.task.projectanalysis.component.DefaultBranchImpl;
 import org.sonar.server.computation.task.projectanalysis.component.ReportComponent;
 import org.sonar.server.computation.task.projectanalysis.component.TreeRootHolderRule;
-import org.sonar.server.computation.task.projectanalysis.validation.ValidateIncremental;
 
 public class ValidateProjectStepTest {
 
@@ -70,61 +64,11 @@ public class ValidateProjectStepTest {
   @Rule
   public AnalysisMetadataHolderRule analysisMetadataHolder = new AnalysisMetadataHolderRule()
     .setAnalysisDate(new Date(DEFAULT_ANALYSIS_TIME))
-    .setIncrementalAnalysis(false)
     .setBranch(DEFAULT_BRANCH);
-
-  public ValidateIncremental validateIncremental = mock(ValidateIncremental.class);
 
   DbClient dbClient = dbTester.getDbClient();
 
-  ValidateProjectStep underTest = new ValidateProjectStep(dbClient, reportReader, treeRootHolder, analysisMetadataHolder, validateIncremental);
-
-  @Test
-  public void fail_if_root_component_is_not_a_project_in_db() {
-    reportReader.putComponent(ScannerReport.Component.newBuilder()
-      .setRef(1)
-      .setType(ComponentType.PROJECT)
-      .setKey(PROJECT_KEY)
-      .build());
-    treeRootHolder.setRoot(ReportComponent.builder(Component.Type.PROJECT, 1).setUuid("ABCD").setKey(PROJECT_KEY).build());
-
-    ComponentDto project = ComponentTesting.newView(dbTester.organizations().insert(), "ABCD").setDbKey(PROJECT_KEY);
-    dbClient.componentDao().insert(dbTester.getSession(), project);
-    dbTester.getSession().commit();
-
-    thrown.expect(MessageException.class);
-    thrown.expectMessage("Validation of project failed:\n" +
-      "  o Component (uuid=ABCD, key=PROJECT_KEY) is not a project");
-
-    underTest.execute();
-  }
-
-  @Test
-  public void fail_on_invalid_key() {
-    String invalidProjectKey = "Project\\Key";
-
-    reportReader.putComponent(ScannerReport.Component.newBuilder()
-      .setRef(1)
-      .setType(ComponentType.PROJECT)
-      .setKey(invalidProjectKey)
-      .addChildRef(2)
-      .build());
-    reportReader.putComponent(ScannerReport.Component.newBuilder()
-      .setRef(2)
-      .setType(ComponentType.MODULE)
-      .setKey("Module$Key")
-      .build());
-    treeRootHolder.setRoot(ReportComponent.builder(Component.Type.PROJECT, 1).setUuid("ABCD").setKey(invalidProjectKey).addChildren(
-      ReportComponent.builder(Component.Type.MODULE, 2).setUuid("BCDE").setKey("Module$Key").build())
-      .build());
-
-    thrown.expect(MessageException.class);
-    thrown.expectMessage("Validation of project failed:\n" +
-      "  o \"Project\\Key\" is not a valid project or module key. Allowed characters are alphanumeric, '-', '_', '.' and ':', with at least one non-digit.\n" +
-      "  o \"Module$Key\" is not a valid project or module key. Allowed characters are alphanumeric, '-', '_', '.' and ':', with at least one non-digit");
-
-    underTest.execute();
-  }
+  ValidateProjectStep underTest = new ValidateProjectStep(dbClient, reportReader, treeRootHolder, analysisMetadataHolder);
 
   @Test
   public void fail_if_module_key_is_already_used_as_project_key() {
@@ -192,42 +136,6 @@ public class ValidateProjectStepTest {
   }
 
   @Test
-  public void fail_if_project_key_already_exists_as_module() {
-    String anotherProjectKey = "ANOTHER_PROJECT_KEY";
-
-    reportReader.putComponent(ScannerReport.Component.newBuilder()
-      .setRef(1)
-      .setType(ComponentType.PROJECT)
-      .setKey(PROJECT_KEY)
-      .addChildRef(2)
-      .build());
-    reportReader.putComponent(ScannerReport.Component.newBuilder()
-      .setRef(2)
-      .setType(ComponentType.MODULE)
-      .setKey(MODULE_KEY)
-      .build());
-
-    ComponentDto anotherProject = ComponentTesting.newPrivateProjectDto(dbTester.organizations().insert()).setDbKey(anotherProjectKey);
-    dbClient.componentDao().insert(dbTester.getSession(), anotherProject);
-    ComponentDto module = ComponentTesting.newModuleDto("ABCD", anotherProject).setDbKey(PROJECT_KEY);
-    dbClient.componentDao().insert(dbTester.getSession(), module);
-    dbTester.getSession().commit();
-
-    treeRootHolder.setRoot(ReportComponent.builder(Component.Type.PROJECT, 1).setUuid("ABCD").setKey(PROJECT_KEY).addChildren(
-      ReportComponent.builder(Component.Type.MODULE, 2).setUuid("BCDE").setKey(MODULE_KEY).build())
-      .build());
-
-    thrown.expect(MessageException.class);
-    thrown.expectMessage("Validation of project failed:\n" +
-      "  o Component (uuid=ABCD, key=PROJECT_KEY) is not a project\n" +
-      "  o The project \"" + PROJECT_KEY + "\" is already defined in SonarQube but as a module of project \"" + anotherProjectKey + "\". " +
-      "If you really want to stop directly analysing project \"" + anotherProjectKey + "\", please first delete it from SonarQube and then relaunch the analysis of project \""
-      + PROJECT_KEY + "\".");
-
-    underTest.execute();
-  }
-
-  @Test
   public void not_fail_if_analysis_date_is_after_last_analysis() {
     reportReader.putComponent(ScannerReport.Component.newBuilder()
       .setRef(1)
@@ -272,71 +180,4 @@ public class ValidateProjectStepTest {
     underTest.execute();
   }
 
-  @Test
-  public void fail_if_incremental_plugin_not_found() {
-    ValidateProjectStep underTest = new ValidateProjectStep(dbClient, reportReader, treeRootHolder, analysisMetadataHolder, null);
-
-    when(validateIncremental.execute()).thenReturn(false);
-    analysisMetadataHolder.setBaseAnalysis(new Analysis.Builder().setId(1).setUuid("base").setCreatedAt(DEFAULT_ANALYSIS_TIME).build());
-    analysisMetadataHolder.setIncrementalAnalysis(true);
-
-    reportReader.putComponent(ScannerReport.Component.newBuilder()
-      .setRef(1)
-      .setType(ComponentType.PROJECT)
-      .setKey(PROJECT_KEY)
-      .addChildRef(2)
-      .build());
-
-    treeRootHolder.setRoot(ReportComponent.builder(Component.Type.PROJECT, 1).setUuid("ABCD").setKey(PROJECT_KEY).build());
-
-    thrown.expect(MessageException.class);
-    thrown.expectMessage("Validation of project failed:");
-    thrown.expectMessage("Can't process an incremental analysis of the project \"PROJECT_KEY\" because the incremental plugin is not loaded");
-
-    underTest.execute();
-  }
-
-  @Test
-  public void fail_if_incremental_validation_fails() {
-    when(validateIncremental.execute()).thenReturn(false);
-    analysisMetadataHolder.setBaseAnalysis(new Analysis.Builder().setId(1).setUuid("base").setCreatedAt(DEFAULT_ANALYSIS_TIME).build());
-    analysisMetadataHolder.setIncrementalAnalysis(true);
-
-    reportReader.putComponent(ScannerReport.Component.newBuilder()
-      .setRef(1)
-      .setType(ComponentType.PROJECT)
-      .setKey(PROJECT_KEY)
-      .addChildRef(2)
-      .build());
-
-    treeRootHolder.setRoot(ReportComponent.builder(Component.Type.PROJECT, 1).setUuid("ABCD").setKey(PROJECT_KEY).build());
-
-    thrown.expect(MessageException.class);
-    thrown.expectMessage("Validation of project failed:");
-    thrown.expectMessage("The installation of the incremental plugin is invalid");
-
-    underTest.execute();
-  }
-
-  @Test
-  public void fail_if_incremental_and_first_analysis() {
-    when(validateIncremental.execute()).thenReturn(true);
-    analysisMetadataHolder.setBaseAnalysis(null);
-    analysisMetadataHolder.setIncrementalAnalysis(true);
-
-    reportReader.putComponent(ScannerReport.Component.newBuilder()
-      .setRef(1)
-      .setType(ComponentType.PROJECT)
-      .setKey(PROJECT_KEY)
-      .addChildRef(2)
-      .build());
-
-    treeRootHolder.setRoot(ReportComponent.builder(Component.Type.PROJECT, 1).setUuid("ABCD").setKey(PROJECT_KEY).build());
-
-    thrown.expect(MessageException.class);
-    thrown.expectMessage("Validation of project failed:");
-    thrown.expectMessage("hasn't been analysed before and the first analysis can't be incremental. Please launch a full analysis of the project.");
-
-    underTest.execute();
-  }
 }

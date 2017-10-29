@@ -128,6 +128,12 @@ public interface CoreProperties {
 
   /* Global settings */
   String SONAR_HOME = "SONAR_HOME";
+
+  /**
+   * @deprecated since 6.7. This feature is deprecated in favor of the new branch feature.
+   * @see <a href="https://redirect.sonarsource.com/doc/branches.html">https://redirect.sonarsource.com/doc/branches.html/a>
+   */
+  @Deprecated
   String PROJECT_BRANCH_PROPERTY = "sonar.branch";
   String PROJECT_VERSION_PROPERTY = "sonar.projectVersion";
 
@@ -263,7 +269,9 @@ public interface CoreProperties {
 
   /**
    * @since 2.11
+   * @deprecated since 6.7
    */
+  @Deprecated
   String CPD_CROSS_PROJECT = "sonar.cpd.cross_project";
 
   /**
@@ -273,17 +281,23 @@ public interface CoreProperties {
 
   /**
    * @since 2.11
+   * @deprecated in 6.7. See {@link Server#getPermanentServerId()}
    */
+  @Deprecated
   String ORGANISATION = "sonar.organisation";
 
   /**
    * @since 2.11
+   * @deprecated in 6.7. See {@link Server#getPermanentServerId()}
    */
+  @Deprecated
   String PERMANENT_SERVER_ID = "sonar.server_id";
 
   /**
    * @since 2.11
+   * @deprecated in 6.7. See {@link Server#getPermanentServerId()}
    */
+  @Deprecated
   String SERVER_ID_IP_ADDRESS = "sonar.server_id.ip_address";
 
   /**

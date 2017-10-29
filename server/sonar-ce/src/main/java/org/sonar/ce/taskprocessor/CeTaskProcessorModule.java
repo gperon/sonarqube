@@ -19,6 +19,7 @@
  */
 package org.sonar.ce.taskprocessor;
 
+import org.sonar.ce.notification.ReportAnalysisFailureNotificationExecutionListener;
 import org.sonar.core.platform.Module;
 
 public class CeTaskProcessorModule extends Module {
@@ -26,6 +27,8 @@ public class CeTaskProcessorModule extends Module {
   protected void configureModule() {
     add(
       CeTaskProcessorRepositoryImpl.class,
+      CeLoggingWorkerExecutionListener.class,
+      ReportAnalysisFailureNotificationExecutionListener.class,
       CeWorkerFactoryImpl.class,
       EnabledCeWorkerControllerImpl.class,
       CeProcessingSchedulerExecutorServiceImpl.class,

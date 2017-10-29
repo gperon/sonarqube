@@ -19,82 +19,64 @@
  */
 package org.sonar.server.computation.task.projectanalysis.webhook;
 
-import com.google.common.collect.Iterables;
-import java.util.Arrays;
-import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.sonar.api.ce.posttask.PostProjectAnalysisTask;
 import org.sonar.api.config.Configuration;
-import org.sonar.api.utils.log.Logger;
-import org.sonar.api.utils.log.Loggers;
-import org.sonar.core.config.WebhookProperties;
-import org.sonar.core.util.stream.MoreCollectors;
 import org.sonar.server.computation.task.projectanalysis.component.ConfigurationRepository;
-
-import static java.lang.String.format;
-import static org.sonar.core.config.WebhookProperties.MAX_WEBHOOKS_PER_TYPE;
+import org.sonar.server.webhook.Analysis;
+import org.sonar.server.webhook.Branch;
+import org.sonar.server.webhook.CeTask;
+import org.sonar.server.webhook.Project;
+import org.sonar.server.webhook.QualityGate;
+import org.sonar.server.webhook.WebHooks;
+import org.sonar.server.webhook.WebhookPayloadFactory;
 
 public class WebhookPostTask implements PostProjectAnalysisTask {
 
-  private static final Logger LOGGER = Loggers.get(WebhookPostTask.class);
-
   private final ConfigurationRepository configRepository;
   private final WebhookPayloadFactory payloadFactory;
-  private final WebhookCaller caller;
-  private final WebhookDeliveryStorage deliveryStorage;
+  private final WebHooks webHooks;
 
-  public WebhookPostTask(ConfigurationRepository configRepository, WebhookPayloadFactory payloadFactory,
-    WebhookCaller caller, WebhookDeliveryStorage deliveryStorage) {
+  public WebhookPostTask(ConfigurationRepository configRepository, WebhookPayloadFactory payloadFactory, WebHooks webHooks) {
     this.configRepository = configRepository;
     this.payloadFactory = payloadFactory;
-    this.caller = caller;
-    this.deliveryStorage = deliveryStorage;
+    this.webHooks = webHooks;
   }
 
   @Override
   public void finished(ProjectAnalysis analysis) {
     Configuration config = configRepository.getConfiguration();
 
-    Iterable<String> webhookProps = Iterables.concat(
-      getWebhookProperties(config, WebhookProperties.GLOBAL_KEY),
-      getWebhookProperties(config, WebhookProperties.PROJECT_KEY));
-    if (!Iterables.isEmpty(webhookProps)) {
-      process(config, analysis, webhookProps);
-      deliveryStorage.purge(analysis.getProject().getUuid());
-    }
+    webHooks.sendProjectAnalysisUpdate(
+      config,
+      new WebHooks.Analysis(
+        analysis.getProject().getUuid(),
+        analysis.getAnalysis().map(org.sonar.api.ce.posttask.Analysis::getAnalysisUuid).orElse(null),
+        analysis.getCeTask().getId()),
+      () -> payloadFactory.create(convert(analysis)));
   }
 
-  private static List<String> getWebhookProperties(Configuration config, String propertyKey) {
-    String[] webhookIds = config.getStringArray(propertyKey);
-    return Arrays.stream(webhookIds)
-      .map(webhookId -> format("%s.%s", propertyKey, webhookId))
-      .limit(MAX_WEBHOOKS_PER_TYPE)
-      .collect(MoreCollectors.toList(webhookIds.length));
-  }
+  private static org.sonar.server.webhook.ProjectAnalysis convert(ProjectAnalysis projectAnalysis) {
+    CeTask ceTask = new CeTask(projectAnalysis.getCeTask().getId(), CeTask.Status.valueOf(projectAnalysis.getCeTask().getStatus().name()));
+    Project project = new Project(projectAnalysis.getProject().getUuid(), projectAnalysis.getProject().getKey(), projectAnalysis.getProject().getName());
+    Analysis analysis = projectAnalysis.getAnalysis().map(a -> new Analysis(a.getAnalysisUuid(), a.getDate().getTime())).orElse(null);
+    Branch branch = projectAnalysis.getBranch().map(b -> new Branch(b.isMain(), b.getName().orElse(null), Branch.Type.valueOf(b.getType().name()))).orElse(null);
+    QualityGate qualityGate = Optional.ofNullable(projectAnalysis.getQualityGate())
+      .map(qg -> new QualityGate(
+        qg.getId(),
+        qg.getName(),
+        QualityGate.Status.valueOf(qg.getStatus().name()),
+        qg.getConditions().stream()
+          .map(c -> new QualityGate.Condition(QualityGate.EvaluationStatus.valueOf(c.getStatus().name()), c.getMetricKey(), QualityGate.Operator.valueOf(c.getOperator().name()),
+            c.getErrorThreshold(), c.getWarningThreshold(), c.isOnLeakPeriod(),
+            c.getStatus() == org.sonar.api.ce.posttask.QualityGate.EvaluationStatus.NO_VALUE ? null : c.getValue()))
+          .collect(Collectors.toSet())))
+      .orElse(null);
+    Long date = projectAnalysis.getAnalysis().map(a -> a.getDate().getTime()).orElse(null);
+    Map<String, String> properties = projectAnalysis.getScannerContext().getProperties();
 
-  private void process(Configuration config, ProjectAnalysis analysis, Iterable<String> webhookProperties) {
-    WebhookPayload payload = payloadFactory.create(analysis);
-    for (String webhookProp : webhookProperties) {
-      String name = config.get(format("%s.%s", webhookProp, WebhookProperties.NAME_FIELD)).orElse(null);
-      String url = config.get(format("%s.%s", webhookProp, WebhookProperties.URL_FIELD)).orElse(null);
-      // as webhooks are defined as property sets, we can't ensure validity of fields on creation.
-      if (name != null && url != null) {
-        Webhook webhook = new Webhook(analysis.getProject().getUuid(), analysis.getCeTask().getId(), name, url);
-        WebhookDelivery delivery = caller.call(webhook, payload);
-        log(delivery);
-        deliveryStorage.persist(delivery);
-      }
-    }
-  }
-
-  private static void log(WebhookDelivery delivery) {
-    Optional<String> error = delivery.getErrorMessage();
-    if (error.isPresent()) {
-      LOGGER.debug("Failed to send webhook '{}' | url={} | message={}",
-        delivery.getWebhook().getName(), delivery.getWebhook().getUrl(), error.get());
-    } else {
-      LOGGER.debug("Sent webhook '{}' | url={} | time={}ms | status={}",
-        delivery.getWebhook().getName(), delivery.getWebhook().getUrl(), delivery.getDurationInMs().orElse(-1), delivery.getHttpStatus().orElse(-1));
-    }
+    return new org.sonar.server.webhook.ProjectAnalysis(project, ceTask, analysis, branch, qualityGate, date, properties);
   }
 }

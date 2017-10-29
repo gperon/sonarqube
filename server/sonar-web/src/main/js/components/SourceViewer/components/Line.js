@@ -34,11 +34,14 @@ import LineCode from './LineCode';
 
 /*::
 type Props = {|
+  branch?: string,
   displayAllIssues: boolean,
   displayCoverage: boolean,
   displayDuplications: boolean,
-  displayFiltered: boolean,
   displayIssues: boolean,
+  displayIssueLocationsCount?: boolean;
+  displayIssueLocationsLink?: boolean;
+  displayLocationMarkers?: boolean;
   duplications: Array<number>,
   duplicationsCount: number,
   filtered: boolean | null,
@@ -95,11 +98,13 @@ export default class Line extends React.PureComponent {
   };
 
   render() {
-    const { line, duplications, duplicationsCount, filtered } = this.props;
+    const { line, duplications, displayCoverage, duplicationsCount, filtered } = this.props;
     const className = classNames('source-line', {
       'source-line-highlighted': this.props.highlighted,
-      'source-line-shadowed': filtered === false,
       'source-line-filtered': filtered === true,
+      'source-line-filtered-dark':
+        displayCoverage &&
+        (line.coverageStatus === 'uncovered' || line.coverageStatus === 'partially-covered'),
       'source-line-last': this.props.last
     });
 
@@ -140,13 +145,11 @@ export default class Line extends React.PureComponent {
           />
         )}
 
-        {this.props.displayFiltered && (
-          <td className="source-meta source-line-filtered-container" data-line-number={line.line}>
-            <div className="source-line-bar" />
-          </td>
-        )}
-
         <LineCode
+          branch={this.props.branch}
+          displayIssueLocationsCount={this.props.displayIssueLocationsCount}
+          displayIssueLocationsLink={this.props.displayIssueLocationsLink}
+          displayLocationMarkers={this.props.displayLocationMarkers}
           highlightedLocationMessage={this.props.highlightedLocationMessage}
           highlightedSymbols={this.props.highlightedSymbols}
           issues={this.props.issues}

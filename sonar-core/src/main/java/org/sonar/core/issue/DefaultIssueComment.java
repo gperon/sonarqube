@@ -125,4 +125,5 @@ public class DefaultIssueComment implements Serializable, IssueComment {
     isNew = b;
     return this;
   }
+
 }

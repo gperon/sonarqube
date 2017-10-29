@@ -32,7 +32,6 @@ import Landing from '../components/Landing';
 import ProjectAdminContainer from '../components/ProjectAdminContainer';
 import ProjectPageExtension from '../components/extensions/ProjectPageExtension';
 import ProjectAdminPageExtension from '../components/extensions/ProjectAdminPageExtension';
-import PortfolioDashboard from '../components/extensions/PortfolioDashboard';
 import PortfoliosPage from '../components/extensions/PortfoliosPage';
 import AdminContainer from '../components/AdminContainer';
 import GlobalPageExtension from '../components/extensions/GlobalPageExtension';
@@ -49,10 +48,12 @@ import componentMeasuresRoutes from '../../apps/component-measures/routes';
 import customMeasuresRoutes from '../../apps/custom-measures/routes';
 import groupsRoutes from '../../apps/groups/routes';
 import issuesRoutes from '../../apps/issues/routes';
+import marketplaceRoutes from '../../apps/marketplace/routes';
 import metricsRoutes from '../../apps/metrics/routes';
 import overviewRoutes from '../../apps/overview/routes';
 import organizationsRoutes from '../../apps/organizations/routes';
 import permissionTemplatesRoutes from '../../apps/permission-templates/routes';
+import portfolioRoutes from '../../apps/portfolio/routes';
 import projectActivityRoutes from '../../apps/projectActivity/routes';
 import projectAdminRoutes from '../../apps/project-admin/routes';
 import projectBranchesRoutes from '../../apps/projectBranches/routes';
@@ -65,7 +66,6 @@ import qualityProfilesRoutes from '../../apps/quality-profiles/routes';
 import sessionsRoutes from '../../apps/sessions/routes';
 import settingsRoutes from '../../apps/settings/routes';
 import systemRoutes from '../../apps/system/routes';
-import updateCenterRoutes from '../../apps/update-center/routes';
 import usersRoutes from '../../apps/users/routes';
 import webAPIRoutes from '../../apps/web-api/routes';
 import { maintenanceRoutes, setupRoutes } from '../../apps/maintenance/routes';
@@ -125,7 +125,6 @@ const startReactApp = () => {
         <Redirect from="/dashboard/index" to="/dashboard" />
         <Redirect from="/governance" to="/portfolio" />
         <Redirect from="/groups" to="/admin/groups" />
-        <Redirect from="/extension/governance/governance" to="/portfolio" />
         <Redirect from="/extension/governance/portfolios" to="/portfolios" />
         <Redirect from="/metrics" to="/admin/custom_metrics" />
         <Redirect from="/permission_templates" to="/admin/permission_templates" />
@@ -136,18 +135,11 @@ const startReactApp = () => {
         <Redirect from="/settings" to="/admin/settings" />
         <Redirect from="/settings/encryption" to="/admin/settings/encryption" />
         <Redirect from="/settings/index" to="/admin/settings" />
-        <Redirect from="/settings/licenses" to="/admin/settings/licenses" />
-        <Redirect from="/settings/server_id" to="/admin/settings/server_id" />
         <Redirect from="/sessions/login" to="/sessions/new" />
         <Redirect from="/system" to="/admin/system" />
         <Redirect from="/system/index" to="/admin/system" />
         <Redirect from="/view" to="/portfolio" />
         <Redirect from="/users" to="/admin/users" />
-        <Redirect from="/updatecenter" to="/admin/update_center" />
-        <Redirect from="/updatecenter/available" to="/admin/update_center/available" />
-        <Redirect from="/updatecenter/installed" to="/admin/update_center/installed" />
-        <Redirect from="/updatecenter/system" to="/admin/update_center/system" />
-        <Redirect from="/updatecenter/updates" to="/admin/update_center/updates" />
 
         <Route path="markdown/help" component={MarkdownHelp} />
 
@@ -189,7 +181,7 @@ const startReactApp = () => {
                     <Route path="code" childRoutes={codeRoutes} />
                     <Route path="component_measures" childRoutes={componentMeasuresRoutes} />
                     <Route path="dashboard" childRoutes={overviewRoutes} />
-                    <Route path="portfolio" component={PortfolioDashboard} />
+                    <Route path="portfolio" childRoutes={portfolioRoutes} />
                     <Route path="project/activity" childRoutes={projectActivityRoutes} />
                     <Route
                       path="project/extension/:pluginKey/:extensionKey"
@@ -229,7 +221,7 @@ const startReactApp = () => {
                     <Route path="projects_management" childRoutes={projectsManagementRoutes} />
                     <Route path="settings" childRoutes={settingsRoutes} />
                     <Route path="system" childRoutes={systemRoutes} />
-                    <Route path="update_center" childRoutes={updateCenterRoutes} />
+                    <Route path="marketplace" childRoutes={marketplaceRoutes} />
                     <Route path="users" childRoutes={usersRoutes} />
                   </Route>
                 </Route>

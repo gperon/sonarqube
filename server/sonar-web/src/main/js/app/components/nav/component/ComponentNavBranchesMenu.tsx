@@ -19,6 +19,7 @@
  */
 import * as React from 'react';
 import * as PropTypes from 'prop-types';
+import { Link } from 'react-router';
 import ComponentNavBranchesMenuItem from './ComponentNavBranchesMenuItem';
 import { Branch, Component } from '../../../types';
 import {
@@ -28,14 +29,14 @@ import {
 } from '../../../../helpers/branches';
 import { translate } from '../../../../helpers/l10n';
 import { getProjectBranchUrl } from '../../../../helpers/urls';
-import { Link } from 'react-router';
 import Tooltip from '../../../../components/controls/Tooltip';
 
 interface Props {
   branches: Branch[];
+  canAdmin?: boolean;
+  component: Component;
   currentBranch: Branch;
   onClose: () => void;
-  project: Component;
 }
 
 interface State {
@@ -125,11 +126,23 @@ export default class ComponentNavBranchesMenu extends React.PureComponent<Props,
   };
 
   getSelected = () => {
+    if (this.state.selected) {
+      return this.state.selected;
+    }
+
     const branches = this.getFilteredBranches();
-    return this.state.selected || (branches.length > 0 && branches[0].name);
+    if (branches.find(b => b.name === this.props.currentBranch.name)) {
+      return this.props.currentBranch.name;
+    }
+
+    if (branches.length > 0) {
+      return branches[0].name;
+    }
+
+    return undefined;
   };
 
-  getProjectBranchUrl = (branch: Branch) => getProjectBranchUrl(this.props.project.key, branch);
+  getProjectBranchUrl = (branch: Branch) => getProjectBranchUrl(this.props.component.key, branch);
 
   isSelected = (branch: Branch) => branch.name === this.getSelected();
 
@@ -179,7 +192,7 @@ export default class ComponentNavBranchesMenu extends React.PureComponent<Props,
       menu.push(
         <ComponentNavBranchesMenuItem
           branch={branch}
-          component={this.props.project}
+          component={this.props.component}
           key={branch.name}
           onSelect={this.handleSelect}
           selected={branch.name === selected}
@@ -191,19 +204,21 @@ export default class ComponentNavBranchesMenu extends React.PureComponent<Props,
   };
 
   render() {
-    const { project } = this.props;
+    const { component } = this.props;
     const showManageLink =
-      project.qualifier === 'TRK' && project.configuration && project.configuration.showSettings;
+      component.qualifier === 'TRK' &&
+      component.configuration &&
+      component.configuration.showSettings;
 
     return (
-      <div className="dropdown-menu dropdown-menu-shadow" ref={node => (this.node = node)}>
+      <div className="dropdown-menu" ref={node => (this.node = node)}>
         {this.renderSearch()}
         {this.renderBranchesList()}
         {showManageLink && (
           <div className="dropdown-bottom-hint text-right">
             <Link
               className="text-muted"
-              to={{ pathname: '/project/branches', query: { id: project.key } }}>
+              to={{ pathname: '/project/branches', query: { id: component.key } }}>
               {translate('branches.manage')}
             </Link>
           </div>

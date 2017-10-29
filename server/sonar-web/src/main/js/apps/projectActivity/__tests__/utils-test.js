@@ -187,8 +187,8 @@ describe('getDisplayedHistoryMetrics', () => {
       'vulnerabilities'
     ]);
     expect(utils.getDisplayedHistoryMetrics('coverage', customMetrics)).toEqual([
-      'uncovered_lines',
-      'lines_to_cover'
+      'lines_to_cover',
+      'uncovered_lines'
     ]);
   });
   it('should return all custom metrics for the custom graph', () => {
@@ -208,8 +208,8 @@ describe('getHistoryMetrics', () => {
       'sqale_rating'
     ]);
     expect(utils.getHistoryMetrics('coverage', customMetrics)).toEqual([
-      'uncovered_lines',
       'lines_to_cover',
+      'uncovered_lines',
       'coverage'
     ]);
     expect(utils.getHistoryMetrics('custom', customMetrics)).toEqual(customMetrics);
@@ -221,8 +221,8 @@ describe('parseQuery', () => {
     expect(
       utils.parseQuery({
         from: '2017-04-27T08:21:32.000Z',
-        id: 'foo',
-        custom_metrics: 'foo,bar,baz'
+        custom_metrics: 'foo,bar,baz',
+        id: 'foo'
       })
     ).toEqual(QUERY);
   });

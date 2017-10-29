@@ -42,7 +42,7 @@ type Props = {
   project: {
     configuration?: { showHistory: boolean },
     key: string,
-    leakPeriodDate: string,
+    leakPeriodDate?: string,
     qualifier: string
   },
   metrics: Array<Metric>,
@@ -55,7 +55,10 @@ type Props = {
 export default function ProjectActivityApp(props /*: Props */) {
   const { analyses, measuresHistory, query } = props;
   const { configuration } = props.project;
-  const canAdmin = configuration ? configuration.showHistory : false;
+  const canAdmin =
+    (props.project.qualifier === 'TRK' || props.project.qualifier === 'APP') &&
+    (configuration ? configuration.showHistory : false);
+  const canDeleteAnalyses = configuration ? configuration.showHistory : false;
   return (
     <div id="project-activity" className="page page-limited">
       <Helmet title={translate('project_activity.page')} />
@@ -76,6 +79,7 @@ export default function ProjectActivityApp(props /*: Props */) {
             analysesLoading={props.analysesLoading}
             analyses={analyses}
             canAdmin={canAdmin}
+            canDeleteAnalyses={canDeleteAnalyses}
             className="boxed-group-inner"
             changeEvent={props.changeEvent}
             deleteAnalysis={props.deleteAnalysis}
@@ -89,7 +93,9 @@ export default function ProjectActivityApp(props /*: Props */) {
         <div className="project-activity-layout-page-main">
           <ProjectActivityGraphs
             analyses={analyses}
-            leakPeriodDate={parseDate(props.project.leakPeriodDate)}
+            leakPeriodDate={
+              props.project.leakPeriodDate ? parseDate(props.project.leakPeriodDate) : undefined
+            }
             loading={props.graphLoading}
             measuresHistory={measuresHistory}
             metrics={props.metrics}

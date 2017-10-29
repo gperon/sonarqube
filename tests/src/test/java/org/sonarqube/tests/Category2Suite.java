@@ -36,7 +36,6 @@ import org.sonarqube.tests.issue.IssueFilterExtensionTest;
 import org.sonarqube.tests.issue.IssueFilterOnCommonRulesTest;
 import org.sonarqube.tests.issue.IssueFilterTest;
 import org.sonarqube.tests.issue.IssueMeasureTest;
-import org.sonarqube.tests.issue.IssueNotificationsTest;
 import org.sonarqube.tests.issue.IssuePurgeTest;
 import org.sonarqube.tests.issue.IssueSearchTest;
 import org.sonarqube.tests.issue.IssueTrackingTest;
@@ -48,9 +47,10 @@ import org.sonarqube.tests.qualityModel.MaintainabilityRatingMeasureTest;
 import org.sonarqube.tests.qualityModel.NewDebtRatioMeasureTest;
 import org.sonarqube.tests.qualityModel.ReliabilityMeasureTest;
 import org.sonarqube.tests.qualityModel.SecurityMeasureTest;
+import org.sonarqube.tests.qualityModel.TechnicalDebtAndIssueNewMeasuresTest;
 import org.sonarqube.tests.qualityModel.TechnicalDebtInIssueChangelogTest;
-import org.sonarqube.tests.qualityModel.TechnicalDebtMeasureVariationTest;
 import org.sonarqube.tests.qualityModel.TechnicalDebtTest;
+import org.sonarqube.tests.rule.RulesPageTest;
 import org.sonarqube.tests.scm.ScmTest;
 import org.sonarqube.tests.test.CoverageTest;
 import org.sonarqube.tests.test.CoverageTrackingTest;
@@ -81,7 +81,6 @@ import static util.ItUtils.xooPlugin;
   IssueFilterTest.class,
   IssueFilterExtensionTest.class,
   IssueMeasureTest.class,
-  IssueNotificationsTest.class,
   IssuePurgeTest.class,
   IssueSearchTest.class,
   IssueTrackingTest.class,
@@ -95,10 +94,12 @@ import static util.ItUtils.xooPlugin;
   ReliabilityMeasureTest.class,
   SecurityMeasureTest.class,
   TechnicalDebtInIssueChangelogTest.class,
-  TechnicalDebtMeasureVariationTest.class,
+  TechnicalDebtAndIssueNewMeasuresTest.class,
   TechnicalDebtTest.class,
   // ui
   IssuesPageTest.class,
+  // rule
+  RulesPageTest.class,
   // branch
   BranchTest.class
 })
@@ -114,6 +115,8 @@ public class Category2Suite {
 
     // 1 second. Required for notification test.
     .setServerProperty("sonar.notifications.delay", "1")
+
+    .setServerProperty("organization.enabled", "true")
 
     // reduce memory for Elasticsearch to 128M
     .setServerProperty("sonar.search.javaOpts", "-Xms128m -Xmx128m")

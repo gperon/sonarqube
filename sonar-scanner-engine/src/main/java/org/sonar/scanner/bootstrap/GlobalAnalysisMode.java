@@ -43,8 +43,10 @@ public class GlobalAnalysisMode {
     mediumTestMode = "true".equals(props.property(MEDIUM_TEST_ENABLED));
     if (preview) {
       LOG.info("Preview mode");
+      LOG.warn("The use of the preview mode (sonar.analysis.mode=preview) is deprecated. This mode will be dropped in the future.");
     } else if (issues) {
       LOG.info("Issues mode");
+      LOG.warn("The use of the issues mode (sonar.analysis.mode=issues) is deprecated. This mode will be dropped in the future.");
     } else {
       LOG.info("Publish mode");
     }
@@ -52,7 +54,7 @@ public class GlobalAnalysisMode {
       LOG.info("Medium test mode");
     }
   }
-  
+
   public boolean isPreview() {
     return preview;
   }
@@ -74,12 +76,8 @@ public class GlobalAnalysisMode {
       return;
     }
 
-    if (CoreProperties.ANALYSIS_MODE_INCREMENTAL.equals(mode)) {
-      throw new IllegalStateException("Invalid analysis mode: " + mode + ". This mode was removed in SonarQube 5.2. Valid modes are: " + Arrays.toString(VALID_MODES));
-    }
-
     if (!Arrays.asList(VALID_MODES).contains(mode)) {
-      throw new IllegalStateException("Invalid analysis mode: " + mode + ". Valid modes are: " + Arrays.toString(VALID_MODES));
+      throw new IllegalStateException("Invalid analysis mode: " + mode + ".");
     }
 
   }

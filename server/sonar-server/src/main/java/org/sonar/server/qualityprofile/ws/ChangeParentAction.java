@@ -30,18 +30,16 @@ import org.sonar.db.organization.OrganizationDto;
 import org.sonar.db.qualityprofile.QProfileDto;
 import org.sonar.server.qualityprofile.RuleActivator;
 import org.sonar.server.user.UserSession;
+import org.sonarqube.ws.client.qualityprofile.QualityProfileWsParameters;
 
 import static org.apache.commons.lang.StringUtils.isEmpty;
 import static org.sonar.core.util.Uuids.UUID_EXAMPLE_02;
-import static org.sonar.db.permission.OrganizationPermission.ADMINISTER_QUALITY_PROFILES;
 import static org.sonarqube.ws.client.qualityprofile.QualityProfileWsParameters.PARAM_LANGUAGE;
-import static org.sonarqube.ws.client.qualityprofile.QualityProfileWsParameters.PARAM_PARENT_PROFILE;
+import static org.sonarqube.ws.client.qualityprofile.QualityProfileWsParameters.PARAM_PARENT_KEY;
 
 public class ChangeParentAction implements QProfileWsAction {
 
-  private static final String PARAM_PARENT_NAME = "parentName";
-
-  private DbClient dbClient;
+  private final DbClient dbClient;
   private final RuleActivator ruleActivator;
   private final Languages languages;
   private final QProfileWsSupport wsSupport;
@@ -62,23 +60,26 @@ public class ChangeParentAction implements QProfileWsAction {
       .setSince("5.2")
       .setPost(true)
       .setDescription("Change a quality profile's parent.<br>" +
-        "Requires to be logged in and the 'Administer Quality Profiles' permission.")
+        "Requires one of the following permissions:" +
+        "<ul>" +
+        "  <li>'Administer Quality Profiles'</li>" +
+        "  <li>Edit right on the specified quality profile</li>" +
+        "</ul>")
       .setHandler(this);
 
     QProfileWsSupport.createOrganizationParam(inheritance)
       .setSince("6.4");
     QProfileReference.defineParams(inheritance, languages);
 
-    inheritance.createParam(PARAM_PARENT_PROFILE)
+    inheritance.createParam(PARAM_PARENT_KEY)
       .setDescription("New parent profile key.<br> " +
         "If no profile is provided, the inheritance link with current parent profile (if any) is broken, which deactivates all rules " +
         "which come from the parent and are not overridden.")
-      .setDeprecatedKey("parentKey", "6.5")
+      .setDeprecatedSince("6.6")
       .setExampleValue(UUID_EXAMPLE_02);
 
-    inheritance.createParam(PARAM_PARENT_NAME)
-      .setDescription("Quality profile name. If this parameter is set, '%s' must not be set and '%s' must be set to disambiguate.", PARAM_PARENT_PROFILE, PARAM_LANGUAGE)
-      .setDeprecatedSince("6.5")
+    inheritance.createParam(QualityProfileWsParameters.PARAM_PARENT_QUALITY_PROFILE)
+      .setDescription("Quality profile name. If this parameter is set, '%s' must not be set and '%s' must be set to disambiguate.", PARAM_PARENT_KEY, PARAM_LANGUAGE)
       .setExampleValue("Sonar way");
   }
 
@@ -89,14 +90,11 @@ public class ChangeParentAction implements QProfileWsAction {
 
     try (DbSession dbSession = dbClient.openSession(false)) {
       QProfileDto profile = wsSupport.getProfile(dbSession, reference);
-      String organizationUuid = profile.getOrganizationUuid();
-      OrganizationDto organization = dbClient.organizationDao().selectByUuid(dbSession, organizationUuid)
-        .orElseThrow(() -> new IllegalStateException(String.format("Could not find organization with uuid '%s' of profile '%s'", organizationUuid, profile.getKee())));
-      userSession.checkPermission(ADMINISTER_QUALITY_PROFILES, organization);
-      wsSupport.checkNotBuiltInt(profile);
+      OrganizationDto organization = wsSupport.getOrganization(dbSession, profile);
+      wsSupport.checkCanEdit(dbSession, organization, profile);
 
-      String parentKey = request.param(PARAM_PARENT_PROFILE);
-      String parentName = request.param(PARAM_PARENT_NAME);
+      String parentKey = request.param(PARAM_PARENT_KEY);
+      String parentName = request.param(QualityProfileWsParameters.PARAM_PARENT_QUALITY_PROFILE);
       if (isEmpty(parentKey) && isEmpty(parentName)) {
         ruleActivator.setParentAndCommit(dbSession, profile, null);
       } else {

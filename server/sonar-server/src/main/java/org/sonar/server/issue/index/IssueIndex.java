@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.TimeZone;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -537,18 +536,14 @@ public class IssueIndex {
       bucketSize = DateHistogramInterval.MONTH;
     }
 
-    // from GMT to server TZ
-    int offsetInSeconds = -system.getDefaultTimeZone().getRawOffset() / 1_000;
-
     AggregationBuilder dateHistogram = AggregationBuilders.dateHistogram(PARAM_CREATED_AT)
       .field(IssueIndexDefinition.FIELD_ISSUE_FUNC_CREATED_AT)
       .dateHistogramInterval(bucketSize)
       .minDocCount(0L)
       .format(DateUtils.DATETIME_FORMAT)
-      .timeZone(DateTimeZone.forTimeZone(TimeZone.getTimeZone("GMT")))
-      .offset(offsetInSeconds + "s")
+      .timeZone(DateTimeZone.forOffsetMillis(system.getDefaultTimeZone().getRawOffset()))
       // ES dateHistogram bounds are inclusive while createdBefore parameter is exclusive
-      .extendedBounds(new ExtendedBounds(startTime, endTime - (offsetInSeconds * 1_000L) - 1L));
+      .extendedBounds(new ExtendedBounds(startTime, endTime - 1L));
     addEffortAggregationIfNeeded(query, dateHistogram);
     return Optional.of(dateHistogram);
   }
@@ -691,20 +686,26 @@ public class IssueIndex {
           .filter(projectUuid, boolQuery()
             .filter(termQuery(IssueIndexDefinition.FIELD_ISSUE_PROJECT_UUID, projectUuid))
             .filter(rangeQuery(IssueIndexDefinition.FIELD_ISSUE_FUNC_CREATED_AT).gte(epochMillisToEpochSeconds(from))))
-          .subAggregation(AggregationBuilders.count(projectUuid + "_count").field(IssueIndexDefinition.FIELD_ISSUE_KEY))
-          .subAggregation(AggregationBuilders.max(projectUuid + "_maxFuncCreatedAt").field(IssueIndexDefinition.FIELD_ISSUE_FUNC_CREATED_AT)));
+          .subAggregation(
+            AggregationBuilders.terms("branchUuid").field(IssueIndexDefinition.FIELD_ISSUE_BRANCH_UUID)
+              .subAggregation(
+                AggregationBuilders.count("count").field(IssueIndexDefinition.FIELD_ISSUE_KEY))
+              .subAggregation(
+                AggregationBuilders.max("maxFuncCreatedAt").field(IssueIndexDefinition.FIELD_ISSUE_FUNC_CREATED_AT))));
     });
     SearchResponse response = request.get();
     return response.getAggregations().asList().stream()
       .map(x -> (InternalFilter) x)
-      .flatMap(projectBucket -> {
-        long count = ((InternalValueCount) projectBucket.getAggregations().get(projectBucket.getName() + "_count")).getValue();
-        if (count < 1L) {
-          return Stream.empty();
-        }
-        long lastIssueDate = (long) ((InternalMax) projectBucket.getAggregations().get(projectBucket.getName() + "_maxFuncCreatedAt")).getValue();
-        return Stream.of(new ProjectStatistics(projectBucket.getName(), count, lastIssueDate));
-      }).collect(MoreCollectors.toList(projectUuids.size()));
+      .flatMap(projectBucket -> ((StringTerms) projectBucket.getAggregations().get("branchUuid")).getBuckets().stream()
+        .flatMap(branchBucket -> {
+          long count = ((InternalValueCount) branchBucket.getAggregations().get("count")).getValue();
+          if (count < 1L) {
+            return Stream.empty();
+          }
+          long lastIssueDate = (long) ((InternalMax) branchBucket.getAggregations().get("maxFuncCreatedAt")).getValue();
+          return Stream.of(new ProjectStatistics(branchBucket.getKeyAsString(), count, lastIssueDate));
+        }))
+      .collect(MoreCollectors.toList(projectUuids.size()));
   }
 
   public List<BranchStatistics> searchBranchStatistics(String projectUuid, List<String> branchUuids) {

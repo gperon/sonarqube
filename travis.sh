@@ -10,32 +10,32 @@ set -euo pipefail
 # at each build.
 #
 function installJdk8 {
-  echo "Setup JDK 1.8u131"
+  echo "Setup JDK 1.8u151"
   mkdir -p ~/jvm
   pushd ~/jvm > /dev/null
-  if [ ! -d "jdk1.8.0_131" ]; then
-    wget -c --header "Cookie: oraclelicense=accept-securebackup-cookie" http://download.oracle.com/otn-pub/java/jdk/8u131-b11/d54c1d3a095b4ff2b6607d096fa80163/jdk-8u131-linux-x64.tar.gz
-    tar xzf jdk-8u131-linux-x64.tar.gz
-    rm jdk-8u131-linux-x64.tar.gz
+  if [ ! -d "jdk1.8.0_151" ]; then
+    wget --quiet --continue --header "Cookie: oraclelicense=accept-securebackup-cookie" http://download.oracle.com/otn-pub/java/jdk/8u151-b12/e758a0de34e24606bca991d704f6dcbf/jdk-8u151-linux-x64.tar.gz
+    tar xzf jdk-8u151-linux-x64.tar.gz
+    rm jdk-8u151-linux-x64.tar.gz
   fi
   popd > /dev/null
-  export JAVA_HOME=~/jvm/jdk1.8.0_131
+  export JAVA_HOME=~/jvm/jdk1.8.0_151
   export PATH=$JAVA_HOME/bin:$PATH
 }
 
 #
-# Maven 3.2.5 is installed by default on Travis. Maven 3.3.9 is preferred.
+# Maven 3.2.5 is installed by default on Travis. Maven 3.5 is preferred.
 #
 function installMaven {
   echo "Setup Maven"
   mkdir -p ~/maven
   pushd ~/maven > /dev/null
-  if [ ! -d "apache-maven-3.3.9" ]; then
-    echo "Download Maven 3.3.9"
-    curl -sSL http://apache.mirrors.ovh.net/ftp.apache.org/dist/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.tar.gz | tar zx -C ~/maven
+  if [ ! -d "apache-maven-3.5" ]; then
+    echo "Download Maven 3.5"
+    curl -sSL http://apache.crihan.fr/dist/maven/maven-3/3.5.0/binaries/apache-maven-3.5.0-bin.tar.gz | tar zx -C ~/maven
   fi
   popd > /dev/null
-  export M2_HOME=~/maven/apache-maven-3.3.9
+  export M2_HOME=~/maven/apache-maven-3.5.0
   export PATH=$M2_HOME/bin:$PATH
 }
 
@@ -105,7 +105,7 @@ function fixBuildVersion {
 #
 function configureTravis {
   mkdir -p ~/.local
-  curl -sSL https://github.com/SonarSource/travis-utils/tarball/v36 | tar zx --strip-components 1 -C ~/.local
+  curl -sSL https://github.com/SonarSource/travis-utils/tarball/v38 | tar zx --strip-components 1 -C ~/.local
   source ~/.local/bin/install
 }
 configureTravis
@@ -126,18 +126,19 @@ BUILD)
 
   # Minimal Maven settings
   export MAVEN_OPTS="-Xmx1G -Xms128m"
-  MAVEN_ARGS="-T 1C -Dmaven.test.redirectTestOutputToFile=false -Dsurefire.useFile=false -B -e -V -DbuildVersion=$BUILD_VERSION -Dtests.es.logger.level=WARN"
+  MAVEN_ARGS="-T 1C -Dmaven.test.redirectTestOutputToFile=false -Dsurefire.useFile=false -B -e -V -DbuildVersion=$BUILD_VERSION -Dtests.es.logger.level=WARN -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn"
+
+
+  # Fetch all commit history so that SonarQube has exact blame information
+  # for issue auto-assignment
+  # This command can fail with "fatal: --unshallow on a complete repository does not make sense"
+  # if there are not enough commits in the Git repository (even if Travis executed git clone --depth 50).
+  # For this reason errors are ignored with "|| true"
+  git fetch --unshallow || true
+
 
   if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
     echo 'Build and analyze master'
-
-    # Fetch all commit history so that SonarQube has exact blame information
-    # for issue auto-assignment
-    # This command can fail with "fatal: --unshallow on a complete repository does not make sense"
-    # if there are not enough commits in the Git repository (even if Travis executed git clone --depth 50).
-    # For this reason errors are ignored with "|| true"
-    git fetch --unshallow || true
-
     mvn org.jacoco:jacoco-maven-plugin:prepare-agent deploy \
           $MAVEN_ARGS \
           -Pdeploy-sonarsource,release
@@ -145,7 +146,11 @@ BUILD)
     mvn sonar:sonar \
           -Dsonar.host.url=$SONAR_HOST_URL \
           -Dsonar.login=$SONAR_TOKEN \
-          -Dsonar.projectVersion=$INITIAL_VERSION
+          -Dsonar.projectVersion=$INITIAL_VERSION \
+          -Dsonar.analysis.buildNumber=$TRAVIS_BUILD_NUMBER \
+          -Dsonar.analysis.pipeline=$TRAVIS_BUILD_NUMBER \
+          -Dsonar.analysis.sha1=$TRAVIS_COMMIT \
+          -Dsonar.analysis.repository=$TRAVIS_REPO_SLUG
 
   elif [[ "$TRAVIS_BRANCH" == "branch-"* ]] && [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
     echo 'Build release branch'
@@ -157,7 +162,12 @@ BUILD)
     mvn sonar:sonar \
         -Dsonar.host.url=$SONAR_HOST_URL \
         -Dsonar.login=$SONAR_TOKEN \
-        -Dsonar.branch.name=$TRAVIS_BRANCH
+        -Dsonar.branch.name=$TRAVIS_BRANCH \
+        -Dsonar.projectVersion=$INITIAL_VERSION \
+        -Dsonar.analysis.buildNumber=$TRAVIS_BUILD_NUMBER \
+        -Dsonar.analysis.pipeline=$TRAVIS_BUILD_NUMBER \
+        -Dsonar.analysis.sha1=$TRAVIS_COMMIT \
+        -Dsonar.analysis.repository=$TRAVIS_REPO_SLUG
 
   elif [ "$TRAVIS_PULL_REQUEST" != "false" ] && [ -n "${GITHUB_TOKEN:-}" ]; then
     echo 'Build and analyze internal pull request'
@@ -177,15 +187,16 @@ BUILD)
         -Dsonar.github.repository=$TRAVIS_REPO_SLUG \
         -Dsonar.github.oauth=$GITHUB_TOKEN
 
-    if [ "$TRAVIS_BRANCH" == "master" ]; then
-      # analysis of short-living branch based on another short-living branch
-      # is currently not supported
-      mvn sonar:sonar \
-          -Dsonar.host.url=$SONAR_HOST_URL \
-          -Dsonar.login=$SONAR_TOKEN \
-          -Dsonar.branch.name=$TRAVIS_PULL_REQUEST_BRANCH \
-          -Dsonar.branch.target=$TRAVIS_BRANCH
-    fi
+    mvn sonar:sonar \
+        -Dsonar.host.url=$SONAR_HOST_URL \
+        -Dsonar.login=$SONAR_TOKEN \
+        -Dsonar.branch.name=$TRAVIS_PULL_REQUEST_BRANCH \
+        -Dsonar.branch.target=$TRAVIS_BRANCH \
+        -Dsonar.analysis.buildNumber=$TRAVIS_BUILD_NUMBER \
+        -Dsonar.analysis.pipeline=$TRAVIS_BUILD_NUMBER \
+        -Dsonar.analysis.sha1=$TRAVIS_PULL_REQUEST_SHA \
+        -Dsonar.analysis.prNumber=$TRAVIS_PULL_REQUEST \
+        -Dsonar.analysis.repository=$TRAVIS_REPO_SLUG
   else
     echo 'Build feature branch or external pull request'
 

@@ -21,7 +21,6 @@ package org.sonar.scanner.platform;
 
 import java.io.File;
 import java.util.Date;
-import javax.annotation.CheckForNull;
 import org.apache.commons.lang.StringUtils;
 import org.sonar.api.CoreProperties;
 import org.sonar.api.SonarRuntime;
@@ -68,12 +67,6 @@ public class DefaultServer extends Server {
   }
 
   @Override
-  @CheckForNull
-  public File getDeployDir() {
-    return null;
-  }
-
-  @Override
   public String getContextPath() {
     return null;
   }
@@ -105,6 +98,6 @@ public class DefaultServer extends Server {
 
   @Override
   public String getPermanentServerId() {
-    return settings.getString(CoreProperties.PERMANENT_SERVER_ID);
+    return getId();
   }
 }

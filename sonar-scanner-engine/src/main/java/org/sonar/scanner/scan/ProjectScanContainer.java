@@ -93,9 +93,11 @@ import org.sonar.scanner.scan.branch.BranchType;
 import org.sonar.scanner.scan.branch.ProjectBranchesProvider;
 import org.sonar.scanner.scan.filesystem.BatchIdGenerator;
 import org.sonar.scanner.scan.filesystem.InputComponentStoreProvider;
+import org.sonar.scanner.scan.filesystem.StatusDetection;
 import org.sonar.scanner.scan.measure.DefaultMetricFinder;
 import org.sonar.scanner.scan.measure.DeprecatedMetricFinder;
 import org.sonar.scanner.scan.measure.MeasureCache;
+import org.sonar.scanner.scm.ScmChangedFilesProvider;
 import org.sonar.scanner.storage.Storages;
 
 public class ProjectScanContainer extends ComponentContainer {
@@ -157,6 +159,8 @@ public class ProjectScanContainer extends ComponentContainer {
       new InputModuleHierarchyProvider(),
       DefaultComponentTree.class,
       BatchIdGenerator.class,
+      new ScmChangedFilesProvider(),
+      StatusDetection.class,
 
       // rules
       new ActiveRulesProvider(),
@@ -243,6 +247,8 @@ public class ProjectScanContainer extends ComponentContainer {
     String branch = tree.root().definition().getBranch();
     if (branch != null) {
       LOG.info("Branch key: {}", branch);
+      LOG.warn("The use of \"sonar.branch\" is deprecated and replaced by \"{}\". See {}.",
+        ScannerProperties.BRANCH_NAME, ScannerProperties.BRANCHES_DOC_LINK);
     }
 
     String branchName = props.property(ScannerProperties.BRANCH_NAME);
@@ -252,7 +258,7 @@ public class ProjectScanContainer extends ComponentContainer {
     }
 
     LOG.debug("Start recursive analysis of project modules");
-    scanRecursively(tree, tree.root());
+    scanRecursively(tree, tree.root(), analysisMode);
 
     if (analysisMode.isMediumTest()) {
       getComponentByType(ScanTaskObservers.class).notifyEndOfScanTask();
@@ -270,16 +276,16 @@ public class ProjectScanContainer extends ComponentContainer {
     }
   }
 
-  private void scanRecursively(InputModuleHierarchy tree, DefaultInputModule module) {
+  private void scanRecursively(InputModuleHierarchy tree, DefaultInputModule module, GlobalAnalysisMode analysisMode) {
     for (DefaultInputModule child : tree.children(module)) {
-      scanRecursively(tree, child);
+      scanRecursively(tree, child, analysisMode);
     }
-    scan(module);
+    scan(module, analysisMode);
   }
 
   @VisibleForTesting
-  void scan(DefaultInputModule module) {
-    new ModuleScanContainer(this, module).execute();
+  void scan(DefaultInputModule module, GlobalAnalysisMode analysisMode) {
+    new ModuleScanContainer(this, module, analysisMode).execute();
   }
 
   static class BatchExtensionFilter implements ExtensionMatcher {

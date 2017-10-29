@@ -25,7 +25,7 @@ import ProfileRulesRowTotal from './ProfileRulesRowTotal';
 import ProfileRulesDeprecatedWarning from './ProfileRulesDeprecatedWarning';
 import ProfileRulesSonarWayComparison from './ProfileRulesSonarWayComparison';
 import { searchRules, takeFacet } from '../../../api/rules';
-import { getQualityProfiles } from '../../../api/quality-profiles';
+import { getQualityProfile } from '../../../api/quality-profiles';
 import { getRulesUrl } from '../../../helpers/urls';
 import { translate } from '../../../helpers/l10n';
 import { Profile } from '../types';
@@ -33,7 +33,6 @@ import { Profile } from '../types';
 const TYPES = ['BUG', 'VULNERABILITY', 'CODE_SMELL'];
 
 interface Props {
-  canAdmin: boolean;
   organization: string | null;
   profile: Profile;
 }
@@ -83,7 +82,7 @@ export default class ProfileRules extends React.PureComponent<Props, State> {
     if (this.props.profile.isBuiltIn) {
       return Promise.resolve(null);
     }
-    return getQualityProfiles({
+    return getQualityProfile({
       compareToSonarWay: true,
       profile: this.props.profile.key
     });
@@ -108,23 +107,26 @@ export default class ProfileRules extends React.PureComponent<Props, State> {
 
   loadRules() {
     this.setState({ loading: true });
-    Promise.all([
-      this.loadAllRules(),
-      this.loadActivatedRules(),
-      this.loadProfile()
-    ]).then(responses => {
-      if (this.mounted) {
-        const [allRules, activatedRules, showProfile] = responses;
-        this.setState({
-          activatedTotal: activatedRules.total,
-          allByType: keyBy<ByType>(takeFacet(allRules, 'types'), 'val'),
-          activatedByType: keyBy<ByType>(takeFacet(activatedRules, 'types'), 'val'),
-          compareToSonarWay: showProfile && showProfile.compareToSonarWay,
-          loading: false,
-          total: allRules.total
-        });
+    Promise.all([this.loadAllRules(), this.loadActivatedRules(), this.loadProfile()]).then(
+      responses => {
+        if (this.mounted) {
+          const [allRules, activatedRules, showProfile] = responses;
+          this.setState({
+            activatedTotal: activatedRules.total,
+            allByType: keyBy<ByType>(takeFacet(allRules, 'types'), 'val'),
+            activatedByType: keyBy<ByType>(takeFacet(activatedRules, 'types'), 'val'),
+            compareToSonarWay: showProfile && showProfile.compareToSonarWay,
+            loading: false,
+            total: allRules.total
+          });
+        }
+      },
+      () => {
+        if (this.mounted) {
+          this.setState({ loading: false });
+        }
       }
-    });
+    );
   }
 
   getRulesCountForType(type: string) {
@@ -148,7 +150,7 @@ export default class ProfileRules extends React.PureComponent<Props, State> {
     );
 
     return (
-      <div className="quality-profile-rules">
+      <div className="boxed-group quality-profile-rules">
         <div className="quality-profile-rules-distribution">
           <table className="data condensed">
             <thead>
@@ -181,7 +183,8 @@ export default class ProfileRules extends React.PureComponent<Props, State> {
             </tbody>
           </table>
 
-          {this.props.canAdmin &&
+          {profile.actions &&
+          profile.actions.edit &&
           !profile.isBuiltIn && (
             <div className="text-right big-spacer-top">
               <Link to={activateMoreUrl} className="button js-activate-rules">

@@ -63,10 +63,23 @@ export default class DomainFacet extends React.PureComponent {
     return measureSelected || overviewSelected;
   };
 
+  getValues = () => {
+    const { domain, selected } = this.props;
+    const measureSelected = domain.measures.find(measure => measure.metric.key === selected);
+    const overviewSelected = domain.name === selected && hasBubbleChart(domain.name);
+    return measureSelected
+      ? [getLocalizedMetricName(measureSelected.metric)]
+      : overviewSelected ? [translate('component_measures.domain_overview')] : [];
+  };
+
+  renderItemFacetStat = (item /*: MeasureEnhanced */) =>
+    hasFacetStat(item.metric.key) ? <FacetMeasureValue measure={item} /> : null;
+
   renderItemsFacet = () => {
     const { domain, selected } = this.props;
     const items = addMeasureCategories(domain.name, filterMeasures(domain.measures));
     const hasCategories = items.some(item => typeof item === 'string');
+    const translateMetric = hasCategories ? getLocalizedCategoryMetricName : getLocalizedMetricName;
     const sortedItems = sortMeasures(domain.name, items);
     return sortedItems.map(
       item =>
@@ -83,15 +96,11 @@ export default class DomainFacet extends React.PureComponent {
             key={item.metric.key}
             name={
               <span className="big-spacer-left" id={`measure-${item.metric.key}-name`}>
-                {hasCategories ? (
-                  getLocalizedCategoryMetricName(item.metric)
-                ) : (
-                  getLocalizedMetricName(item.metric)
-                )}
+                {translateMetric(item.metric)}
               </span>
             }
             onClick={this.props.onChange}
-            stat={hasFacetStat(item.metric.key) ? <FacetMeasureValue measure={item} /> : null}
+            stat={this.renderItemFacetStat(item)}
             value={item.metric.key}
           />
         )
@@ -121,7 +130,7 @@ export default class DomainFacet extends React.PureComponent {
   };
 
   render() {
-    const { domain, selected } = this.props;
+    const { domain } = this.props;
     const helper = `component_measures.domain_facets.${domain.name}.help`;
     const translatedHelper = translate(helper);
     return (
@@ -131,7 +140,7 @@ export default class DomainFacet extends React.PureComponent {
           name={getLocalizedMetricDomain(domain.name)}
           onClick={this.handleHeaderClick}
           open={this.props.open}
-          values={this.hasFacetSelected(domain, domain.measures, selected) ? 1 : 0}
+          values={this.getValues()}
         />
 
         {this.props.open && (

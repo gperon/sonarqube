@@ -22,10 +22,10 @@ import ProfileRules from './ProfileRules';
 import ProfileProjects from './ProfileProjects';
 import ProfileInheritance from './ProfileInheritance';
 import ProfileExporters from './ProfileExporters';
+import ProfilePermissions from './ProfilePermissions';
 import { Exporter, Profile } from '../types';
 
 interface Props {
-  canAdmin: boolean;
   exporters: Exporter[];
   onRequestFail: (reasong: any) => void;
   organization: string | null;
@@ -35,12 +35,18 @@ interface Props {
 }
 
 export default function ProfileDetails(props: Props) {
+  const { profile } = props;
   return (
     <div>
       <div className="quality-profile-grid">
         <div className="quality-profile-grid-left">
           <ProfileRules {...props} />
           <ProfileExporters {...props} />
+          {profile.actions &&
+          profile.actions.edit &&
+          !profile.isBuiltIn && (
+            <ProfilePermissions organization={props.organization || undefined} profile={profile} />
+          )}
         </div>
         <div className="quality-profile-grid-right">
           <ProfileInheritance {...props} />

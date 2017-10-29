@@ -46,7 +46,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.sonar.core.config.CorePropertyDefinitions.LEAK_PERIOD_MODE_DATE;
-import static org.sonar.core.config.CorePropertyDefinitions.LEAK_PERIOD_MODE_PREVIOUS_ANALYSIS;
+import static org.sonar.core.config.CorePropertyDefinitions.LEAK_PERIOD_MODE_PREVIOUS_VERSION;
 
 public class ReportPersistAnalysisStepTest extends BaseStepTest {
 
@@ -63,16 +63,11 @@ public class ReportPersistAnalysisStepTest extends BaseStepTest {
   public PeriodHolderRule periodsHolder = new PeriodHolderRule();
 
   private System2 system2 = mock(System2.class);
-
   private DbIdsRepositoryImpl dbIdsRepository;
-
   private DbClient dbClient = dbTester.getDbClient();
-
   private long analysisDate;
-
   private long now;
-
-  PersistAnalysisStep underTest;
+  private PersistAnalysisStep underTest;
 
   @Before
   public void setup() {
@@ -98,7 +93,6 @@ public class ReportPersistAnalysisStepTest extends BaseStepTest {
 
   @Test
   public void persist_analysis() {
-    analysisMetadataHolder.setIncrementalAnalysis(false);
     OrganizationDto organizationDto = dbTester.organizations().insert();
     ComponentDto projectDto = ComponentTesting.newPrivateProjectDto(organizationDto, "ABCD").setDbKey(PROJECT_KEY).setName("Project");
     dbClient.componentDao().insert(dbTester.getSession(), projectDto);
@@ -133,7 +127,6 @@ public class ReportPersistAnalysisStepTest extends BaseStepTest {
     assertThat(projectSnapshot.getStatus()).isEqualTo("U");
     assertThat(projectSnapshot.getCreatedAt()).isEqualTo(analysisDate);
     assertThat(projectSnapshot.getBuildDate()).isEqualTo(now);
-    assertThat(projectSnapshot.getIncremental()).isFalse();
 
     assertThat(dbIdsRepository.getComponentId(module)).isEqualTo(moduleDto.getId());
     assertThat(dbIdsRepository.getComponentId(directory)).isEqualTo(directoryDto.getId());
@@ -142,7 +135,6 @@ public class ReportPersistAnalysisStepTest extends BaseStepTest {
 
   @Test
   public void persist_snapshots_with_leak_period() {
-    analysisMetadataHolder.setIncrementalAnalysis(false);
     OrganizationDto organizationDto = dbTester.organizations().insert();
     ComponentDto projectDto = ComponentTesting.newPrivateProjectDto(organizationDto, "ABCD").setDbKey(PROJECT_KEY).setName("Project");
     dbClient.componentDao().insert(dbTester.getSession(), projectDto);
@@ -165,8 +157,7 @@ public class ReportPersistAnalysisStepTest extends BaseStepTest {
 
   @Test
   public void only_persist_snapshots_with_leak_period_on_project_and_module() {
-    analysisMetadataHolder.setIncrementalAnalysis(false);
-    periodsHolder.setPeriod(new Period(LEAK_PERIOD_MODE_PREVIOUS_ANALYSIS, null, analysisDate, "u1"));
+    periodsHolder.setPeriod(new Period(LEAK_PERIOD_MODE_PREVIOUS_VERSION, null, analysisDate, "u1"));
 
     OrganizationDto organizationDto = dbTester.organizations().insert();
     ComponentDto projectDto = ComponentTesting.newPrivateProjectDto(organizationDto, "ABCD").setDbKey(PROJECT_KEY).setName("Project");
@@ -199,12 +190,11 @@ public class ReportPersistAnalysisStepTest extends BaseStepTest {
     underTest.execute();
 
     SnapshotDto newProjectSnapshot = getUnprocessedSnapshot(projectDto.uuid());
-    assertThat(newProjectSnapshot.getPeriodMode()).isEqualTo(LEAK_PERIOD_MODE_PREVIOUS_ANALYSIS);
+    assertThat(newProjectSnapshot.getPeriodMode()).isEqualTo(LEAK_PERIOD_MODE_PREVIOUS_VERSION);
   }
 
   @Test
   public void set_no_period_on_snapshots_when_no_period() {
-    analysisMetadataHolder.setIncrementalAnalysis(false);
     ComponentDto projectDto = ComponentTesting.newPrivateProjectDto(dbTester.organizations().insert(), "ABCD").setDbKey(PROJECT_KEY).setName("Project");
     dbClient.componentDao().insert(dbTester.getSession(), projectDto);
     SnapshotDto snapshotDto = SnapshotTesting.newAnalysis(projectDto);

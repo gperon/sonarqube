@@ -27,7 +27,8 @@ export default ModalForm.extend({
   events() {
     return {
       ...ModalForm.prototype.events.apply(this, arguments),
-      'click #create-user-add-scm-account': 'onAddScmAccountClick'
+      'click #create-user-add-scm-account': 'onAddScmAccountClick',
+      'click .js-remove-scm': 'onRemoveScmAccountClick'
     };
   },
 
@@ -56,16 +57,28 @@ export default ModalForm.extend({
       .map(function() {
         return $(this).val();
       })
-      .toArray();
-    return scmAccounts.filter(value => !!value);
+      .toArray()
+      .filter(value => !!value);
+    // return empty string to reset the field when updating
+    return scmAccounts.length ? scmAccounts : '';
   },
 
   addScmAccount() {
-    const fields = this.$('[name="scmAccounts"]');
-    fields
+    const fields = this.$('.js-scm-input');
+    const newField = fields
       .first()
       .clone()
+      .removeClass('hidden');
+    newField.insertAfter(fields.last());
+    newField
+      .find('input')
       .val('')
-      .insertAfter(fields.last());
+      .focus();
+  },
+
+  onRemoveScmAccountClick(e) {
+    $(e.currentTarget)
+      .parent()
+      .remove();
   }
 });

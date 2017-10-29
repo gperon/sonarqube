@@ -25,6 +25,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.server.ws.WebService;
+import org.sonar.api.utils.System2;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbTester;
 import org.sonar.db.component.ComponentDto;
@@ -74,7 +75,7 @@ public class ListActionTest {
 
   private DbClient dbClient = db.getDbClient();
 
-  private TestIndex testIndex = new TestIndex(es.client());
+  private TestIndex testIndex = new TestIndex(es.client(), System2.INSTANCE);
   private TestIndexer testIndexer = new TestIndexer(db.getDbClient(), es.client());
 
   private ComponentDto project;
@@ -100,7 +101,7 @@ public class ListActionTest {
     assertThat(action.responseExampleAsString()).isNotEmpty();
     assertThat(action.params()).hasSize(9);
     assertThat(action.description()).isEqualTo("Get the list of tests either in a test file or that test a given line of source code.<br /> " +
-      "Require Browse permission on the file's project.<br /> " +
+      "Requires 'Browse' permission on the file's project.<br /> " +
       "One (and only one) of the following combination of parameters must be provided: " +
       "<ul>" +
       "<li>testId - get a specific test</li>" +

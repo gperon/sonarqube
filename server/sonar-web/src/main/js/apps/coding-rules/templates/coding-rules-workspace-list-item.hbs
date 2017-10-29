@@ -16,7 +16,11 @@
 
     <td>
       <div class="coding-rule-title">
-        <a class="js-rule link-no-underline">{{name}}</a>
+        <a class="js-rule link-no-underline" href="{{permalink}}">{{name}}</a>
+        {{#if isTemplate}}
+          <span class="outline-badge spacer-left" title="{{t 'coding_rules.rule_template.title'}}" 
+            data-toggle="tooltip" data-placement="bottom">{{t 'coding_rules.rule_template'}}</span>
+        {{/if}}
       </div>
     </td>
 
@@ -46,16 +50,15 @@
     </td>
 
     {{#any activation selectedProfile}}
-      {{#if canWrite}}
+      {{#if canEditQualityProfile}}
         {{#unless isSelectedProfileBuiltIn}}
           <td class="coding-rule-table-meta-cell coding-rule-activation-actions">
             <div class="button-group">
               {{#if activation}}
-                {{#eq activation.inherit 'NONE'}}
-                  <button class="coding-rules-detail-quality-profile-deactivate button-red">
-                    {{t 'coding_rules.deactivate'}}
-                  </button>
-                {{/eq}}
+                <button class="coding-rules-detail-quality-profile-deactivate button-red" 
+                        {{#notEq activation.inherit 'NONE'}}disabled  title="{{t 'coding_rules.can_not_deactivate'}}"{{/notEq}}>
+                  {{t 'coding_rules.deactivate'}}
+                </button>
               {{else}}
                 {{#unless isTemplate}}
                   <button class="coding-rules-detail-quality-profile-activate">{{t 'coding_rules.activate'}}</button>

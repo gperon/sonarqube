@@ -35,6 +35,7 @@ import org.sonar.db.permission.template.PermissionTemplateDto;
 import org.sonar.db.permission.template.PermissionTemplateUserDto;
 import org.sonar.db.property.PropertyDto;
 import org.sonar.db.property.PropertyQuery;
+import org.sonar.db.qualityprofile.QProfileDto;
 import org.sonar.db.user.GroupDto;
 import org.sonar.db.user.UserDto;
 import org.sonar.server.es.EsTester;
@@ -82,7 +83,7 @@ public class DeactivateActionTest {
   public UserSessionRule userSession = UserSessionRule.standalone();
 
   private DefaultOrganizationProvider defaultOrganizationProvider = TestDefaultOrganizationProvider.from(db);
-  private UserIndex index = new UserIndex(esTester.client());
+  private UserIndex index = new UserIndex(esTester.client(), system2);
   private DbClient dbClient = db.getDbClient();
   private UserIndexer userIndexer = new UserIndexer(dbClient, esTester.client());
   private DbSession dbSession = db.getSession();
@@ -175,6 +176,18 @@ public class DeactivateActionTest {
 
     assertThat(db.getDbClient().permissionTemplateDao().selectUserPermissionsByTemplateId(dbSession, template.getId())).extracting(PermissionTemplateUserDto::getUserId).isEmpty();
     assertThat(db.getDbClient().permissionTemplateDao().selectUserPermissionsByTemplateId(dbSession, anotherTemplate.getId())).extracting(PermissionTemplateUserDto::getUserId).isEmpty();
+  }
+
+  @Test
+  public void deactivate_user_deletes_his_qprofiles_permissions() {
+    logInAsSystemAdministrator();
+    UserDto user = insertUser(newUserDto());
+    QProfileDto profile = db.qualityProfiles().insert(db.getDefaultOrganization());
+    db.qualityProfiles().addUserPermission(profile, user);
+
+    deactivate(user.getLogin()).getInput();
+
+    assertThat(db.getDbClient().qProfileEditUsersDao().exists(dbSession, profile, user)).isFalse();
   }
 
   @Test

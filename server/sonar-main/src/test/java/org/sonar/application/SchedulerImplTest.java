@@ -38,15 +38,15 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.rules.TestRule;
 import org.junit.rules.Timeout;
 import org.mockito.Mockito;
+import org.sonar.application.command.AbstractCommand;
+import org.sonar.application.command.CommandFactory;
+import org.sonar.application.command.EsScriptCommand;
+import org.sonar.application.command.JavaCommand;
 import org.sonar.application.config.TestAppSettings;
 import org.sonar.application.process.ProcessLauncher;
 import org.sonar.application.process.ProcessMonitor;
-import org.sonar.cluster.localclient.HazelcastClient;
 import org.sonar.process.ProcessId;
-import org.sonar.process.command.AbstractCommand;
-import org.sonar.process.command.CommandFactory;
-import org.sonar.process.command.EsCommand;
-import org.sonar.process.command.JavaCommand;
+import org.sonar.process.cluster.hz.HazelcastMember;
 
 import static java.util.Collections.synchronizedList;
 import static org.apache.commons.lang.RandomStringUtils.randomAlphanumeric;
@@ -55,14 +55,14 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
-import static org.sonar.cluster.ClusterProperties.CLUSTER_ENABLED;
-import static org.sonar.cluster.ClusterProperties.CLUSTER_NODE_HOST;
-import static org.sonar.cluster.ClusterProperties.CLUSTER_NODE_NAME;
-import static org.sonar.cluster.ClusterProperties.CLUSTER_NODE_PORT;
-import static org.sonar.cluster.ClusterProperties.CLUSTER_NODE_TYPE;
 import static org.sonar.process.ProcessId.COMPUTE_ENGINE;
 import static org.sonar.process.ProcessId.ELASTICSEARCH;
 import static org.sonar.process.ProcessId.WEB_SERVER;
+import static org.sonar.process.ProcessProperties.CLUSTER_ENABLED;
+import static org.sonar.process.ProcessProperties.CLUSTER_NODE_HOST;
+import static org.sonar.process.ProcessProperties.CLUSTER_NODE_NAME;
+import static org.sonar.process.ProcessProperties.CLUSTER_NODE_PORT;
+import static org.sonar.process.ProcessProperties.CLUSTER_NODE_TYPE;
 
 public class SchedulerImplTest {
 
@@ -73,7 +73,8 @@ public class SchedulerImplTest {
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  private EsCommand esCommand;
+  private EsScriptCommand esScriptCommand;
+  private JavaCommand esJavaCommand;
   private JavaCommand webLeaderCommand;
   private JavaCommand webFollowerCommand;
   private JavaCommand ceCommand;
@@ -83,14 +84,15 @@ public class SchedulerImplTest {
   private TestCommandFactory javaCommandFactory = new TestCommandFactory();
   private TestProcessLauncher processLauncher = new TestProcessLauncher();
   private TestAppState appState = new TestAppState();
-  private HazelcastClient hazelcastClient = mock(HazelcastClient.class);
-  private TestClusterAppState clusterAppState = new TestClusterAppState(hazelcastClient);
+  private HazelcastMember hazelcastMember = mock(HazelcastMember.class);
+  private TestClusterAppState clusterAppState = new TestClusterAppState(hazelcastMember);
   private List<ProcessId> orderedStops = synchronizedList(new ArrayList<>());
 
   @Before
   public void setUp() throws Exception {
     File tempDir = temporaryFolder.newFolder();
-    esCommand = new EsCommand(ELASTICSEARCH, tempDir);
+    esScriptCommand = new EsScriptCommand(ELASTICSEARCH, tempDir);
+    esJavaCommand = new JavaCommand(ELASTICSEARCH, tempDir);
     webLeaderCommand = new JavaCommand(WEB_SERVER, tempDir);
     webFollowerCommand = new JavaCommand(WEB_SERVER, tempDir);
     ceCommand = new JavaCommand(COMPUTE_ENGINE, tempDir);
@@ -117,7 +119,7 @@ public class SchedulerImplTest {
     TestProcess web = processLauncher.waitForProcess(WEB_SERVER);
     assertThat(web.isAlive()).isTrue();
     assertThat(processLauncher.processes).hasSize(2);
-    assertThat(processLauncher.commands).containsExactly(esCommand, webLeaderCommand);
+    assertThat(processLauncher.commands).containsExactly(esScriptCommand, webLeaderCommand);
 
     // web becomes operational -> CE is starting
     web.operational = true;
@@ -125,7 +127,7 @@ public class SchedulerImplTest {
     TestProcess ce = processLauncher.waitForProcess(COMPUTE_ENGINE);
     assertThat(ce.isAlive()).isTrue();
     assertThat(processLauncher.processes).hasSize(3);
-    assertThat(processLauncher.commands).containsExactly(esCommand, webLeaderCommand, ceCommand);
+    assertThat(processLauncher.commands).containsExactly(esScriptCommand, webLeaderCommand, ceCommand);
 
     // all processes are up
     processLauncher.processes.values().forEach(p -> assertThat(p.isAlive()).isTrue());
@@ -360,8 +362,8 @@ public class SchedulerImplTest {
 
   private class TestCommandFactory implements CommandFactory {
     @Override
-    public EsCommand createEsCommand() {
-      return esCommand;
+    public EsScriptCommand createEsCommand() {
+      return esScriptCommand;
     }
 
     @Override
@@ -381,13 +383,8 @@ public class SchedulerImplTest {
     private ProcessId makeStartupFail = null;
 
     @Override
-    public ProcessMonitor launch(EsCommand esCommand) {
-      return launchImpl(esCommand);
-    }
-
-    @Override
-    public ProcessMonitor launch(JavaCommand javaCommand) {
-      return launchImpl(javaCommand);
+    public ProcessMonitor launch(AbstractCommand command) {
+      return launchImpl(command);
     }
 
     private ProcessMonitor launchImpl(AbstractCommand<?> javaCommand) {

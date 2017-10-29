@@ -34,7 +34,6 @@ import org.openqa.selenium.html5.WebStorage;
 import org.sonarqube.pageobjects.measures.MeasuresPage;
 import org.sonarqube.tests.Tester;
 import org.sonarqube.pageobjects.issues.IssuesPage;
-import org.sonarqube.pageobjects.licenses.LicensesPage;
 import org.sonarqube.pageobjects.organization.MembersPage;
 import org.sonarqube.pageobjects.projects.ProjectsPage;
 import org.sonarqube.pageobjects.settings.SettingsPage;
@@ -162,17 +161,15 @@ public class Navigation {
     return open(url, SettingsPage.class);
   }
 
-  public LicensesPage openLicenses() {
-    return open("/settings/licenses", LicensesPage.class);
-  }
-
   public EncryptionPage openEncryption() {
     return open("/settings/encryption", EncryptionPage.class);
   }
 
-  public ServerIdPage openServerId() {
-    return open("/settings/server_id", ServerIdPage.class);
+  public SystemInfoPage openSystemInfo() {
+    return open("/admin/system", SystemInfoPage.class);
   }
+
+  public MarketplacePage openMarketplace() { return open("/admin/marketplace", MarketplacePage.class);}
 
   public NotificationsPage openNotifications() {
     return open("/account/notifications", NotificationsPage.class);
@@ -223,9 +220,8 @@ public class Navigation {
     return this;
   }
 
-  public RulesPage clickOnRules() {
-    $(By.linkText("Rules")).click();
-    return page(RulesPage.class);
+  public RulesPage openRules() {
+    return open("/coding_rules", RulesPage.class);
   }
 
   public SelenideElement clickOnQualityProfiles() {

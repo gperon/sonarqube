@@ -81,13 +81,20 @@ export default Marionette.CompositeView.extend({
       that.collection.reset(
         that.model.getInactiveProfiles(data.actives, that.options.app.qualityProfiles)
       );
+      this.options.app.controller.updateActivation(this.model, data.actives);
     });
   },
 
   serializeData() {
+    // show "Activate" button only if user has at least one QP of the same language which he administates
+    const ruleLang = this.model.get('lang');
+    const canActivate = this.options.app.qualityProfiles.some(
+      profile => profile.actions && profile.actions.edit && profile.language === ruleLang
+    );
+
     return {
       ...Marionette.ItemView.prototype.serializeData.apply(this, arguments),
-      canWrite: this.options.app.canWrite
+      canActivate
     };
   }
 });

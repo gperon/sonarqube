@@ -24,20 +24,18 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
-import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.utils.log.LogTester;
 import org.sonar.api.utils.log.LoggerLevel;
 import org.sonar.server.app.ProcessCommandWrapper;
 import org.sonar.server.app.RestartFlagHolder;
 import org.sonar.server.exceptions.ForbiddenException;
-import org.sonar.server.platform.Platform;
+import org.sonar.server.platform.WebServer;
 import org.sonar.server.tester.UserSessionRule;
 import org.sonar.server.ws.WsActionTester;
-import org.sonar.server.ws.WsTester;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class RestartActionTest {
   @Rule
@@ -47,51 +45,17 @@ public class RestartActionTest {
   @Rule
   public LogTester logTester = new LogTester();
 
-  private MapSettings settings = new MapSettings();
-  private Platform platform = mock(Platform.class);
   private ProcessCommandWrapper processCommandWrapper = mock(ProcessCommandWrapper.class);
   private RestartFlagHolder restartFlagHolder = mock(RestartFlagHolder.class);
-  private RestartAction sut = new RestartAction(userSessionRule, settings.asConfig(), platform, processCommandWrapper, restartFlagHolder);
-  private InOrder inOrder = Mockito.inOrder(platform, restartFlagHolder, processCommandWrapper);
+  private WebServer webServer = mock(WebServer.class);
+  private RestartAction sut = new RestartAction(userSessionRule, processCommandWrapper, restartFlagHolder, webServer);
+  private InOrder inOrder = Mockito.inOrder(restartFlagHolder, processCommandWrapper);
 
   private WsActionTester actionTester = new WsActionTester(sut);
 
   @Test
-  public void restart_if_dev_mode() throws Exception {
-    settings.setProperty("sonar.web.dev", true);
-
-    SystemWs ws = new SystemWs(sut);
-
-    WsTester tester = new WsTester(ws);
-    tester.newPostRequest("api/system", "restart").execute();
-    InOrder inOrder = Mockito.inOrder(platform, restartFlagHolder);
-    inOrder.verify(restartFlagHolder).set();
-    inOrder.verify(platform).restart();
-    inOrder.verify(restartFlagHolder).unset();
-  }
-
-  @Test
-  public void restart_flag_is_unset_in_dev_mode_even_if_restart_fails() throws Exception {
-    settings.setProperty("sonar.web.dev", true);
-    RuntimeException toBeThrown = new RuntimeException("simulating platform.restart() failed");
-    doThrow(toBeThrown).when(platform).restart();
-
-    SystemWs ws = new SystemWs(sut);
-
-    WsTester tester = new WsTester(ws);
-    try {
-      tester.newPostRequest("api/system", "restart").execute();
-    } catch (RuntimeException e) {
-      assertThat(e).isSameAs(toBeThrown);
-    } finally {
-      inOrder.verify(restartFlagHolder).set();
-      inOrder.verify(platform).restart();
-      inOrder.verify(restartFlagHolder).unset();
-    }
-  }
-
-  @Test
   public void request_fails_in_production_mode_with_ForbiddenException_when_user_is_not_logged_in() {
+    when(webServer.isStandalone()).thenReturn(true);
     expectedException.expect(ForbiddenException.class);
 
     actionTester.newRequest().execute();
@@ -99,6 +63,7 @@ public class RestartActionTest {
 
   @Test
   public void request_fails_in_production_mode_with_ForbiddenException_when_user_is_not_system_administrator() {
+    when(webServer.isStandalone()).thenReturn(true);
     userSessionRule.logIn().setNonSystemAdministrator();
 
     expectedException.expect(ForbiddenException.class);
@@ -107,7 +72,18 @@ public class RestartActionTest {
   }
 
   @Test
+  public void request_fails_in_cluster_mode_with_IllegalArgumentException() {
+    when(webServer.isStandalone()).thenReturn(false);
+
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("Restart not allowed for cluster nodes");
+
+    actionTester.newRequest().execute();
+  }
+
+  @Test
   public void calls_ProcessCommandWrapper_requestForSQRestart_in_production_mode() throws Exception {
+    when(webServer.isStandalone()).thenReturn(true);
     userSessionRule.logIn().setSystemAdministrator();
 
     actionTester.newRequest().execute();
@@ -118,6 +94,7 @@ public class RestartActionTest {
 
   @Test
   public void logs_login_of_authenticated_user_requesting_the_restart_in_production_mode() throws Exception {
+    when(webServer.isStandalone()).thenReturn(true);
     String login = "BigBother";
     userSessionRule.logIn(login).setSystemAdministrator();
 

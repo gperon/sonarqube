@@ -107,8 +107,10 @@ function injectCommentsRelational(issue: RawIssue, users?: User[]) {
   return { comments };
 }
 
-function prepareClosed(issue: RawIssue): { flows?: undefined } {
-  return issue.status === 'CLOSED' ? { flows: undefined } : {};
+function prepareClosed(issue: RawIssue) {
+  return issue.status === 'CLOSED'
+    ? { flows: undefined, line: undefined, textRange: undefined }
+    : {};
 }
 
 function ensureTextRange(issue: RawIssue): { textRange?: TextRange } {
@@ -132,7 +134,7 @@ function reverseLocations(locations: FlowLocation[]): FlowLocation[] {
 
 function splitFlows(
   issue: RawIssue
-): { secondaryLocations: Array<FlowLocation>; flows: Array<Array<FlowLocation>> } {
+): { secondaryLocations: FlowLocation[]; flows: FlowLocation[][] } {
   const parsedFlows = (issue.flows || [])
     .filter(flow => flow.locations != null)
     .map(flow => flow.locations!.filter(location => location.textRange != null));
@@ -140,8 +142,16 @@ function splitFlows(
   const onlySecondaryLocations = parsedFlows.every(flow => flow.length === 1);
 
   return onlySecondaryLocations
-    ? { secondaryLocations: flatten(parsedFlows), flows: [] }
+    ? { secondaryLocations: orderLocations(flatten(parsedFlows)), flows: [] }
     : { secondaryLocations: [], flows: parsedFlows.map(reverseLocations) };
+}
+
+function orderLocations(locations: FlowLocation[]) {
+  return sortBy(
+    locations,
+    location => location.textRange && location.textRange.startLine,
+    location => location.textRange && location.textRange.startOffset
+  );
 }
 
 export function parseIssueFromResponse(

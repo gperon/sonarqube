@@ -20,28 +20,25 @@ exports[`renders status of short-living branches 1`] = `
 <ul
   className="list-inline branch-status"
 >
-  <li>
-    <i
-      className="branch-status-indicator is-passed"
+  <li
+    className="spacer-right"
+  >
+    <StatusIndicator
+      color="green"
+      size="small"
     />
   </li>
   <li>
     0
-    <BugIcon
-      className="little-spacer-left"
-    />
+    <BugIcon />
   </li>
   <li>
     0
-    <VulnerabilityIcon
-      className="little-spacer-left"
-    />
+    <VulnerabilityIcon />
   </li>
   <li>
     0
-    <CodeSmellIcon
-      className="little-spacer-left"
-    />
+    <CodeSmellIcon />
   </li>
 </ul>
 `;
@@ -50,28 +47,25 @@ exports[`renders status of short-living branches 2`] = `
 <ul
   className="list-inline branch-status"
 >
-  <li>
-    <i
-      className="branch-status-indicator is-failed"
+  <li
+    className="spacer-right"
+  >
+    <StatusIndicator
+      color="red"
+      size="small"
     />
   </li>
   <li>
     0
-    <BugIcon
-      className="little-spacer-left"
-    />
+    <BugIcon />
   </li>
   <li>
     0
-    <VulnerabilityIcon
-      className="little-spacer-left"
-    />
+    <VulnerabilityIcon />
   </li>
   <li>
     1
-    <CodeSmellIcon
-      className="little-spacer-left"
-    />
+    <CodeSmellIcon />
   </li>
 </ul>
 `;
@@ -80,28 +74,25 @@ exports[`renders status of short-living branches 3`] = `
 <ul
   className="list-inline branch-status"
 >
-  <li>
-    <i
-      className="branch-status-indicator is-failed"
+  <li
+    className="spacer-right"
+  >
+    <StatusIndicator
+      color="red"
+      size="small"
     />
   </li>
   <li>
     7
-    <BugIcon
-      className="little-spacer-left"
-    />
+    <BugIcon />
   </li>
   <li>
     6
-    <VulnerabilityIcon
-      className="little-spacer-left"
-    />
+    <VulnerabilityIcon />
   </li>
   <li>
     3
-    <CodeSmellIcon
-      className="little-spacer-left"
-    />
+    <CodeSmellIcon />
   </li>
 </ul>
 `;

@@ -19,63 +19,41 @@
  */
 import * as React from 'react';
 import { shallow } from 'enzyme';
-import ComponentNavBranchesMenuItem from '../ComponentNavBranchesMenuItem';
+import ComponentNavBranchesMenuItem, { Props } from '../ComponentNavBranchesMenuItem';
 import { BranchType, MainBranch, ShortLivingBranch, Component } from '../../../../types';
 
+const component = { key: 'component' } as Component;
+
+const shortBranch: ShortLivingBranch = {
+  isMain: false,
+  mergeBranch: 'master',
+  name: 'foo',
+  status: { bugs: 1, codeSmells: 2, vulnerabilities: 3 },
+  type: BranchType.SHORT
+};
+
+const mainBranch: MainBranch = { isMain: true, name: 'master' };
+
 it('renders main branch', () => {
-  const component = { key: 'component' } as Component;
-  const mainBranch: MainBranch = { isMain: true, name: 'master' };
-  expect(
-    shallow(
-      <ComponentNavBranchesMenuItem
-        branch={mainBranch}
-        component={component}
-        onSelect={jest.fn()}
-        selected={false}
-      />
-    )
-  ).toMatchSnapshot();
+  expect(shallowRender({ branch: mainBranch })).toMatchSnapshot();
 });
 
 it('renders short-living branch', () => {
-  const component = { key: 'component' } as Component;
-  const shortBranch: ShortLivingBranch = {
-    isMain: false,
-    mergeBranch: 'master',
-    name: 'foo',
-    status: { bugs: 1, codeSmells: 2, vulnerabilities: 3 },
-    type: BranchType.SHORT
-  };
-  expect(
-    shallow(
-      <ComponentNavBranchesMenuItem
-        branch={shortBranch}
-        component={component}
-        onSelect={jest.fn()}
-        selected={false}
-      />
-    )
-  ).toMatchSnapshot();
+  expect(shallowRender()).toMatchSnapshot();
 });
 
 it('renders short-living orhpan branch', () => {
-  const component = { key: 'component' } as Component;
-  const shortBranch: ShortLivingBranch = {
-    isMain: false,
-    isOrphan: true,
-    mergeBranch: 'master',
-    name: 'foo',
-    status: { bugs: 1, codeSmells: 2, vulnerabilities: 3 },
-    type: BranchType.SHORT
-  };
-  expect(
-    shallow(
-      <ComponentNavBranchesMenuItem
-        branch={shortBranch}
-        component={component}
-        onSelect={jest.fn()}
-        selected={false}
-      />
-    )
-  ).toMatchSnapshot();
+  expect(shallowRender({ branch: { ...shortBranch, isOrphan: true } })).toMatchSnapshot();
 });
+
+function shallowRender(props?: { [P in keyof Props]?: Props[P] }) {
+  return shallow(
+    <ComponentNavBranchesMenuItem
+      branch={shortBranch}
+      component={component}
+      onSelect={jest.fn()}
+      selected={false}
+      {...props}
+    />
+  );
+}

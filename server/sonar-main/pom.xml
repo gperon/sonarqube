@@ -6,12 +6,14 @@
   <parent>
     <groupId>org.sonarsource.sonarqube</groupId>
     <artifactId>server</artifactId>
-    <version>6.6-SNAPSHOT</version>
+    <version>7.0-SNAPSHOT</version>
     <relativePath>../</relativePath>
   </parent>
 
   <artifactId>sonar-main</artifactId>
   <name>SonarQube :: Main Process</name>
+  <description>Server process used to bootstrap Elasticsearch, Web Server and
+  Compute Engine processes. Could be merged with sonar-application.</description>
 
   <properties>
     <!--
@@ -52,6 +54,14 @@
       <groupId>com.hazelcast</groupId>
       <artifactId>hazelcast</artifactId>
     </dependency>
+    <dependency>
+      <groupId>com.hazelcast</groupId>
+      <artifactId>hazelcast-client</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.yaml</groupId>
+      <artifactId>snakeyaml</artifactId>
+    </dependency>
     <!--
     Required by our usage of Guava for clustering : CeWorkerFactoryImpl.getClusteredWorkerUUIDs()
     -->
@@ -86,10 +96,16 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>com.hazelcast</groupId>
-      <artifactId>hazelcast-client</artifactId>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>sonar-testing-harness</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>com.tngtech.java</groupId>
+      <artifactId>junit-dataprovider</artifactId>
+      <scope>test</scope>
+    </dependency>
+
   </dependencies>
 
   <build>

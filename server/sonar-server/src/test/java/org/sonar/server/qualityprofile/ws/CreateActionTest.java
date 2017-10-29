@@ -90,7 +90,7 @@ public class CreateActionTest {
 
   private DbClient dbClient = db.getDbClient();
   private DbSession dbSession = db.getSession();
-  private RuleIndex ruleIndex = new RuleIndex(es.client());
+  private RuleIndex ruleIndex = new RuleIndex(es.client(), System2.INSTANCE);
   private RuleIndexer ruleIndexer = new RuleIndexer(es.client(), dbClient);
   private ActiveRuleIndexer activeRuleIndexer = new ActiveRuleIndexer(dbClient, es.client());
   private ProfileImporter[] profileImporters = createImporters();
@@ -117,10 +117,10 @@ public class CreateActionTest {
 
     assertThat(definition.responseExampleAsString()).isNotEmpty();
     assertThat(definition.params()).extracting(Param::key)
-      .containsExactlyInAnyOrder("language", "organization", "profileName", "backup_with_messages", "backup_with_errors", "backup_xoo_lint");
-    Param profileName = definition.param("profileName");
-    assertThat(profileName.deprecatedKey()).isEqualTo("name");
-    assertThat(profileName.deprecatedKeySince()).isEqualTo("6.1");
+      .containsExactlyInAnyOrder("language", "organization", "name", "backup_with_messages", "backup_with_errors", "backup_xoo_lint");
+    Param name = definition.param("name");
+    assertThat(name.deprecatedKey()).isEqualTo("profileName");
+    assertThat(name.deprecatedKeySince()).isEqualTo("6.6");
   }
 
   @Test

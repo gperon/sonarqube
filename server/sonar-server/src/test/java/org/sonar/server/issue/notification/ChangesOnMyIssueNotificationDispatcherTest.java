@@ -28,6 +28,7 @@ import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 import org.sonar.api.notifications.Notification;
 import org.sonar.api.notifications.NotificationChannel;
+import org.sonar.api.web.UserRole;
 import org.sonar.server.notification.NotificationDispatcher;
 import org.sonar.server.notification.NotificationDispatcherMetadata;
 import org.sonar.server.notification.NotificationManager;
@@ -83,9 +84,11 @@ public class ChangesOnMyIssueNotificationDispatcherTest {
     recipients.put("simon", emailChannel);
     recipients.put("freddy", twitterChannel);
     recipients.put("godin", twitterChannel);
-    when(notifications.findNotificationSubscribers(dispatcher, "struts")).thenReturn(recipients);
+    when(notifications.findSubscribedRecipientsForDispatcher(dispatcher, "struts",
+      new NotificationManager.SubscriberPermissionsOnProject(UserRole.USER))).thenReturn(recipients);
 
-    Notification notification = new IssueChangeNotification().setFieldValue("projectKey", "struts")
+    Notification notification = new IssueChangeNotification()
+      .setFieldValue("projectKey", "struts")
       .setFieldValue("changeAuthor", "olivier")
       .setFieldValue("assignee", "freddy");
     dispatcher.performDispatch(notification, context);
@@ -101,11 +104,16 @@ public class ChangesOnMyIssueNotificationDispatcherTest {
     recipients.put("simon", emailChannel);
     recipients.put("freddy", twitterChannel);
     recipients.put("godin", twitterChannel);
-    when(notifications.findNotificationSubscribers(dispatcher, "struts")).thenReturn(recipients);
+    when(notifications.findSubscribedRecipientsForDispatcher(dispatcher, "uuid1", new NotificationManager.SubscriberPermissionsOnProject(UserRole.USER))).thenReturn(recipients);
 
     // change author is the assignee
-    dispatcher.performDispatch(new IssueChangeNotification().setFieldValue("projectKey", "struts")
-      .setFieldValue("changeAuthor", "simon").setFieldValue("assignee", "simon"), context);
+    dispatcher.performDispatch(
+      new IssueChangeNotification()
+        .setFieldValue("projectKey", "struts")
+        .setFieldValue("projectUuid", "uuid1")
+        .setFieldValue("changeAuthor", "simon")
+        .setFieldValue("assignee", "simon"),
+      context);
 
     // no change author
     dispatcher.performDispatch(new IssueChangeNotification().setFieldValue("projectKey", "struts")

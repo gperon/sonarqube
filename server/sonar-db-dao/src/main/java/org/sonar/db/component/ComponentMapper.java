@@ -117,6 +117,11 @@ public interface ComponentMapper {
     @Param(value = "excludeDisabled") boolean excludeDisabled);
 
   /**
+   * Return keys and UUIDs of all components belonging to a project
+   */
+  List<KeyWithUuidDto> selectUuidsByKeyFromProjectKey(@Param("projectKey") String projectKey);
+
+  /**
    * Return technical projects from a view or a sub-view
    */
   List<String> selectProjectsFromView(@Param("viewUuidLikeQuery") String viewUuidLikeQuery, @Param("projectViewUuid") String projectViewUuid);
@@ -146,4 +151,6 @@ public interface ComponentMapper {
   void delete(long componentId);
 
   void updateTags(ComponentDto component);
+
+  List<KeyWithUuidDto> selectComponentKeysHavingIssuesToMerge(@Param("mergeBranchUuid") String mergeBranchUuid);
 }

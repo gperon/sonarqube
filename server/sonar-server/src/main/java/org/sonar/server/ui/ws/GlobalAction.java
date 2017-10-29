@@ -35,12 +35,14 @@ import org.sonar.db.dialect.H2;
 import org.sonar.server.branch.BranchFeatureProxy;
 import org.sonar.server.organization.DefaultOrganizationProvider;
 import org.sonar.server.organization.OrganizationFlags;
+import org.sonar.server.platform.WebServer;
 import org.sonar.server.ui.PageRepository;
 import org.sonar.server.ui.VersionFormatter;
 import org.sonar.server.user.UserSession;
 
 import static org.sonar.api.CoreProperties.RATING_GRID;
-import static org.sonar.core.config.WebConstants.SONARQUBE_DOT_COM_ENABLED;
+import static org.sonar.core.config.CorePropertyDefinitions.EDITIONS_CONFIG_URL;
+import static org.sonar.core.config.WebConstants.SONARCLOUD_ENABLED;
 import static org.sonar.core.config.WebConstants.SONAR_LF_ENABLE_GRAVATAR;
 import static org.sonar.core.config.WebConstants.SONAR_LF_GRAVATAR_SERVER_URL;
 import static org.sonar.core.config.WebConstants.SONAR_LF_LOGO_URL;
@@ -55,13 +57,15 @@ public class GlobalAction implements NavigationWsAction {
     SONAR_LF_ENABLE_GRAVATAR,
     SONAR_LF_GRAVATAR_SERVER_URL,
     SONAR_UPDATECENTER_ACTIVATE,
-    SONARQUBE_DOT_COM_ENABLED,
+    EDITIONS_CONFIG_URL,
+    SONARCLOUD_ENABLED,
     RATING_GRID);
 
   private final PageRepository pageRepository;
   private final Configuration config;
   private final ResourceTypes resourceTypes;
   private final Server server;
+  private final WebServer webServer;
   private final DbClient dbClient;
   private final OrganizationFlags organizationFlags;
   private final DefaultOrganizationProvider defaultOrganizationProvider;
@@ -69,11 +73,13 @@ public class GlobalAction implements NavigationWsAction {
   private final UserSession userSession;
 
   public GlobalAction(PageRepository pageRepository, Configuration config, ResourceTypes resourceTypes, Server server,
-    DbClient dbClient, OrganizationFlags organizationFlags, DefaultOrganizationProvider defaultOrganizationProvider, BranchFeatureProxy branchFeature, UserSession userSession) {
+    WebServer webServer, DbClient dbClient, OrganizationFlags organizationFlags,
+    DefaultOrganizationProvider defaultOrganizationProvider, BranchFeatureProxy branchFeature, UserSession userSession) {
     this.pageRepository = pageRepository;
     this.config = config;
     this.resourceTypes = resourceTypes;
     this.server = server;
+    this.webServer = webServer;
     this.dbClient = dbClient;
     this.organizationFlags = organizationFlags;
     this.defaultOrganizationProvider = defaultOrganizationProvider;
@@ -104,6 +110,7 @@ public class GlobalAction implements NavigationWsAction {
       writeDatabaseProduction(json);
       writeOrganizationSupport(json);
       writeBranchSupport(json);
+      json.prop("standalone", webServer.isStandalone());
       json.endObject();
     }
   }

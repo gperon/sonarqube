@@ -20,8 +20,8 @@
 package org.sonar.server.platform.platformlevel;
 
 import org.sonar.server.app.ProcessCommandWrapper;
+import org.sonar.server.edition.CommitPendingEditionOnStartup;
 import org.sonar.server.es.IndexerStartupTask;
-import org.sonar.server.notification.NotificationModule;
 import org.sonar.server.organization.DefaultOrganizationEnforcer;
 import org.sonar.server.platform.ServerLifecycleNotifier;
 import org.sonar.server.platform.web.RegisterServletFilters;
@@ -29,8 +29,6 @@ import org.sonar.server.qualitygate.RegisterQualityGates;
 import org.sonar.server.qualityprofile.BuiltInQProfileInsertImpl;
 import org.sonar.server.qualityprofile.BuiltInQProfileLoader;
 import org.sonar.server.qualityprofile.BuiltInQProfileUpdateImpl;
-import org.sonar.server.qualityprofile.BuiltInQualityProfilesNotificationDispatcher;
-import org.sonar.server.qualityprofile.BuiltInQualityProfilesNotificationTemplate;
 import org.sonar.server.qualityprofile.BuiltInQualityProfilesUpdateListener;
 import org.sonar.server.qualityprofile.RegisterQualityProfiles;
 import org.sonar.server.rule.RegisterRules;
@@ -40,8 +38,8 @@ import org.sonar.server.startup.DisplayLogOnDeprecatedProjects;
 import org.sonar.server.startup.GeneratePluginIndex;
 import org.sonar.server.startup.RegisterMetrics;
 import org.sonar.server.startup.RegisterPermissionTemplates;
-import org.sonar.server.startup.RenameDeprecatedPropertyKeys;
 import org.sonar.server.startup.RegisterPlugins;
+import org.sonar.server.startup.RenameDeprecatedPropertyKeys;
 import org.sonar.server.user.DoPrivileged;
 import org.sonar.server.user.ThreadLocalUserSession;
 
@@ -61,13 +59,10 @@ public class PlatformLevelStartup extends PlatformLevel {
       IndexerStartupTask.class,
       RegisterMetrics.class,
       RegisterQualityGates.class,
-      RegisterRules.class);
+      RegisterRules.class,
+      CommitPendingEditionOnStartup.class);
     add(BuiltInQProfileLoader.class);
     addIfStartupLeader(
-      // TODO Should we put it in level 2 ?
-      NotificationModule.class,
-      BuiltInQualityProfilesNotificationDispatcher.class,
-      BuiltInQualityProfilesNotificationTemplate.class,
       BuiltInQualityProfilesUpdateListener.class,
       BuiltInQProfileInsertImpl.class,
       BuiltInQProfileUpdateImpl.class,

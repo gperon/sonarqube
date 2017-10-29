@@ -19,14 +19,15 @@
  */
 import * as React from 'react';
 import ComponentNavFavorite from './ComponentNavFavorite';
+import ComponentNavBranch from './ComponentNavBranch';
 import ComponentNavBreadcrumbs from './ComponentNavBreadcrumbs';
 import ComponentNavMeta from './ComponentNavMeta';
 import ComponentNavMenu from './ComponentNavMenu';
-import ComponentNavBranch from './ComponentNavBranch';
+import ComponentNavBgTaskNotif from './ComponentNavBgTaskNotif';
 import RecentHistory from '../../RecentHistory';
-import { Branch, Component, ComponentConfiguration } from '../../../types';
+import { Branch, Component } from '../../../types';
 import ContextNavBar from '../../../../components/nav/ContextNavBar';
-import { getTasksForComponent } from '../../../../api/ce';
+import { getTasksForComponent, PendingTask, Task } from '../../../../api/ce';
 import { STATUSES } from '../../../../apps/background-tasks/constants';
 import './ComponentNav.css';
 
@@ -34,13 +35,11 @@ interface Props {
   branches: Branch[];
   currentBranch?: Branch;
   component: Component;
-  conf: ComponentConfiguration;
   location: {};
 }
 
 interface State {
-  incremental?: boolean;
-  isFailed?: boolean;
+  currentTask?: Task;
   isInProgress?: boolean;
   isPending?: boolean;
 }
@@ -56,18 +55,26 @@ export default class ComponentNav extends React.PureComponent<Props, State> {
     this.populateRecentHistory();
   }
 
+  componentDidUpdate(prevProps: Props) {
+    if (this.props.component.key !== prevProps.component.key) {
+      this.loadStatus();
+      this.populateRecentHistory();
+    }
+  }
+
   componentWillUnmount() {
     this.mounted = false;
   }
 
   loadStatus = () => {
-    getTasksForComponent(this.props.component.key).then((r: any) => {
+    getTasksForComponent(
+      this.props.component.key
+    ).then((r: { queue: PendingTask[]; current: Task }) => {
       if (this.mounted) {
         this.setState({
-          isPending: r.queue.some((task: any) => task.status === STATUSES.PENDING),
-          isInProgress: r.queue.some((task: any) => task.status === STATUSES.IN_PROGRESS),
-          isFailed: r.current && r.current.status === STATUSES.FAILED,
-          incremental: r.current && r.current.incremental
+          currentTask: r.current,
+          isInProgress: r.queue.some(task => task.status === STATUSES.IN_PROGRESS),
+          isPending: r.queue.some(task => task.status === STATUSES.PENDING)
         });
       }
     });
@@ -87,42 +94,44 @@ export default class ComponentNav extends React.PureComponent<Props, State> {
   };
 
   render() {
+    const { currentTask, isInProgress, isPending } = this.state;
+    let notifComponent;
+    if (isInProgress || isPending || (currentTask && currentTask.status === STATUSES.FAILED)) {
+      notifComponent = (
+        <ComponentNavBgTaskNotif
+          component={this.props.component}
+          currentTask={currentTask}
+          isInProgress={isInProgress}
+          isPending={isPending}
+        />
+      );
+    }
     return (
-      <ContextNavBar id="context-navigation" height={65}>
+      <ContextNavBar
+        id="context-navigation"
+        height={notifComponent ? 95 : 65}
+        notif={notifComponent}>
         <ComponentNavFavorite
           component={this.props.component.key}
           favorite={this.props.component.isFavorite}
         />
-
         <ComponentNavBreadcrumbs
           component={this.props.component}
           breadcrumbs={this.props.component.breadcrumbs}
         />
-
         {this.props.currentBranch && (
           <ComponentNavBranch
             branches={this.props.branches}
+            component={this.props.component}
             currentBranch={this.props.currentBranch}
             // to close dropdown on any location change
             location={this.props.location}
-            project={this.props.component}
           />
         )}
-
-        <ComponentNavMeta
-          branch={this.props.currentBranch}
-          component={this.props.component}
-          conf={this.props.conf}
-          incremental={this.state.incremental}
-          isInProgress={this.state.isInProgress}
-          isFailed={this.state.isFailed}
-          isPending={this.state.isPending}
-        />
-
+        <ComponentNavMeta branch={this.props.currentBranch} component={this.props.component} />
         <ComponentNavMenu
           branch={this.props.currentBranch}
           component={this.props.component}
-          conf={this.props.conf}
           // to re-render selected menu item
           location={this.props.location}
         />

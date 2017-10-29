@@ -24,6 +24,8 @@ import { Task } from '../types';
 import QualifierIcon from '../../../components/shared/QualifierIcon';
 import Organization from '../../../components/shared/Organization';
 import { getProjectUrl } from '../../../helpers/urls';
+import ShortLivingBranchIcon from '../../../components/icons-components/ShortLivingBranchIcon';
+import LongLivingBranchIcon from '../../../components/icons-components/LongLivingBranchIcon';
 
 interface Props {
   task: Task;
@@ -34,14 +36,18 @@ export default function TaskComponent({ task }: Props) {
     return (
       <td>
         <span className="note">{task.id}</span>
-        <TaskType incremental={task.incremental} type={task.type} />
+        <TaskType type={task.type} />
       </td>
     );
   }
 
   return (
     <td>
-      {task.componentQualifier && (
+      {task.branchType === 'SHORT' && <ShortLivingBranchIcon className="little-spacer-right" />}
+      {task.branchType === 'LONG' && <LongLivingBranchIcon className="little-spacer-right" />}
+
+      {!task.branchType &&
+      task.componentQualifier && (
         <span className="little-spacer-right">
           <QualifierIcon qualifier={task.componentQualifier} />
         </span>
@@ -62,7 +68,7 @@ export default function TaskComponent({ task }: Props) {
         </Link>
       )}
 
-      <TaskType incremental={task.incremental} type={task.type} />
+      <TaskType type={task.type} />
     </td>
   );
 }

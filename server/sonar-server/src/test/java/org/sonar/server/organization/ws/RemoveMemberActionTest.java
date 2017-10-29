@@ -28,6 +28,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.server.ws.WebService;
+import org.sonar.api.utils.System2;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbSession;
 import org.sonar.db.DbTester;
@@ -38,6 +39,7 @@ import org.sonar.db.permission.template.PermissionTemplateDto;
 import org.sonar.db.permission.template.PermissionTemplateUserDto;
 import org.sonar.db.property.PropertyDto;
 import org.sonar.db.property.PropertyQuery;
+import org.sonar.db.qualityprofile.QProfileDto;
 import org.sonar.db.user.GroupDto;
 import org.sonar.db.user.UserDto;
 import org.sonar.server.es.EsTester;
@@ -79,7 +81,7 @@ public class RemoveMemberActionTest {
   private DbClient dbClient = db.getDbClient();
   private DbSession dbSession = db.getSession();
 
-  private UserIndex userIndex = new UserIndex(es.client());
+  private UserIndex userIndex = new UserIndex(es.client(), System2.INSTANCE);
   private UserIndexer userIndexer = new UserIndexer(dbClient, es.client());
 
   private WsActionTester ws = new WsActionTester(new RemoveMemberAction(dbClient, userSession, userIndexer));
@@ -183,6 +185,21 @@ public class RemoveMemberActionTest {
       .containsOnly(anotherUser.getId());
     assertThat(dbClient.permissionTemplateDao().selectUserPermissionsByTemplateId(dbSession, anotherTemplate.getId())).extracting(PermissionTemplateUserDto::getUserId)
       .containsOnly(user.getId());
+  }
+
+  @Test
+  public void remove_qprofiles_user_permission() {
+    OrganizationDto anotherOrganization = db.organizations().insert();
+    db.organizations().addMember(anotherOrganization, user);
+    QProfileDto profile = db.qualityProfiles().insert(organization);
+    QProfileDto anotherProfile = db.qualityProfiles().insert(anotherOrganization);
+    db.qualityProfiles().addUserPermission(profile, user);
+    db.qualityProfiles().addUserPermission(anotherProfile, user);
+
+    call(organization.getKey(), user.getLogin());
+
+    assertThat(db.getDbClient().qProfileEditUsersDao().exists(dbSession, profile, user)).isFalse();
+    assertThat(db.getDbClient().qProfileEditUsersDao().exists(dbSession, anotherProfile, user)).isTrue();
   }
 
   @Test

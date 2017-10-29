@@ -26,7 +26,6 @@ import { translate } from '../../../helpers/l10n';
 import { Profile } from '../types';
 
 interface Props {
-  canAdmin: boolean;
   organization: string | null;
   profile: Profile;
   updateProfiles: () => Promise<void>;
@@ -65,6 +64,7 @@ export default class ProfileProjects extends React.PureComponent<Props, State> {
 
   loadProjects() {
     if (this.props.profile.isDefault) {
+      this.setState({ loading: false });
       return;
     }
 
@@ -126,28 +126,38 @@ export default class ProfileProjects extends React.PureComponent<Props, State> {
   }
 
   render() {
+    const { profile } = this.props;
     return (
-      <div className="quality-profile-projects">
-        <header className="page-header">
-          <h2 className="page-title">{translate('projects')}</h2>
+      <div className="boxed-group quality-profile-projects">
+        {profile.actions &&
+        profile.actions.edit &&
+        !profile.isDefault && (
+          <div className="boxed-group-actions">
+            <button className="js-change-projects" onClick={this.handleChangeClick}>
+              {translate('quality_profiles.change_projects')}
+            </button>
+          </div>
+        )}
 
-          {this.props.canAdmin &&
-          !this.props.profile.isDefault && (
-            <div className="pull-right">
-              <button className="js-change-projects" onClick={this.handleChangeClick}>
-                {translate('quality_profiles.change_projects')}
-              </button>
-            </div>
-          )}
+        <header className="boxed-group-header">
+          <h2>{translate('projects')}</h2>
         </header>
 
-        {this.props.profile.isDefault ? this.renderDefault() : this.renderProjects()}
+        <div className="boxed-group-inner">
+          {this.state.loading ? (
+            <i className="spinner" />
+          ) : profile.isDefault ? (
+            this.renderDefault()
+          ) : (
+            this.renderProjects()
+          )}
+        </div>
 
         {this.state.formOpen && (
           <ChangeProjectsForm
             onClose={this.closeForm}
             organization={this.props.organization}
-            profile={this.props.profile}
+            profile={profile}
           />
         )}
       </div>

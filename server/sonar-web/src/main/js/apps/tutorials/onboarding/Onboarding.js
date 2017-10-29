@@ -26,7 +26,7 @@ import OrganizationStep from './OrganizationStep';
 import AnalysisStep from './AnalysisStep';
 import ProjectWatcher from './ProjectWatcher';
 import { skipOnboarding } from '../../../api/users';
-import { translate } from '../../../helpers/l10n';
+import { translate, translateWithParameters } from '../../../helpers/l10n';
 import { getProjectUrl } from '../../../helpers/urls';
 import handleRequiredAuthentication from '../../../app/utils/handleRequiredAuthentication';
 import './styles.css';
@@ -71,14 +71,26 @@ export default class Onboarding extends React.PureComponent {
 
   componentDidMount() {
     this.mounted = true;
+
+    // useCapture = true to receive the event before inputs
+    window.addEventListener('keydown', this.onKeyDown, true);
+
     if (!this.props.currentUser.isLoggedIn) {
       handleRequiredAuthentication();
     }
   }
 
   componentWillUnmount() {
+    window.removeEventListener('keydown', this.onKeyDown, true);
     this.mounted = false;
   }
+
+  onKeyDown = (event /*: KeyboardEvent */) => {
+    // ESC key
+    if (event.keyCode === 27) {
+      this.finishOnboarding();
+    }
+  };
 
   finishOnboarding = () => {
     this.setState({ skipping: true });
@@ -124,7 +136,7 @@ export default class Onboarding extends React.PureComponent {
 
   handleFinish = (projectKey /*: string | void */) => this.setState({ finished: true, projectKey });
 
-  handleReset = () => this.setState({ finished: false });
+  handleReset = () => this.setState({ finished: false, projectKey: undefined });
 
   render() {
     if (!this.props.currentUser.isLoggedIn) {
@@ -153,8 +165,14 @@ export default class Onboarding extends React.PureComponent {
                   {translate('tutorials.skip')}
                 </a>
               )}
+              <p className="note">{translate('tutorials.find_it_back_in_help')}</p>
             </div>
-            <div className="page-description">{translate('onboarding.header.description')}</div>
+            <div className="page-description">
+              {translateWithParameters(
+                'onboarding.header.description',
+                organizationsEnabled ? 3 : 2
+              )}
+            </div>
           </header>
 
           {organizationsEnabled && (
@@ -169,6 +187,7 @@ export default class Onboarding extends React.PureComponent {
           )}
 
           <TokenStep
+            currentUser={this.props.currentUser}
             finished={this.state.token != null}
             onContinue={this.handleTokenDone}
             onOpen={this.handleTokenOpen}

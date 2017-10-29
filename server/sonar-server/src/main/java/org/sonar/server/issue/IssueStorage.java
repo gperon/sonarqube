@@ -152,7 +152,7 @@ public abstract class IssueStorage {
 
   protected abstract IssueDto doUpdate(DbSession batchSession, long now, DefaultIssue issue);
 
-  private void insertChanges(IssueChangeMapper mapper, DefaultIssue issue) {
+  public static void insertChanges(IssueChangeMapper mapper, DefaultIssue issue) {
     for (IssueComment comment : issue.comments()) {
       DefaultIssueComment c = (DefaultIssueComment) comment;
       if (c.isNew()) {
@@ -161,7 +161,12 @@ public abstract class IssueStorage {
       }
     }
     FieldDiffs diffs = issue.currentChange();
-    if (!issue.isNew() && diffs != null) {
+    if (issue.isCopied()) {
+      for (FieldDiffs d : issue.changes()) {
+        IssueChangeDto changeDto = IssueChangeDto.of(issue.key(), d);
+        mapper.insert(changeDto);
+      }
+    } else if (!issue.isNew() && diffs != null) {
       IssueChangeDto changeDto = IssueChangeDto.of(issue.key(), diffs);
       mapper.insert(changeDto);
     }

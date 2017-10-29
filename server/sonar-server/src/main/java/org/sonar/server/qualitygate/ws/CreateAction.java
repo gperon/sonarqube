@@ -24,9 +24,9 @@ import org.sonar.api.server.ws.Response;
 import org.sonar.api.server.ws.WebService;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbSession;
+import org.sonar.db.permission.OrganizationPermission;
 import org.sonar.db.qualitygate.QualityGateDto;
 import org.sonar.server.organization.DefaultOrganizationProvider;
-import org.sonar.db.permission.OrganizationPermission;
 import org.sonar.server.qualitygate.QualityGateUpdater;
 import org.sonar.server.user.UserSession;
 import org.sonarqube.ws.WsQualityGates.CreateWsResponse;
@@ -53,7 +53,8 @@ public class CreateAction implements QualityGatesWsAction {
   @Override
   public void define(WebService.NewController controller) {
     WebService.NewAction action = controller.createAction(ACTION_CREATE)
-      .setDescription("Create a Quality Gate. Require Administer Quality Gates permission")
+      .setDescription("Create a Quality Gate.<br>" +
+        "Requires the 'Administer Quality Gates' permission.")
       .setSince("4.3")
       .setPost(true)
       .setHandler(this);
@@ -73,8 +74,8 @@ public class CreateAction implements QualityGatesWsAction {
       CreateWsResponse.Builder createWsResponse = CreateWsResponse.newBuilder()
         .setId(newQualityGate.getId())
         .setName(newQualityGate.getName());
-      writeProtobuf(createWsResponse.build(), request, response);
       dbSession.commit();
+      writeProtobuf(createWsResponse.build(), request, response);
     }
   }
 

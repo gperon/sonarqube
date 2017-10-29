@@ -23,13 +23,17 @@ import java.util.Arrays;
 import java.util.Optional;
 import java.util.function.Consumer;
 import org.sonar.api.rule.Severity;
+import org.sonar.core.util.UuidFactoryFast;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbSession;
 import org.sonar.db.DbTester;
 import org.sonar.db.component.ComponentDto;
 import org.sonar.db.organization.OrganizationDto;
 import org.sonar.db.rule.RuleDefinitionDto;
+import org.sonar.db.user.GroupDto;
+import org.sonar.db.user.UserDto;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static org.apache.commons.lang.math.RandomUtils.nextInt;
 import static org.apache.commons.lang.math.RandomUtils.nextLong;
 import static org.sonar.db.qualityprofile.ActiveRuleDto.createFor;
@@ -107,5 +111,25 @@ public class QualityProfileDbTester {
     }
     dbSession.commit();
     return this;
+  }
+
+  public void addUserPermission(QProfileDto profile, UserDto user){
+    checkArgument(!profile.isBuiltIn(), "Built-In profile cannot be used");
+    dbClient.qProfileEditUsersDao().insert(dbSession, new QProfileEditUsersDto()
+      .setUuid(UuidFactoryFast.getInstance().create())
+      .setUserId(user.getId())
+      .setQProfileUuid(profile.getKee())
+    );
+    dbSession.commit();
+  }
+
+  public void addGroupPermission(QProfileDto profile, GroupDto group){
+    checkArgument(!profile.isBuiltIn(), "Built-In profile cannot be used");
+    dbClient.qProfileEditGroupsDao().insert(dbSession, new QProfileEditGroupsDto()
+      .setUuid(UuidFactoryFast.getInstance().create())
+      .setGroupId(group.getId())
+      .setQProfileUuid(profile.getKee())
+    );
+    dbSession.commit();
   }
 }

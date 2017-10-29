@@ -89,6 +89,7 @@ public class BuiltInQualityProfilesNotificationTest {
   public void send_mail_if_quality_profile_is_updated() throws Exception {
     orchestrator = Orchestrator.builderEnv()
       .addPlugin(pluginArtifact("foo-plugin-v1"))
+      .setServerProperty("sonar.notifications.delay", "1")
       .setServerProperty("email.smtp_host.secured", "localhost")
       .setServerProperty("email.smtp_port.secured", Integer.toString(smtpServer.getServer().getPort()))
       .build();
@@ -110,7 +111,7 @@ public class BuiltInQualityProfilesNotificationTest {
     WsUsers.CreateWsResponse.User noProfileAdmin = userRule.generate();
 
     // Create a child profile on the built-in profile => The notification should not take into account updates of this profile
-    wsClient.qualityProfiles().create(CreateRequest.builder().setLanguage("foo").setProfileName("child").build());
+    wsClient.qualityProfiles().create(CreateRequest.builder().setLanguage("foo").setName("child").build());
     wsClient.qualityProfiles().changeParent(ChangeParentRequest.builder().setProfileName("child").setParentName("Basic").setLanguage("foo").build());
 
     // uninstall plugin V1
@@ -136,9 +137,9 @@ public class BuiltInQualityProfilesNotificationTest {
       .containsSequence(
         "The following built-in profiles have been updated:",
         "\"Basic\" - Foo: " + url + "/profiles/changelog?language=foo&name=Basic&since=", "&to=",
-        " 1 new rules",
+        " 1 new rule",
         " 3 rules have been updated",
-        " 1 rules removed",
+        " 1 rule removed",
         "This is a good time to review your quality profiles and update them to benefit from the latest evolutions: " + url + "/profiles")
       .isEqualTo(messages.get(1).getMimeMessage().getContent().toString());
   }

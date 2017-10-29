@@ -24,6 +24,9 @@ import Issue from '../../issue/Issue';
 
 /*::
 type Props = {
+  branch?: string,
+  displayIssueLocationsCount?: boolean;
+  displayIssueLocationsLink?: boolean;
   issues: Array<IssueType>,
   onIssueChange: IssueType => void,
   onIssueClick: (issueKey: string) => void,
@@ -37,12 +40,15 @@ export default class LineIssuesList extends React.PureComponent {
   /*:: props: Props; */
 
   render() {
-    const { issues, onIssueClick, openPopup, selectedIssue } = this.props;
+    const { branch, issues, onIssueClick, openPopup, selectedIssue } = this.props;
 
     return (
       <div className="issue-list">
         {issues.map(issue => (
           <Issue
+            branch={branch}
+            displayLocationsCount={this.props.displayIssueLocationsCount}
+            displayLocationsLink={this.props.displayIssueLocationsLink}
             issue={issue}
             key={issue.key}
             onChange={this.props.onIssueChange}

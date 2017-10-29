@@ -26,6 +26,8 @@ import org.junit.ClassRule;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 import org.sonarqube.tests.authorisation.PermissionTemplateTest;
+import org.sonarqube.tests.issue.IssueNotificationsTest;
+import org.sonarqube.tests.ce.ReportFailureNotificationTest;
 import org.sonarqube.tests.issue.IssueTagsTest;
 import org.sonarqube.tests.issue.OrganizationIssueAssignTest;
 import org.sonarqube.tests.issue.OrganizationIssuesPageTest;
@@ -45,6 +47,7 @@ import org.sonarqube.tests.qualityGate.OrganizationQualityGateUiTest;
 import org.sonarqube.tests.qualityProfile.BuiltInQualityProfilesTest;
 import org.sonarqube.tests.qualityProfile.CustomQualityProfilesTest;
 import org.sonarqube.tests.qualityProfile.OrganizationQualityProfilesUiTest;
+import org.sonarqube.tests.qualityProfile.QualityProfilesEditTest;
 import org.sonarqube.tests.qualityProfile.QualityProfilesWsTest;
 import org.sonarqube.tests.rule.RulesWsTest;
 import org.sonarqube.tests.ui.OrganizationUiExtensionsTest;
@@ -70,6 +73,7 @@ import static util.ItUtils.xooPlugin;
   OrganizationUiExtensionsTest.class,
   PersonalOrganizationTest.class,
   BuiltInQualityProfilesTest.class,
+  QualityProfilesEditTest.class,
   QualityProfilesWsTest.class,
   CustomQualityProfilesTest.class,
   BillingTest.class,
@@ -81,7 +85,9 @@ import static util.ItUtils.xooPlugin;
   ProjectProvisioningTest.class,
   ProjectKeyUpdateTest.class,
   ProjectSearchTest.class,
-  PermissionTemplateTest.class
+  PermissionTemplateTest.class,
+  ReportFailureNotificationTest.class,
+  IssueNotificationsTest.class
 })
 public class Category6Suite {
 
@@ -94,6 +100,7 @@ public class Category6Suite {
     .setServerProperty("sonar.search.httpPort", "" + SEARCH_HTTP_PORT)
     .setServerProperty("sonar.search.recovery.delayInMs", "1000")
     .setServerProperty("sonar.search.recovery.minAgeInMs", "3000")
+    .setServerProperty("sonar.notifications.delay", "1")
 
     .addPlugin(xooPlugin())
     .addPlugin(pluginArtifact("base-auth-plugin"))

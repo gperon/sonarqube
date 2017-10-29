@@ -21,13 +21,15 @@ package org.sonar.server.computation.task.projectanalysis.qualitygate;
 
 import com.google.common.base.Optional;
 import java.util.Collection;
-import org.sonar.core.util.stream.MoreCollectors;
+import java.util.Objects;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbSession;
 import org.sonar.db.qualitygate.QualityGateConditionDto;
 import org.sonar.db.qualitygate.QualityGateDto;
-import org.sonar.server.computation.task.projectanalysis.metric.Metric;
 import org.sonar.server.computation.task.projectanalysis.metric.MetricRepository;
+import org.sonar.server.qualitygate.ShortLivingBranchQualityGate;
+
+import static org.sonar.core.util.stream.MoreCollectors.toList;
 
 public class QualityGateServiceImpl implements QualityGateService {
 
@@ -41,6 +43,9 @@ public class QualityGateServiceImpl implements QualityGateService {
 
   @Override
   public Optional<QualityGate> findById(long id) {
+    if (id == ShortLivingBranchQualityGate.ID) {
+      return Optional.of(buildShortLivingBranchHardcodedQualityGate());
+    }
     try (DbSession dbSession = dbClient.openSession(false)) {
       QualityGateDto qualityGateDto = dbClient.qualityGateDao().selectById(dbSession, id);
       if (qualityGateDto == null) {
@@ -54,13 +59,22 @@ public class QualityGateServiceImpl implements QualityGateService {
     Collection<QualityGateConditionDto> dtos = dbClient.gateConditionDao().selectForQualityGate(dbSession, qualityGateDto.getId());
 
     Iterable<Condition> conditions = dtos.stream()
-      .map(input -> {
-        Metric metric = metricRepository.getById(input.getMetricId());
-        return new Condition(metric, input.getOperator(), input.getErrorThreshold(), input.getWarningThreshold(), input.getPeriod() != null);
-      })
-      .collect(MoreCollectors.toList(dtos.size()));
+      .map(input -> metricRepository.getOptionalById(input.getMetricId())
+        .map(metric -> new Condition(metric, input.getOperator(), input.getErrorThreshold(), input.getWarningThreshold(), input.getPeriod() != null))
+        .orElse(null))
+      .filter(Objects::nonNull)
+      .collect(toList(dtos.size()));
 
     return new QualityGate(qualityGateDto.getId(), qualityGateDto.getName(), conditions);
+  }
+
+  private QualityGate buildShortLivingBranchHardcodedQualityGate() {
+    return new QualityGate(
+      ShortLivingBranchQualityGate.ID,
+      ShortLivingBranchQualityGate.NAME,
+      ShortLivingBranchQualityGate.CONDITIONS.stream()
+        .map(c -> new Condition(metricRepository.getByKey(c.getMetricKey()), c.getOperator(), c.getErrorThreshold(), c.getWarnThreshold(), c.isOnLeak()))
+        .collect(toList(ShortLivingBranchQualityGate.CONDITIONS.size())));
   }
 
 }

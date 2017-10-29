@@ -17,13 +17,40 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-import { getJSON, RequestData } from '../helpers/request';
+import { post, getJSON, RequestData } from '../helpers/request';
+import throwGlobalError from '../app/utils/throwGlobalError';
+
+export interface GetRulesAppResponse {
+  respositories: Array<{ key: string; language: string; name: string }>;
+}
+
+export function getRulesApp(): Promise<GetRulesAppResponse> {
+  return getJSON('/api/rules/app').catch(throwGlobalError);
+}
 
 export function searchRules(data: RequestData) {
-  return getJSON('/api/rules/search', data);
+  return getJSON('/api/rules/search', data).catch(throwGlobalError);
 }
 
 export function takeFacet(response: any, property: string) {
   const facet = response.facets.find((facet: any) => facet.property === property);
   return facet ? facet.values : [];
+}
+
+export interface GetRuleDetailsParameters {
+  actives?: boolean;
+  key: string;
+  organization?: string;
+}
+
+export function getRuleDetails(parameters: GetRuleDetailsParameters): Promise<any> {
+  return getJSON('/api/rules/show', parameters).catch(throwGlobalError);
+}
+
+export function getRuleTags(parameters: { organization?: string }): Promise<string[]> {
+  return getJSON('/api/rules/tags', parameters).then(r => r.tags, throwGlobalError);
+}
+
+export function deleteRule(parameters: { key: string }) {
+  return post('/api/rules/delete', parameters).catch(throwGlobalError);
 }

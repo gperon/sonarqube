@@ -64,7 +64,6 @@
       <outputDirectory>lib/bundled-plugins</outputDirectory>
       <useTransitiveDependencies>false</useTransitiveDependencies>
       <includes>
-        <include>org.codehaus.sonar-plugins*:sonar-*-plugin</include>
         <include>org.sonarsource.*:sonar-*-plugin</include>
       </includes>
       <scope>provided</scope>
@@ -130,7 +129,7 @@
     <!-- wrapper binaries -->
     <fileSet>
       <directory>src/main/assembly</directory>
-      <outputDirectory>/</outputDirectory>
+      <outputDirectory></outputDirectory>
       <includes>
         <include>bin/*/lib/*.so</include>
         <include>bin/*/lib/*.jnilib</include>
@@ -145,7 +144,7 @@
     <!-- Configuration Files -->
     <fileSet>
       <directory>src/main/assembly</directory>
-      <outputDirectory>/</outputDirectory>
+      <outputDirectory></outputDirectory>
       <includes>
         <include>conf/**</include>
       </includes>
@@ -156,7 +155,7 @@
     <!-- Windows Scripts -->
     <fileSet>
       <directory>src/main/assembly</directory>
-      <outputDirectory>/</outputDirectory>
+      <outputDirectory></outputDirectory>
       <includes>
         <include>**/*.bat</include>
         <include>**/*.cmd</include>
@@ -167,7 +166,7 @@
     <!-- Linux Scripts -->
     <fileSet>
       <directory>src/main/assembly</directory>
-      <outputDirectory>/</outputDirectory>
+      <outputDirectory></outputDirectory>
       <includes>
         <include>**/*.sh</include>
         <include>**/ant</include>
@@ -179,7 +178,7 @@
     <!-- Other stuff -->
     <fileSet>
       <directory>src/main/assembly</directory>
-      <outputDirectory>/</outputDirectory>
+      <outputDirectory></outputDirectory>
       <excludes>
         <exclude>conf/**</exclude>
         <exclude>**/*.bat</exclude>

@@ -1,0 +1,87 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`should display an error message 1`] = `
+<div
+  className="spacer-bottom marketplace-editions"
+>
+  <span
+    className="alert alert-info"
+  >
+    <FormattedMessage
+      defaultMessage="marketplace.editions_unavailable"
+      id="marketplace.editions_unavailable"
+      values={
+        Object {
+          "url": <a
+            href="https://redirect.sonarsource.com/editions/editions.html"
+            target="_blank"
+        >
+            SonarSource.com
+        </a>,
+        }
+      }
+    />
+  </span>
+</div>
+`;
+
+exports[`should display the edition boxes correctly 1`] = `
+<i
+  className="big-spacer-bottom spinner"
+/>
+`;
+
+exports[`should display the edition boxes correctly 2`] = `
+<div
+  className="spacer-bottom marketplace-editions"
+>
+  <EditionBox
+    canInstall={true}
+    canUninstall={true}
+    edition={
+      Object {
+        "downloadUrl": "download_url",
+        "homeUrl": "more_url",
+        "key": "comunity",
+        "name": "Comunity Edition",
+        "requestUrl": "license_url",
+        "textDescription": "bar",
+      }
+    }
+    editionStatus={
+      Object {
+        "currentEditionKey": "developer",
+        "installationStatus": "NONE",
+        "nextEditionKey": "",
+      }
+    }
+    isDowngrade={true}
+    onInstall={[Function]}
+    onUninstall={[Function]}
+  />
+  <EditionBox
+    canInstall={true}
+    canUninstall={true}
+    edition={
+      Object {
+        "downloadUrl": "download_url",
+        "homeUrl": "more_url",
+        "key": "developer",
+        "name": "Developer Edition",
+        "requestUrl": "license_url",
+        "textDescription": "foo",
+      }
+    }
+    editionStatus={
+      Object {
+        "currentEditionKey": "developer",
+        "installationStatus": "NONE",
+        "nextEditionKey": "",
+      }
+    }
+    isDowngrade={false}
+    onInstall={[Function]}
+    onUninstall={[Function]}
+  />
+</div>
+`;

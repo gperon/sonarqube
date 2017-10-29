@@ -20,10 +20,15 @@
 package org.sonar.server.component.index;
 
 import java.util.HashMap;
+import java.util.Map;
+import javax.annotation.CheckForNull;
+import javax.annotation.Nullable;
 import org.sonar.server.es.BaseDoc;
 
 import static org.sonar.server.component.index.ComponentIndexDefinition.FIELD_KEY;
+import static org.sonar.server.component.index.ComponentIndexDefinition.FIELD_LANGUAGE;
 import static org.sonar.server.component.index.ComponentIndexDefinition.FIELD_NAME;
+import static org.sonar.server.component.index.ComponentIndexDefinition.FIELD_ORGANIZATION_UUID;
 import static org.sonar.server.component.index.ComponentIndexDefinition.FIELD_PROJECT_UUID;
 import static org.sonar.server.component.index.ComponentIndexDefinition.FIELD_QUALIFIER;
 import static org.sonar.server.component.index.ComponentIndexDefinition.FIELD_UUID;
@@ -32,6 +37,10 @@ public class ComponentDoc extends BaseDoc {
 
   public ComponentDoc() {
     super(new HashMap<>(6));
+  }
+
+  public ComponentDoc(Map<String, Object> fields) {
+    super(fields);
   }
 
   @Override
@@ -87,6 +96,25 @@ public class ComponentDoc extends BaseDoc {
 
   public ComponentDoc setQualifier(String s) {
     setField(FIELD_QUALIFIER, s);
+    return this;
+  }
+
+  @CheckForNull
+  public String getLanguage() {
+    return getField(FIELD_LANGUAGE);
+  }
+
+  public ComponentDoc setLanguage(@Nullable String s) {
+    setField(FIELD_LANGUAGE, s);
+    return this;
+  }
+
+  public String getOrganization() {
+    return getField(FIELD_ORGANIZATION_UUID);
+  }
+
+  public ComponentDoc setOrganization(String s) {
+    setField(FIELD_ORGANIZATION_UUID, s);
     return this;
   }
 }

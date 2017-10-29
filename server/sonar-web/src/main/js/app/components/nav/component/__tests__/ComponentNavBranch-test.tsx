@@ -38,8 +38,8 @@ it('renders main branch', () => {
     shallow(
       <ComponentNavBranch
         branches={[branch, fooBranch]}
+        component={component}
         currentBranch={branch}
-        project={component}
       />,
       { context: { branchesEnabled: true } }
     )
@@ -59,8 +59,8 @@ it('renders short-living branch', () => {
     shallow(
       <ComponentNavBranch
         branches={[branch, fooBranch]}
+        component={component}
         currentBranch={branch}
-        project={component}
       />,
       { context: { branchesEnabled: true } }
     )
@@ -73,8 +73,8 @@ it('opens menu', () => {
   const wrapper = shallow(
     <ComponentNavBranch
       branches={[branch, fooBranch]}
+      component={component}
       currentBranch={branch}
-      project={component}
     />,
     { context: { branchesEnabled: true } }
   );
@@ -87,7 +87,7 @@ it('renders single branch popup', () => {
   const branch: MainBranch = { isMain: true, name: 'master' };
   const component = {} as Component;
   const wrapper = shallow(
-    <ComponentNavBranch branches={[branch]} currentBranch={branch} project={component} />,
+    <ComponentNavBranch branches={[branch]} component={component} currentBranch={branch} />,
     { context: { branchesEnabled: true } }
   );
   expect(wrapper).toMatchSnapshot();
@@ -102,8 +102,8 @@ it('renders no branch support popup', () => {
   const wrapper = shallow(
     <ComponentNavBranch
       branches={[branch, fooBranch]}
+      component={component}
       currentBranch={branch}
-      project={component}
     />,
     { context: { branchesEnabled: false } }
   );
@@ -117,7 +117,7 @@ it('renders nothing on SonarCloud without branch support', () => {
   const branch: MainBranch = { isMain: true, name: 'master' };
   const component = {} as Component;
   const wrapper = shallow(
-    <ComponentNavBranch branches={[branch]} currentBranch={branch} project={component} />,
+    <ComponentNavBranch branches={[branch]} component={component} currentBranch={branch} />,
     { context: { branchesEnabled: false, onSonarCloud: true } }
   );
   expect(wrapper.type()).toBeNull();

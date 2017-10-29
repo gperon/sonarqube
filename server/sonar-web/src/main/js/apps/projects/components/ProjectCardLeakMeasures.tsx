@@ -38,7 +38,7 @@ export default function ProjectCardLeakMeasures({ measures }: Props) {
             <Measure
               className="spacer-right"
               measure={{
-                metric: { key: 'new_bugs', name: 'new_bugs', type: 'SHORT_INT' },
+                metric: { key: 'new_bugs', type: 'SHORT_INT' },
                 leak: measures['new_bugs']
               }}
             />
@@ -57,11 +57,7 @@ export default function ProjectCardLeakMeasures({ measures }: Props) {
             <Measure
               className="spacer-right"
               measure={{
-                metric: {
-                  key: 'new_vulnerabilities',
-                  name: 'new_vulnerabilities',
-                  type: 'SHORT_INT'
-                },
+                metric: { key: 'new_vulnerabilities', type: 'SHORT_INT' },
                 leak: measures['new_vulnerabilities']
               }}
             />
@@ -80,7 +76,7 @@ export default function ProjectCardLeakMeasures({ measures }: Props) {
             <Measure
               className="spacer-right"
               measure={{
-                metric: { key: 'new_code_smells', name: 'new_code_smells', type: 'SHORT_INT' },
+                metric: { key: 'new_code_smells', type: 'SHORT_INT' },
                 leak: measures['new_code_smells']
               }}
             />
@@ -98,7 +94,7 @@ export default function ProjectCardLeakMeasures({ measures }: Props) {
           <div className="project-card-measure-number">
             <Measure
               measure={{
-                metric: { key: 'new_coverage', name: 'new_coverage', type: 'PERCENT' },
+                metric: { key: 'new_coverage', type: 'PERCENT' },
                 leak: measures['new_coverage']
               }}
             />
@@ -112,11 +108,7 @@ export default function ProjectCardLeakMeasures({ measures }: Props) {
           <div className="project-card-measure-number">
             <Measure
               measure={{
-                metric: {
-                  key: 'new_duplicated_lines_density',
-                  name: 'new_duplicated_lines_density',
-                  type: 'PERCENT'
-                },
+                metric: { key: 'new_duplicated_lines_density', type: 'PERCENT' },
                 leak: measures['new_duplicated_lines_density']
               }}
             />
@@ -127,12 +119,12 @@ export default function ProjectCardLeakMeasures({ measures }: Props) {
         </div>
       </div>
 
-      <div className="project-card-measure smaller-card pull-right" data-key="new_lines">
+      <div className="project-card-measure smaller-card project-card-ncloc" data-key="new_lines">
         <div className="project-card-measure-inner">
           <div className="project-card-measure-number">
             <Measure
               measure={{
-                metric: { key: 'new_lines', name: 'new_lines', type: 'SHORT_INT' },
+                metric: { key: 'new_lines', type: 'SHORT_INT' },
                 leak: measures['new_lines']
               }}
             />

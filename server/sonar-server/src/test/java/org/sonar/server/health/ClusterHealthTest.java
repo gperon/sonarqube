@@ -19,7 +19,9 @@
  */
 package org.sonar.server.health;
 
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -27,8 +29,8 @@ import java.util.stream.IntStream;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.sonar.cluster.health.NodeDetails;
-import org.sonar.cluster.health.NodeHealth;
+import org.sonar.process.cluster.health.NodeDetails;
+import org.sonar.process.cluster.health.NodeHealth;
 
 import static org.apache.commons.lang.RandomStringUtils.randomAlphanumeric;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -85,9 +87,7 @@ public class ClusterHealthTest {
     Set<NodeHealth> nodeHealths = randomNodeHealths();
     ClusterHealth underTest = new ClusterHealth(health, nodeHealths);
 
-    assertThat(underTest.hashCode())
-      .isEqualTo(underTest.hashCode())
-      .isNotEqualTo(new ClusterHealth(randomHealth(), randomNodeHealths()).hashCode());
+    assertThat(underTest.hashCode()).isEqualTo(underTest.hashCode());
   }
 
   @Test
@@ -98,6 +98,17 @@ public class ClusterHealthTest {
     ClusterHealth underTest = new ClusterHealth(health, nodeHealths);
 
     assertThat(underTest.toString()).isEqualTo("ClusterHealth{health=" + health + ", nodes=" + nodeHealths + "}");
+  }
+
+  @Test
+  public void test_getNodeHealth() {
+    Health health = randomHealth();
+    Set<NodeHealth> nodeHealths = new HashSet<>(Arrays.asList(newNodeHealth("foo"), newNodeHealth("bar")));
+
+    ClusterHealth underTest = new ClusterHealth(health, nodeHealths);
+
+    assertThat(underTest.getNodeHealth("does_not_exist")).isEmpty();
+    assertThat(underTest.getNodeHealth("bar")).isPresent();
   }
 
   private Health randomHealth() {
@@ -119,5 +130,18 @@ public class ClusterHealthTest {
           .setStartedAt(1 + random.nextInt(999))
           .build())
       .build()).collect(Collectors.toSet());
+  }
+
+  private static NodeHealth newNodeHealth(String nodeName) {
+    return NodeHealth.newNodeHealthBuilder()
+      .setStatus(NodeHealth.Status.YELLOW)
+      .setDetails(NodeDetails.newNodeDetailsBuilder()
+        .setType(NodeDetails.Type.APPLICATION)
+        .setName(nodeName)
+        .setHost(randomAlphanumeric(4))
+        .setPort(3000)
+        .setStartedAt(1_000L)
+        .build())
+      .build();
   }
 }

@@ -19,34 +19,64 @@
  */
 package org.sonar.scanner.scan.filesystem;
 
+import javax.annotation.CheckForNull;
 import javax.annotation.concurrent.Immutable;
-
 import org.apache.commons.lang.StringUtils;
 import org.sonar.api.batch.fs.InputFile;
+import org.sonar.api.batch.fs.internal.DefaultInputFile;
 import org.sonar.scanner.repository.FileData;
 import org.sonar.scanner.repository.ProjectRepositories;
+import org.sonar.scanner.scm.ScmChangedFiles;
+
+import static org.sonar.api.batch.fs.InputFile.Status.*;
 
 @Immutable
-class StatusDetection {
+public class StatusDetection {
 
   private final ProjectRepositories projectRepositories;
+  private final ScmChangedFiles scmChangedFiles;
 
-  StatusDetection(ProjectRepositories projectSettings) {
+  public StatusDetection(ProjectRepositories projectSettings, ScmChangedFiles scmChangedFiles) {
     this.projectRepositories = projectSettings;
+    this.scmChangedFiles = scmChangedFiles;
   }
 
-  InputFile.Status status(String projectKeyWithBranch, String relativePath, String hash) {
-    FileData fileDataPerPath = projectRepositories.fileData(projectKeyWithBranch, relativePath);
+  InputFile.Status status(String projectKeyWithBranch, DefaultInputFile inputFile, String hash) {
+    FileData fileDataPerPath = projectRepositories.fileData(projectKeyWithBranch, inputFile.relativePath());
     if (fileDataPerPath == null) {
-      return InputFile.Status.ADDED;
+      return checkChanged(ADDED, inputFile);
     }
     String previousHash = fileDataPerPath.hash();
     if (StringUtils.equals(hash, previousHash)) {
-      return InputFile.Status.SAME;
+      return SAME;
     }
     if (StringUtils.isEmpty(previousHash)) {
-      return InputFile.Status.ADDED;
+      return checkChanged(ADDED, inputFile);
     }
-    return InputFile.Status.CHANGED;
+    return checkChanged(CHANGED, inputFile);
+  }
+
+  /**
+   * If possible, get the status of the provided file without initializing metadata of the file.
+   * @return null if it was not possible to get the status without calculating metadata
+   */
+  @CheckForNull
+  public InputFile.Status getStatusWithoutMetadata(String projectKeyWithBranch, DefaultInputFile inputFile) {
+    FileData fileDataPerPath = projectRepositories.fileData(projectKeyWithBranch, inputFile.relativePath());
+    if (fileDataPerPath == null) {
+      return checkChanged(ADDED, inputFile);
+    }
+    String previousHash = fileDataPerPath.hash();
+    if (StringUtils.isEmpty(previousHash)) {
+      return checkChanged(ADDED, inputFile);
+    }
+    return null;
+  }
+
+  private InputFile.Status checkChanged(InputFile.Status status, DefaultInputFile inputFile) {
+    if (!scmChangedFiles.verifyChanged(inputFile.path())) {
+      return SAME;
+    }
+    return status;
   }
 }

@@ -79,7 +79,6 @@ public class EmailNotificationChannel extends NotificationChannel {
    */
   private static final String REFERENCES_HEADER = "References";
 
-  private static final String FROM_NAME_DEFAULT = "SonarQube";
   private static final String SUBJECT_DEFAULT = "Notification";
 
   private EmailSettings configuration;
@@ -163,7 +162,8 @@ public class EmailNotificationChannel extends NotificationChannel {
       }
       // Set general information
       email.setCharset("UTF-8");
-      String from = StringUtils.isBlank(emailMessage.getFrom()) ? FROM_NAME_DEFAULT : (emailMessage.getFrom() + " (SonarQube)");
+      String fromName = configuration.getFromName();
+      String from = StringUtils.isBlank(emailMessage.getFrom()) ? fromName : (emailMessage.getFrom() + " (" + fromName + ")");
       email.setFrom(configuration.getFrom(), from);
       email.addTo(emailMessage.getTo(), " ");
       String subject = StringUtils.defaultIfBlank(StringUtils.trimToEmpty(configuration.getPrefix()) + " ", "")
@@ -217,7 +217,7 @@ public class EmailNotificationChannel extends NotificationChannel {
       emailMessage.setMessage(message);
       send(emailMessage);
     } catch (EmailException e) {
-      LOG.debug("Fail to send test email to: " + toAddress, e);
+      LOG.debug("Fail to send test email to {}: {}", toAddress, e);
       throw e;
     }
   }

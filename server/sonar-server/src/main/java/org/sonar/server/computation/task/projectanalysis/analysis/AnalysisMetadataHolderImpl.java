@@ -21,10 +21,8 @@ package org.sonar.server.computation.task.projectanalysis.analysis;
 
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
-import java.util.Optional;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nullable;
-
 import org.sonar.db.component.BranchType;
 import org.sonar.server.computation.util.InitializedProperty;
 import org.sonar.server.qualityprofile.QualityProfile;
@@ -33,11 +31,10 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 public class AnalysisMetadataHolderImpl implements MutableAnalysisMetadataHolder {
-
+  private static final String BRANCH_NOT_SET = "Branch has not been set";
   private final InitializedProperty<Organization> organization = new InitializedProperty<>();
   private final InitializedProperty<String> uuid = new InitializedProperty<>();
   private final InitializedProperty<Long> analysisDate = new InitializedProperty<>();
-  private final InitializedProperty<Boolean> incrementalAnalysis = new InitializedProperty<>();
   private final InitializedProperty<Analysis> baseProjectSnapshot = new InitializedProperty<>();
   private final InitializedProperty<Boolean> crossProjectDuplicationEnabled = new InitializedProperty<>();
   private final InitializedProperty<Branch> branch = new InitializedProperty<>();
@@ -98,19 +95,6 @@ public class AnalysisMetadataHolderImpl implements MutableAnalysisMetadataHolder
   }
 
   @Override
-  public MutableAnalysisMetadataHolder setIncrementalAnalysis(boolean isIncrementalAnalysis) {
-    checkState(!incrementalAnalysis.isInitialized(), "Incremental analysis flag has already been set");
-    this.incrementalAnalysis.setProperty(isIncrementalAnalysis);
-    return this;
-  }
-
-  @Override
-  public boolean isIncrementalAnalysis() {
-    checkState(incrementalAnalysis.isInitialized(), "Incremental analysis flag has not been set");
-    return this.incrementalAnalysis.getProperty();
-  }
-
-  @Override
   public MutableAnalysisMetadataHolder setBaseAnalysis(@Nullable Analysis baseAnalysis) {
     checkState(!this.baseProjectSnapshot.isInitialized(), "Base project snapshot has already been set");
     this.baseProjectSnapshot.setProperty(baseAnalysis);
@@ -138,16 +122,16 @@ public class AnalysisMetadataHolderImpl implements MutableAnalysisMetadataHolder
   }
 
   @Override
-  public MutableAnalysisMetadataHolder setBranch(@Nullable Branch branch) {
+  public MutableAnalysisMetadataHolder setBranch(Branch branch) {
     checkState(!this.branch.isInitialized(), "Branch has already been set");
     this.branch.setProperty(branch);
     return this;
   }
 
   @Override
-  public Optional<Branch> getBranch() {
-    checkState(branch.isInitialized(), "Branch has not been set");
-    return Optional.ofNullable(branch.getProperty());
+  public Branch getBranch() {
+    checkState(branch.isInitialized(), BRANCH_NOT_SET);
+    return branch.getProperty();
   }
 
   @Override
@@ -204,9 +188,15 @@ public class AnalysisMetadataHolderImpl implements MutableAnalysisMetadataHolder
   }
 
   public boolean isShortLivingBranch() {
-    checkState(this.branch.isInitialized(), "Branch has not been set");
+    checkState(this.branch.isInitialized(), BRANCH_NOT_SET);
     Branch prop = branch.getProperty();
     return prop != null && prop.getType() == BranchType.SHORT;
+  }
+
+  public boolean isLongLivingBranch() {
+    checkState(this.branch.isInitialized(), BRANCH_NOT_SET);
+    Branch prop = branch.getProperty();
+    return prop != null && prop.getType() == BranchType.LONG;
   }
 
 }

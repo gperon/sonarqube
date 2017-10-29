@@ -53,9 +53,11 @@ import {
   Component,
   CurrentUser
 } from '../utils'; */
+import handleRequiredAuthentication from '../../../app/utils/handleRequiredAuthentication';
 import ListFooter from '../../../components/controls/ListFooter';
 import EmptySearch from '../../../components/common/EmptySearch';
-import { getBranchName } from '../../../helpers/branches';
+import ScreenPositionHelper from '../../../components/common/ScreenPositionHelper';
+import { getBranchName, isShortLivingBranch } from '../../../helpers/branches';
 import { translate, translateWithParameters } from '../../../helpers/l10n';
 import { scrollToElement } from '../../../helpers/scrolling';
 /*:: import type { Issue } from '../../../components/issue/types'; */
@@ -67,8 +69,9 @@ export type Props = {
   branch?: { name: string },
   component?: Component,
   currentUser: CurrentUser,
-  fetchIssues: (query: RawQuery) => Promise<*>,
+  fetchIssues: (query: RawQuery, requestOrganizations?: boolean) => Promise<*>,
   location: { pathname: string, query: RawQuery },
+  onBranchesChange: () => void,
   organization?: { key: string },
   router: {
     push: ({ pathname: string, query?: RawQuery }) => void,
@@ -121,7 +124,7 @@ export default class App extends React.PureComponent {
       loading: true,
       locationsNavigator: false,
       myIssues: areMyIssuesSelected(props.location.query),
-      openFacets: { resolutions: true, types: true },
+      openFacets: { severities: true, types: true },
       openIssue: null,
       openPopup: null,
       query: parseQuery(props.location.query),
@@ -138,6 +141,11 @@ export default class App extends React.PureComponent {
   componentDidMount() {
     this.mounted = true;
 
+    if (this.state.myIssues && !this.props.currentUser.isLoggedIn) {
+      handleRequiredAuthentication();
+      return;
+    }
+
     const footer = document.getElementById('footer');
     if (footer) {
       footer.classList.add('page-footer-with-sidebar');
@@ -152,6 +160,7 @@ export default class App extends React.PureComponent {
 
     if (openIssue != null && openIssue.key !== this.state.selected) {
       this.setState({
+        locationsNavigator: false,
         selected: openIssue.key,
         selectedFlowIndex: null,
         selectedLocationIndex: null
@@ -179,10 +188,13 @@ export default class App extends React.PureComponent {
       areMyIssuesSelected(prevQuery) !== areMyIssuesSelected(query)
     ) {
       this.fetchFirstIssues();
-    } else if (prevState.selected !== this.state.selected) {
-      if (!this.state.openIssue) {
-        this.scrollToSelectedIssue();
-      }
+    } else if (
+      !this.state.openIssue &&
+      (prevState.selected !== this.state.selected || prevState.openIssue != null)
+    ) {
+      // if user simply selected another issue
+      // or if he went from the source code back to the list of issues
+      this.scrollToSelectedIssue();
     }
   }
 
@@ -234,11 +246,11 @@ export default class App extends React.PureComponent {
       event.preventDefault();
       this.setState(actions.enableLocationsNavigator);
     } else if (event.keyCode === 40 && event.altKey) {
-      // alt + up
+      // alt + down
       event.preventDefault();
       this.selectNextLocation();
     } else if (event.keyCode === 38 && event.altKey) {
-      // alt + down
+      // alt + up
       event.preventDefault();
       this.selectPreviousLocation();
     } else if (event.keyCode === 37 && event.altKey) {
@@ -356,7 +368,11 @@ export default class App extends React.PureComponent {
     }
   };
 
-  fetchIssues = (additional /*: ?{} */, requestFacets /*: ?boolean */ = false) => {
+  fetchIssues = (
+    additional /*: ?{} */,
+    requestFacets /*: ?boolean */ = false,
+    requestOrganizations /*: boolean | void */ = true
+  ) => {
     const { component, organization } = this.props;
     const { myIssues, openFacets, query } = this.state;
 
@@ -387,7 +403,7 @@ export default class App extends React.PureComponent {
       Object.assign(parameters, { assignees: '__me__' });
     }
 
-    return this.props.fetchIssues(parameters);
+    return this.props.fetchIssues(parameters, requestOrganizations);
   };
 
   fetchFirstIssues() {
@@ -418,7 +434,7 @@ export default class App extends React.PureComponent {
         if (this.mounted) {
           this.setState({ loading: false });
         }
-        return Promise.reject();
+        return [];
       }
     );
   }
@@ -516,29 +532,33 @@ export default class App extends React.PureComponent {
   };
 
   fetchFacet = (facet /*: string */) => {
-    return this.fetchIssues({ ps: 1, facets: mapFacet(facet) }).then(({ facets, ...other }) => {
-      if (this.mounted) {
-        this.setState(state => ({
-          facets: { ...state.facets, ...parseFacets(facets) },
-          referencedComponents: {
-            ...state.referencedComponents,
-            ...keyBy(other.components, 'uuid')
-          },
-          referencedLanguages: {
-            ...state.referencedLanguages,
-            ...keyBy(other.languages, 'key')
-          },
-          referencedRules: {
-            ...state.referencedRules,
-            ...keyBy(other.rules, 'key')
-          },
-          referencedUsers: {
-            ...state.referencedUsers,
-            ...keyBy(other.users, 'login')
-          }
-        }));
-      }
-    });
+    const requestOrganizations = facet === 'projects';
+    return this.fetchIssues({ ps: 1, facets: mapFacet(facet) }, false, requestOrganizations).then(
+      ({ facets, ...other }) => {
+        if (this.mounted) {
+          this.setState(state => ({
+            facets: { ...state.facets, ...parseFacets(facets) },
+            referencedComponents: {
+              ...state.referencedComponents,
+              ...keyBy(other.components, 'uuid')
+            },
+            referencedLanguages: {
+              ...state.referencedLanguages,
+              ...keyBy(other.languages, 'key')
+            },
+            referencedRules: {
+              ...state.referencedRules,
+              ...keyBy(other.rules, 'key')
+            },
+            referencedUsers: {
+              ...state.referencedUsers,
+              ...keyBy(other.users, 'login')
+            }
+          }));
+        }
+      },
+      () => {}
+    );
   };
 
   isFiltered = () => {
@@ -665,6 +685,9 @@ export default class App extends React.PureComponent {
 
   handleReload = () => {
     this.fetchFirstIssues();
+    if (isShortLivingBranch(this.props.branch)) {
+      this.props.onBranchesChange();
+    }
   };
 
   handleReloadAndOpenFirst = () => {
@@ -791,16 +814,16 @@ export default class App extends React.PureComponent {
   }
 
   renderSide(openIssue /*: ?Issue */) {
-    const top = this.props.component || this.props.organization ? 95 : 30;
-
     return (
-      <div className="layout-page-side-outer">
-        <div className="layout-page-side" style={{ top }}>
-          <div className="layout-page-side-inner">
-            {openIssue == null ? this.renderFacets() : this.renderConciseIssuesList()}
+      <ScreenPositionHelper className="layout-page-side-outer">
+        {({ top }) => (
+          <div className="layout-page-side" style={{ top }}>
+            <div className="layout-page-side-inner">
+              {openIssue == null ? this.renderFacets() : this.renderConciseIssuesList()}
+            </div>
           </div>
-        </div>
-      </div>
+        )}
+      </ScreenPositionHelper>
     );
   }
 

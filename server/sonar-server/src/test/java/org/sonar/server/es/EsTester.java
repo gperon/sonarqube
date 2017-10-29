@@ -56,6 +56,9 @@ import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.test.NodeConfigurationSource;
 import org.junit.rules.ExternalResource;
 import org.sonar.api.config.internal.MapSettings;
+import org.sonar.api.utils.log.Logger;
+import org.sonar.api.utils.log.LoggerLevel;
+import org.sonar.api.utils.log.Loggers;
 import org.sonar.core.config.ConfigurationProvider;
 import org.sonar.core.platform.ComponentContainer;
 import org.sonar.elasticsearch.test.EsTestCluster;
@@ -160,7 +163,19 @@ public class EsTester extends ExternalResource {
       container.addSingleton(MetadataIndex.class);
       container.addSingleton(MetadataIndexDefinition.class);
       container.addSingleton(TestEsDbCompatibility.class);
-      container.startComponents();
+
+      Logger logger = Loggers.get(IndexCreator.class);
+      LoggerLevel oldLevel = logger.getLevel();
+      if (oldLevel == LoggerLevel.INFO) {
+        logger.setLevel(LoggerLevel.WARN);
+      }
+
+      try {
+        container.startComponents();
+      } finally {
+        logger.setLevel(oldLevel);
+      }
+
       container.stopComponents();
       client().close();
     }
@@ -291,7 +306,7 @@ public class EsTester extends ExternalResource {
   }
 
   public long countDocuments(IndexType indexType) {
-    return client().prepareSearch(indexType).setSize(0).get().getHits().totalHits();
+    return client().prepareSearch(indexType).setSize(0).get().getHits().getTotalHits();
   }
 
   /**

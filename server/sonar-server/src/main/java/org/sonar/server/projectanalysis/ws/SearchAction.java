@@ -60,7 +60,7 @@ import static org.sonarqube.ws.client.projectanalysis.ProjectAnalysesWsParameter
 import static org.sonarqube.ws.client.projectanalysis.SearchRequest.DEFAULT_PAGE_SIZE;
 
 public class SearchAction implements ProjectAnalysesWsAction {
-  private static final Set<String> ALLOWED_QUALIFIERS = ImmutableSet.of(Qualifiers.PROJECT, Qualifiers.APP);
+  private static final Set<String> ALLOWED_QUALIFIERS = ImmutableSet.of(Qualifiers.PROJECT, Qualifiers.APP, Qualifiers.VIEW);
 
   private final DbClient dbClient;
   private final ComponentFinder componentFinder;
@@ -100,13 +100,15 @@ public class SearchAction implements ProjectAnalysesWsAction {
       .setExampleValue(OTHER.name());
 
     action.createParam(PARAM_FROM)
-      .setDescription("Filter analyses created after the given date (inclusive). Format: date or datetime ISO formats")
+      .setDescription("Filter analyses created after the given date (inclusive). <br>" +
+        "Either a date (server timezone) or datetime can be provided")
       .setExampleValue("2013-05-01")
       .setSince("6.5");
 
     action.createParam(PARAM_TO)
-      .setDescription("Filter analyses created before the given date (inclusive). Format: date or datetime ISO formats")
-      .setExampleValue("2013-05-01T13:00:00+0100")
+      .setDescription("Filter analyses created before the given date (inclusive). <br>" +
+        "Either a date (server timezone) or datetime can be provided")
+      .setExampleValue("2017-10-19 or 2017-10-19T13:00:00+0200")
       .setSince("6.5");
 
   }
@@ -163,7 +165,7 @@ public class SearchAction implements ProjectAnalysesWsAction {
 
   private void addProject(SearchData.Builder data) {
     ComponentDto project = loadComponent(data.getDbSession(), data.getRequest());
-    checkArgument(Scopes.PROJECT.equals(project.scope()) && ALLOWED_QUALIFIERS.contains(project.qualifier()), "A project or application is required");
+    checkArgument(Scopes.PROJECT.equals(project.scope()) && ALLOWED_QUALIFIERS.contains(project.qualifier()), "A project, portfolio or application is required");
     data.setProject(project);
   }
 

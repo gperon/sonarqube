@@ -31,21 +31,28 @@ interface Location {
   query?: Query;
 }
 
+export function getBaseUrl(): string {
+  return (window as any).baseUrl;
+}
+
 /**
  * Generate URL for a component's home page
+ * Deprecated : use getProjectUrl
  */
 export function getComponentUrl(componentKey: string, branch?: string): string {
   const branchQuery = branch ? `&branch=${encodeURIComponent(branch)}` : '';
-  return (
-    (window as any).baseUrl + '/dashboard?id=' + encodeURIComponent(componentKey) + branchQuery
-  );
+  return getBaseUrl() + '/dashboard?id=' + encodeURIComponent(componentKey) + branchQuery;
 }
 
 export function getProjectUrl(key: string, branch?: string): Location {
   return { pathname: '/dashboard', query: { id: key, branch } };
 }
 
-export function getProjectBranchUrl(key: string, branch: Branch) {
+export function getComponentBackgroundTaskUrl(componentKey: string): Location {
+  return { pathname: '/project/background_tasks', query: { id: componentKey } };
+}
+
+export function getProjectBranchUrl(key: string, branch: Branch): Location {
   if (isShortLivingBranch(branch)) {
     return {
       pathname: '/project/issues',
@@ -74,27 +81,34 @@ export function getComponentIssuesUrl(componentKey: string, query?: Query): Loca
 
 export function getComponentIssuesUrlAsString(componentKey: string, query?: Query): string {
   const path = getComponentIssuesUrl(componentKey, query);
-  return `${(window as any).baseUrl}${path.pathname}?${stringify(path.query)}`;
+  return `${getBaseUrl()}${path.pathname}?${stringify(path.query)}`;
 }
 
 /**
  * Generate URL for a component's drilldown page
  */
-export function getComponentDrilldownUrl(componentKey: string, metric: string, branch?: string) {
+export function getComponentDrilldownUrl(
+  componentKey: string,
+  metric: string,
+  branch?: string
+): Location {
   return { pathname: '/component_measures', query: { id: componentKey, metric, branch } };
+}
+
+export function getMeasureTreemapUrl(component: string, metric: string, branch?: string) {
+  return {
+    pathname: '/component_measures',
+    query: { id: component, metric, branch, view: 'treemap' }
+  };
 }
 
 /**
  * Generate URL for a component's measure history
  */
-export function getComponentMeasureHistory(
-  componentKey: string,
-  metric: string,
-  branch?: string
-): Location {
+export function getMeasureHistoryUrl(component: string, metric: string, branch?: string) {
   return {
     pathname: '/project/activity',
-    query: { id: componentKey, graph: 'custom', custom_metrics: metric, branch }
+    query: { id: component, graph: 'custom', custom_metrics: metric, branch }
   };
 }
 
@@ -155,10 +169,10 @@ export function getDeprecatedActiveRulesUrl(query = {}, organization?: string | 
   return getRulesUrl({ ...query, ...baseQuery }, organization);
 }
 
-export function getProjectsUrl(): string {
-  return (window as any).baseUrl + '/projects';
+export function getMarkdownHelpUrl(): string {
+  return getBaseUrl() + '/markdown/help';
 }
 
-export function getMarkdownHelpUrl(): string {
-  return (window as any).baseUrl + '/markdown/help';
+export function getCodeUrl(project: string, branch?: string, selected?: string) {
+  return { pathname: '/code', query: { id: project, branch, selected } };
 }

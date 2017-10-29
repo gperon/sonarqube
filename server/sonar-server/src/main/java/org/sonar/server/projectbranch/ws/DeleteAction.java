@@ -28,12 +28,13 @@ import org.sonar.api.web.UserRole;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbSession;
 import org.sonar.db.component.BranchDto;
-import org.sonar.db.component.BranchKeyType;
 import org.sonar.db.component.ComponentDto;
 import org.sonar.server.component.ComponentCleanerService;
 import org.sonar.server.component.ComponentFinder;
 import org.sonar.server.user.UserSession;
 
+import static org.sonar.server.projectbranch.ws.BranchesWs.addBranchParam;
+import static org.sonar.server.projectbranch.ws.BranchesWs.addProjectParam;
 import static org.sonar.server.ws.WsUtils.checkFoundWithOptional;
 import static org.sonarqube.ws.client.projectbranches.ProjectBranchesParameters.ACTION_DELETE;
 import static org.sonarqube.ws.client.projectbranches.ProjectBranchesParameters.PARAM_BRANCH;
@@ -56,13 +57,14 @@ public class DeleteAction implements BranchWsAction {
   public void define(NewController context) {
     WebService.NewAction action = context.createAction(ACTION_DELETE)
       .setSince("6.6")
-      .setDescription("Delete a non-main branch of a project. Requires permission to administer the project.")
+      .setDescription("Delete a non-main branch of a project.<br/>" +
+        "Requires 'Administer' rights on the specified project.")
       .setResponseExample(Resources.getResource(getClass(), "list-example.json"))
-      .setInternal(true)
       .setPost(true)
       .setHandler(this);
 
-    BranchesWs.addProjectBranchParams(action);
+    addProjectParam(action);
+    addBranchParam(action);
   }
 
   @Override
@@ -76,7 +78,7 @@ public class DeleteAction implements BranchWsAction {
       checkPermission(project);
 
       BranchDto branch = checkFoundWithOptional(
-        dbClient.branchDao().selectByKey(dbSession, project.uuid(), BranchKeyType.BRANCH, branchKey),
+        dbClient.branchDao().selectByKey(dbSession, project.uuid(), branchKey),
         "Branch '%s' not found for project '%s'", branchKey, projectKey);
 
       if (branch.isMain()) {

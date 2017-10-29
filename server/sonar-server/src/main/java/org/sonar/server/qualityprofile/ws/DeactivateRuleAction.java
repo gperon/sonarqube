@@ -25,13 +25,14 @@ import org.sonar.api.server.ws.Response;
 import org.sonar.api.server.ws.WebService;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbSession;
+import org.sonar.db.organization.OrganizationDto;
 import org.sonar.db.qualityprofile.QProfileDto;
 import org.sonar.server.qualityprofile.RuleActivator;
 import org.sonar.server.user.UserSession;
 
 import static org.sonar.core.util.Uuids.UUID_EXAMPLE_01;
 import static org.sonarqube.ws.client.qualityprofile.QualityProfileWsParameters.ACTION_DEACTIVATE_RULE;
-import static org.sonarqube.ws.client.qualityprofile.QualityProfileWsParameters.PARAM_PROFILE;
+import static org.sonarqube.ws.client.qualityprofile.QualityProfileWsParameters.PARAM_KEY;
 import static org.sonarqube.ws.client.qualityprofile.QualityProfileWsParameters.PARAM_RULE;
 
 public class DeactivateRuleAction implements QProfileWsAction {
@@ -51,13 +52,17 @@ public class DeactivateRuleAction implements QProfileWsAction {
   public void define(WebService.NewController controller) {
     WebService.NewAction deactivate = controller
       .createAction(ACTION_DEACTIVATE_RULE)
-      .setDescription("Deactivate a rule on a Quality profile.<br> " +
-        "Requires to be logged in and the 'Administer Quality Profiles' permission.")
+      .setDescription("Deactivate a rule on a quality profile.<br> " +
+        "Requires one of the following permissions:" +
+        "<ul>" +
+        "  <li>'Administer Quality Profiles'</li>" +
+        "  <li>Edit right on the specified quality profile</li>" +
+        "</ul>")
       .setHandler(this)
       .setPost(true)
       .setSince("4.4");
 
-    deactivate.createParam(PARAM_PROFILE)
+    deactivate.createParam(PARAM_KEY)
       .setDescription("Quality Profile key. Can be obtained through <code>api/qualityprofiles/search</code>")
       .setDeprecatedKey("profile_key", "6.5")
       .setRequired(true)
@@ -73,12 +78,12 @@ public class DeactivateRuleAction implements QProfileWsAction {
   @Override
   public void handle(Request request, Response response) throws Exception {
     RuleKey ruleKey = RuleKey.parse(request.mandatoryParam(PARAM_RULE));
-    String qualityProfileKey = request.mandatoryParam(PARAM_PROFILE);
+    String qualityProfileKey = request.mandatoryParam(PARAM_KEY);
     userSession.checkLoggedIn();
     try (DbSession dbSession = dbClient.openSession(false)) {
       QProfileDto profile = wsSupport.getProfile(dbSession, QProfileReference.fromKey(qualityProfileKey));
-      wsSupport.checkPermission(dbSession, profile);
-      wsSupport.checkNotBuiltInt(profile);
+      OrganizationDto organization = wsSupport.getOrganization(dbSession, profile);
+      wsSupport.checkCanEdit(dbSession, organization, profile);
       ruleActivator.deactivateAndCommit(dbSession, profile, ruleKey);
     }
     response.noContent();

@@ -23,6 +23,7 @@ import classNames from 'classnames';
 import { throttle } from 'lodash';
 import ProjectActivityAnalysis from './ProjectActivityAnalysis';
 import DateFormatter from '../../../components/intl/DateFormatter';
+import Tooltip from '../../../components/controls/Tooltip';
 import { translate } from '../../../helpers/l10n';
 import { toShortNotSoISOString } from '../../../helpers/dates';
 import {
@@ -40,6 +41,7 @@ type Props = {
   analyses: Array<Analysis>,
   analysesLoading: boolean,
   canAdmin: boolean,
+  canDeleteAnalyses: boolean,
   className?: string,
   changeEvent: (event: string, name: string) => Promise<*>,
   deleteAnalysis: (analysis: string) => Promise<*>,
@@ -170,12 +172,13 @@ export default class ProjectActivityAnalysesList extends React.PureComponent {
     const selectedDate = this.props.query.selectedDate
       ? this.props.query.selectedDate.valueOf()
       : null;
+
     return (
       <ul
         className={classNames('project-activity-versions-list', this.props.className)}
         onScroll={this.handleScroll}
         ref={element => (this.scrollContainer = element)}
-        style={{ paddingTop: this.props.project.qualifier === 'APP' ? undefined : 52 }}>
+        style={{ paddingTop: this.props.project.qualifier === 'TRK' ? 52 : undefined }}>
         {byVersionByDay.map((version, idx) => {
           const days = Object.keys(version.byDay);
           if (days.length <= 0) {
@@ -185,7 +188,11 @@ export default class ProjectActivityAnalysesList extends React.PureComponent {
             <li key={version.key || 'noversion'}>
               {version.version && (
                 <div className={classNames('project-activity-version-badge', { first: idx === 0 })}>
-                  <span className="badge">{version.version}</span>
+                  <Tooltip
+                    overlay={`${translate('version')} ${version.version}`}
+                    mouseEnterDelay={0.5}>
+                    <span className="badge">{version.version}</span>
+                  </Tooltip>
                 </div>
               )}
               <ul className="project-activity-days-list">
@@ -205,7 +212,8 @@ export default class ProjectActivityAnalysesList extends React.PureComponent {
                             addVersion={this.props.addVersion}
                             analysis={analysis}
                             canAdmin={this.props.canAdmin}
-                            canCreateVersion={this.props.project.qualifier !== 'APP'}
+                            canDeleteAnalyses={this.props.canDeleteAnalyses}
+                            canCreateVersion={this.props.project.qualifier === 'TRK'}
                             changeEvent={this.props.changeEvent}
                             deleteAnalysis={this.props.deleteAnalysis}
                             deleteEvent={this.props.deleteEvent}

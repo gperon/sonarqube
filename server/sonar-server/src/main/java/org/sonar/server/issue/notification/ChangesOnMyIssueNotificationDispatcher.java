@@ -29,6 +29,8 @@ import org.sonar.server.notification.NotificationDispatcher;
 import org.sonar.server.notification.NotificationDispatcherMetadata;
 import org.sonar.server.notification.NotificationManager;
 
+import static org.sonar.server.notification.NotificationManager.SubscriberPermissionsOnProject.ALL_MUST_HAVE_ROLE_USER;
+
 /**
  * This dispatcher means: "notify me when a change is done on an issue that is assigned to me or reported by me".
  *
@@ -58,7 +60,8 @@ public class ChangesOnMyIssueNotificationDispatcher extends NotificationDispatch
   @Override
   public void dispatch(Notification notification, Context context) {
     String projectKey = notification.getFieldValue("projectKey");
-    Multimap<String, NotificationChannel> subscribedRecipients = notificationManager.findNotificationSubscribers(this, projectKey);
+    Multimap<String, NotificationChannel> subscribedRecipients = notificationManager
+      .findSubscribedRecipientsForDispatcher(this, projectKey, ALL_MUST_HAVE_ROLE_USER);
 
     // See available fields in the class IssueNotifications.
 

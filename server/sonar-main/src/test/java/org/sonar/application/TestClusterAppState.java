@@ -20,17 +20,17 @@
 package org.sonar.application;
 
 import org.sonar.application.cluster.ClusterAppState;
-import org.sonar.cluster.localclient.HazelcastClient;
+import org.sonar.process.cluster.hz.HazelcastMember;
 
 public class TestClusterAppState extends TestAppState implements ClusterAppState {
-  private final HazelcastClient hazelcastClient;
+  private final HazelcastMember hazelcastMember;
 
-  public TestClusterAppState(HazelcastClient hazelcastClient) {
-    this.hazelcastClient = hazelcastClient;
+  public TestClusterAppState(HazelcastMember hazelcastMember) {
+    this.hazelcastMember = hazelcastMember;
   }
 
   @Override
-  public HazelcastClient getHazelcastClient() {
-    return hazelcastClient;
+  public HazelcastMember getHazelcastMember() {
+    return hazelcastMember;
   }
 }

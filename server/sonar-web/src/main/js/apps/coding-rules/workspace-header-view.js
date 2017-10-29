@@ -49,7 +49,8 @@ export default WorkspaceHeaderView.extend({
     }).render();
   },
 
-  reload() {
+  reload(event) {
+    event.preventDefault();
     this.options.app.controller.fetchList(true);
   },
 
@@ -58,9 +59,14 @@ export default WorkspaceHeaderView.extend({
   },
 
   serializeData() {
+    // show "Bulk Change" button only if user has at least one QP which he administates
+    const canBulkChange = this.options.app.qualityProfiles.some(
+      profile => profile.actions && profile.actions.edit
+    );
+
     return {
       ...WorkspaceHeaderView.prototype.serializeData.apply(this, arguments),
-      canWrite: this.options.app.canWrite
+      canBulkChange
     };
   }
 });
