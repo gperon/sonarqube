@@ -49,13 +49,32 @@ public class DropColumnsBuilder {
         this.columns = columns;
     }
 
-  private String getOracleStatement() {
+    public List<String> build() {
+        switch (dialect.getId()) {
+            case PostgreSql.ID:
+            case MySql.ID:
+            case MariaDb.ID:
     StringBuilder sql = new StringBuilder().append(ALTER_TABLE).append(tableName).append(" ");
-    sql.append("SET UNUSED (");
-    dropColumns(sql, "", columns);
-    sql.append(")");
-    return sql.toString();
+                dropColumns(sql, "DROP COLUMN ", columns);
+                return Collections.singletonList(sql.toString());
+            case MsSql.ID:
+                return Collections.singletonList(getMsSQLStatement(columns));
+            case Oracle.ID:
+                return Collections.singletonList(getOracleStatement());
+            case H2.ID:
+                return Arrays.stream(columns).map(this::getMsSQLStatement).collect(MoreCollectors.toList(columns.length));
+            default:
+                throw new IllegalStateException(String.format("Unsupported database '%s'", dialect.getId()));
   }
+    }
+
+    private String getOracleStatement() {
+        StringBuilder sql2 = new StringBuilder().append(ALTER_TABLE).append(tableName).append(" ");
+        sql2.append("DROP (");
+        dropColumns(sql2, "", columns);
+        sql2.append(")");
+        return sql2.toString();
+    }
 
   private String getMsSQLStatement(String... columnNames) {
     StringBuilder sql = new StringBuilder().append(ALTER_TABLE).append(tableName).append(" ");
@@ -73,31 +92,6 @@ public class DropColumnsBuilder {
         sql.append(", ");
       }
     }
-
-    private String getOracleStatement() {
-        StringBuilder sql2 = new StringBuilder().append(ALTER_TABLE).append(tableName).append(" ");
-        sql2.append("DROP (");
-        dropColumns(sql2, "", columns);
-        sql2.append(")");
-        return sql2.toString();
-    }
-
-    private String getMsSQLStatement(String... columnNames) {
-        StringBuilder sql1 = new StringBuilder().append(ALTER_TABLE).append(tableName).append(" ");
-        sql1.append("DROP COLUMN ");
-        dropColumns(sql1, "", columnNames);
-        return sql1.toString();
-    }
-
-    private static void dropColumns(StringBuilder sql, String columnPrefix, String... columnNames) {
-        Iterator<String> columnNamesIterator = Arrays.stream(columnNames).iterator();
-        while (columnNamesIterator.hasNext()) {
-            sql.append(columnPrefix);
-            sql.append(columnNamesIterator.next());
-            if (columnNamesIterator.hasNext()) {
-                sql.append(", ");
-            }
-        }
-    }
-
+  }
+  
 }
